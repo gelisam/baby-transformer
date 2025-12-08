@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TensorFlow.js Linear Regression</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm/dist/tf-backend-wasm.js"></script>
     <script src="main.js" defer></script>
     <style>
         body {
@@ -51,7 +52,8 @@
       <label for="backend-selector">Select Backend: </label>
       <select id="backend-selector">
         <option value="webgl">WebGL</option>
-        <option value="cpu">CPU</option>
+        <option value="cpu" selected>CPU</option>
+        <option value="wasm">WASM</option>
         <option value="webgpu">WebGPU</option>
       </select>
     </div>
