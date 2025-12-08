@@ -16,22 +16,28 @@ interface TrainingData {
     ysArray: number[];
 }
 
-// Define the model
+// Define the model based on a shared configuration
+const HIDDEN_LAYER_SIZES = [2, 2];
+
 function createModel(): Sequential {
     const model = tf.sequential();
 
-    // Two hidden layers with ReLU activation
+    // Add the first hidden layer with inputShape
     model.add(tf.layers.dense({
-        units: 2,
+        units: HIDDEN_LAYER_SIZES[0],
         inputShape: [1],
         activation: 'relu'
     }));
-    model.add(tf.layers.dense({
-        units: 2,
-        activation: 'relu'
-    }));
 
-    // Linear output layer
+    // Add the remaining hidden layers
+    for (let i = 1; i < HIDDEN_LAYER_SIZES.length; i++) {
+        model.add(tf.layers.dense({
+            units: HIDDEN_LAYER_SIZES[i],
+            activation: 'relu'
+        }));
+    }
+
+    // Add the linear output layer
     model.add(tf.layers.dense({
         units: 1
     }));
@@ -271,6 +277,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Add event listener for changes
     const backendSelector = document.getElementById('backend-selector') as HTMLSelectElement;
     backendSelector.addEventListener('change', setBackend);
+
+    // Draw the initial network architecture
+    drawNetworkArchitecture();
 });
 
 // Visualize the network architecture
@@ -282,7 +291,7 @@ function drawNetworkArchitecture(): void {
     const layerGap = 40;
     const nodeWidth = 20;
     const nodeHeight = 10;
-    const layers = [1, 2, 2, 1]; // Input, Hidden 1, Hidden 2, Output
+    const layers = [1, ...HIDDEN_LAYER_SIZES, 1]; // Input, Hidden Layers, Output
 
     // Function to draw a node (filled rectangle)
     function drawNode(x: number, y: number): void {
