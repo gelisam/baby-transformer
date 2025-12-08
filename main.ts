@@ -205,6 +205,18 @@ function visualize(xs: number[], ys: number[], xPred: number[], yPred: number[])
 
 // --- Backend Selection Logic ---
 
+// Function to display toaster-style error messages
+function showError(message: string): void {
+    const toaster = document.getElementById('toaster')!;
+    toaster.textContent = message;
+    toaster.style.display = 'block';
+
+    // Hide the toaster after 3 seconds
+    setTimeout(() => {
+        toaster.style.display = 'none';
+    }, 3000);
+}
+
 // Function to set the backend and update UI
 async function setBackend() {
     const backendSelector = document.getElementById('backend-selector') as HTMLSelectElement;
@@ -213,32 +225,51 @@ async function setBackend() {
     const canvas = document.getElementById('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
 
-    const backend = backendSelector.value;
+    const requestedBackend = backendSelector.value;
 
+    // GPU Fallback Logic
+    if (requestedBackend === 'webgpu') {
+        const fallbacks = ['webgpu', 'webgl', 'wasm', 'cpu'];
+        for (const backend of fallbacks) {
+            try {
+                await tf.setBackend(backend);
+                console.log(`TensorFlow.js backend set to: ${tf.getBackend()}`);
+                statusElement.innerHTML = `Backend set to <strong>${tf.getBackend()}</strong>. Click the button to start training...`;
+                resultsElement.style.display = 'none';
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return; // Exit after successful backend setting
+            } catch (error) {
+                console.warn(`Failed to initialize ${backend} backend:`, error);
+                if (backend === 'webgl' || backend === 'wasm') {
+                    showError(`Failed to initialize ${backend}, falling back...`);
+                }
+            }
+        }
+        // If all fallbacks fail
+        statusElement.innerHTML = `Error: Could not initialize GPU or any fallback backend.`;
+        return;
+    }
+
+    // Default logic for other backends
     try {
-        await tf.setBackend(backend);
+        await tf.setBackend(requestedBackend);
         console.log(`TensorFlow.js backend set to: ${tf.getBackend()}`);
-
-        // Reset UI elements
         statusElement.innerHTML = `Backend set to <strong>${tf.getBackend()}</strong>. Click the button to start training...`;
         resultsElement.style.display = 'none';
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     } catch (error) {
-        console.error(`Failed to set backend to ${backend}:`, error);
-        // Handle cases where a backend is not available (e.g., WebGPU)
-        statusElement.innerHTML = `Error: Could not initialize <strong>${backend}</strong> backend. Your browser may not support it.`;
+        console.error(`Failed to set backend to ${requestedBackend}:`, error);
+        statusElement.innerHTML = `Error: Could not initialize <strong>${requestedBackend}</strong> backend. Your browser may not support it.`;
     }
 }
 
 // Set up backend selection when the DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
-    const backendSelector = document.getElementById('backend-selector') as HTMLSelectElement;
-
     // Set the initial backend
     await setBackend();
 
     // Add event listener for changes
+    const backendSelector = document.getElementById('backend-selector') as HTMLSelectElement;
     backendSelector.addEventListener('change', setBackend);
 });
 

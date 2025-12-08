@@ -42,9 +42,23 @@
             background-color: #e7f3fe;
             border-left: 4px solid #2196F3;
         }
+        #toaster {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #f44336;
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            z-index: 1;
+            display: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
+    <div id="toaster"></div>
     <h1>TensorFlow.js Linear Regression Demo</h1>
     <p>This example trains a simple linear regression model to learn y = 2x - 1</p>
     
