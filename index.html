@@ -62,6 +62,15 @@
     <h1>TensorFlow.js Linear Regression Demo</h1>
     <p>This example trains a simple linear regression model to learn y = 2x - 1</p>
     
+    <div>
+      <label for="backend-selector">Select Backend: </label>
+      <select id="backend-selector">
+        <option value="cpu" selected>CPU</option>
+        <option value="wasm">WASM</option>
+        <option value="webgpu">GPU</option>
+      </select>
+    </div>
+    <br/>
     <button onclick="trainModel()">Train Model</button>
     
     <div id="status">Click the button to start training...</div>
