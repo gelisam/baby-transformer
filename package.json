@@ -1,0 +1,14 @@
+{
+  "name": "baby-transformer",
+  "version": "1.0.0",
+  "description": "TensorFlow.js Linear Regression Demo",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "devDependencies": {
+    "@tensorflow/tfjs": "^4.15.0",
+    "typescript": "^5.3.3"
+  }
+}
