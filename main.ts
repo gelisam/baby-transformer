@@ -186,5 +186,44 @@ function visualize(xs: number[], ys: number[], slope: number, intercept: number)
     ctx.fillText('- - True model (y=2x-1)', canvas.width - 200, 60);
 }
 
+// --- Backend Selection Logic ---
+
+// Function to set the backend and update UI
+async function setBackend() {
+    const backendSelector = document.getElementById('backend-selector') as HTMLSelectElement;
+    const statusElement = document.getElementById('status')!;
+    const resultsElement = document.getElementById('results')!;
+    const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+
+    const backend = backendSelector.value;
+
+    try {
+        await tf.setBackend(backend);
+        console.log(`TensorFlow.js backend set to: ${tf.getBackend()}`);
+
+        // Reset UI elements
+        statusElement.innerHTML = `Backend set to <strong>${tf.getBackend()}</strong>. Click the button to start training...`;
+        resultsElement.style.display = 'none';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    } catch (error) {
+        console.error(`Failed to set backend to ${backend}:`, error);
+        // Handle cases where a backend is not available (e.g., WebGPU)
+        statusElement.innerHTML = `Error: Could not initialize <strong>${backend}</strong> backend. Your browser may not support it.`;
+    }
+}
+
+// Set up backend selection when the DOM is loaded
+document.addEventListener('DOMContentLoaded', async () => {
+    const backendSelector = document.getElementById('backend-selector') as HTMLSelectElement;
+
+    // Set the initial backend
+    await setBackend();
+
+    // Add event listener for changes
+    backendSelector.addEventListener('change', setBackend);
+});
+
 // Make trainModel available globally
 (window as any).trainModel = trainModel;
