@@ -1,16 +1,23 @@
 /// <reference types="@tensorflow/tfjs" />
 
-import * as tf from '@tensorflow/tfjs';
+// TensorFlow.js is loaded via CDN in index.html
+declare const tf: typeof import('@tensorflow/tfjs');
+
+// Import types only (no runtime import)
+type Tensor2D = import('@tensorflow/tfjs').Tensor2D;
+type Sequential = import('@tensorflow/tfjs').Sequential;
+type Logs = import('@tensorflow/tfjs').Logs;
+type Tensor = import('@tensorflow/tfjs').Tensor;
 
 interface TrainingData {
-    xs: tf.Tensor2D;
-    ys: tf.Tensor2D;
+    xs: Tensor2D;
+    ys: Tensor2D;
     xsArray: number[];
     ysArray: number[];
 }
 
 // Define the model
-function createModel(): tf.Sequential {
+function createModel(): Sequential {
     const model = tf.sequential();
     
     // Add a single dense layer with 1 unit (output)
@@ -69,7 +76,7 @@ async function trainModel(): Promise<void> {
     await model.fit(data.xs, data.ys, {
         epochs: 100,
         callbacks: {
-            onEpochEnd: (epoch: number, logs?: tf.Logs) => {
+            onEpochEnd: (epoch: number, logs?: Logs) => {
                 if (epoch % 10 === 0 && logs) {
                     statusElement.innerHTML = 
                         `Training... Epoch ${epoch}/100 - Loss: ${logs.loss.toFixed(4)}`;
@@ -85,7 +92,7 @@ async function trainModel(): Promise<void> {
     
     // Make predictions
     const testX = tf.tensor2d([0, 1, 2, 3, 4], [5, 1]);
-    const predictions = model.predict(testX) as tf.Tensor;
+    const predictions = model.predict(testX) as Tensor;
     const predArray = await predictions.array() as number[][];
     
     // Display results

@@ -9,7 +9,7 @@
     "serve": "python3 -m http.server 8000"
   },
   "devDependencies": {
-    "@tensorflow/tfjs": "^4.15.0",
+    "@tensorflow/tfjs": "^4.22.0",
     "typescript": "^5.3.3"
   }
 }
