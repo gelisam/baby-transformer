@@ -19,20 +19,29 @@ interface TrainingData {
 // Define the model
 function createModel(): Sequential {
     const model = tf.sequential();
-    
-    // Add a single dense layer with 1 unit (output)
-    // This creates a linear model: y = mx + b
+
+    // Two hidden layers with ReLU activation
     model.add(tf.layers.dense({
-        units: 1,
-        inputShape: [1]
+        units: 2,
+        inputShape: [1],
+        activation: 'relu'
     }));
-    
+    model.add(tf.layers.dense({
+        units: 2,
+        activation: 'relu'
+    }));
+
+    // Linear output layer
+    model.add(tf.layers.dense({
+        units: 1
+    }));
+
     // Compile the model with mean squared error loss
     model.compile({
         loss: 'meanSquaredError',
         optimizer: tf.train.sgd(0.1) // Stochastic Gradient Descent with learning rate 0.1
     });
-    
+
     return model;
 }
 
@@ -85,12 +94,16 @@ async function trainModel(): Promise<void> {
         }
     });
     
-    // Get the learned parameters
-    const weights = model.getWeights();
-    const slope = weights[0].dataSync()[0];
-    const intercept = weights[1].dataSync()[0];
+    // Get the learned parameters - This is no longer a simple line
+    // We will visualize the learned function by predicting over a range
     
-    // Make predictions
+    // Make predictions for visualization
+    const xRange = tf.linspace(-5, 5, 100);
+    const yPreds = model.predict(xRange.reshape([100, 1])) as Tensor;
+    const xRangeArray = await xRange.array();
+    const yPredsArray = await yPreds.array();
+
+    // Make predictions for the table
     const testX = tf.tensor2d([0, 1, 2, 3, 4], [5, 1]);
     const predictions = model.predict(testX) as Tensor;
     const predArray = await predictions.array() as number[][];
@@ -98,8 +111,7 @@ async function trainModel(): Promise<void> {
     // Display results
     statusElement.innerHTML = 'Training complete!';
     resultsElement.style.display = 'block';
-    paramsElement.innerHTML = 
-        `y = ${slope.toFixed(4)}x + ${intercept.toFixed(4)}`;
+    paramsElement.innerHTML = `The model is a 2x2 ReLU network with a linear output.`;
     
     let predText = '<strong>Sample predictions:</strong><br>';
     for (let i = 0; i < 5; i++) {
@@ -108,17 +120,20 @@ async function trainModel(): Promise<void> {
     predictionsElement.innerHTML = predText;
     
     // Visualize
-    visualize(data.xsArray, data.ysArray, slope, intercept);
+    visualize(data.xsArray, data.ysArray, xRangeArray, (yPredsArray as number[][]).flat());
+    drawNetworkArchitecture();
     
     // Clean up tensors
     data.xs.dispose();
     data.ys.dispose();
     testX.dispose();
     predictions.dispose();
+    xRange.dispose();
+    yPreds.dispose();
 }
 
 // Visualize the data and learned model
-function visualize(xs: number[], ys: number[], slope: number, intercept: number): void {
+function visualize(xs: number[], ys: number[], xPred: number[], yPred: number[]): void {
     const canvas = document.getElementById('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
     
@@ -158,12 +173,14 @@ function visualize(xs: number[], ys: number[], slope: number, intercept: number)
         ctx.fill();
     }
     
-    // Draw learned line
+    // Draw learned function
     ctx.strokeStyle = 'red';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(toCanvasX(xMin), toCanvasY(slope * xMin + intercept));
-    ctx.lineTo(toCanvasX(xMax), toCanvasY(slope * xMax + intercept));
+    ctx.moveTo(toCanvasX(xPred[0]), toCanvasY(yPred[0]));
+    for (let i = 1; i < xPred.length; i++) {
+        ctx.lineTo(toCanvasX(xPred[i]), toCanvasY(yPred[i]));
+    }
     ctx.stroke();
     
     // Draw true line (green, dashed)
@@ -224,6 +241,83 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Add event listener for changes
     backendSelector.addEventListener('change', setBackend);
 });
+
+// Visualize the network architecture
+function drawNetworkArchitecture(): void {
+    const canvas = document.getElementById('network-canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const layerGap = 150;
+    const neuronRadius = 15;
+    const layers = [1, 2, 2, 1]; // Input, Hidden 1, Hidden 2, Output
+
+    // Function to draw a neuron
+    function drawNeuron(x: number, y: number, text: string): void {
+        ctx.beginPath();
+        ctx.arc(x, y, neuronRadius, 0, 2 * Math.PI);
+        ctx.fillStyle = 'white';
+        ctx.fill();
+        ctx.strokeStyle = 'black';
+        ctx.stroke();
+        ctx.fillStyle = 'black';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, x, y);
+    }
+
+    // Function to draw a connection
+    function drawConnection(x1: number, y1: number, x2: number, y2: number): void {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = 'gray';
+        ctx.stroke();
+    }
+
+    const startX = 50;
+    const canvasHeight = canvas.height;
+
+    // Store neuron positions
+    const neuronPositions: { x: number, y: number }[][] = [];
+
+    // Draw neurons and labels
+    for (let i = 0; i < layers.length; i++) {
+        const layerX = startX + i * layerGap;
+        const numNeurons = layers[i];
+        const layerPositions: { x: number, y: number }[] = [];
+
+        for (let j = 0; j < numNeurons; j++) {
+            const neuronY = (canvasHeight - (numNeurons - 1) * 60) / 2 + j * 60;
+            layerPositions.push({ x: layerX, y: neuronY });
+
+            let neuronText = '';
+            if (i > 0 && i < layers.length - 1) {
+                neuronText = 'ReLU';
+            }
+            drawNeuron(layerX, neuronY, neuronText);
+        }
+        neuronPositions.push(layerPositions);
+
+        // Draw layer labels
+        ctx.fillStyle = 'black';
+        ctx.textAlign = 'center';
+        let label = '';
+        if (i === 0) label = 'Input';
+        else if (i === layers.length - 1) label = 'Linear Output';
+        else label = `Hidden Layer ${i}`;
+        ctx.fillText(label, layerX, canvasHeight - 20);
+    }
+
+    // Draw connections
+    for (let i = 0; i < neuronPositions.length - 1; i++) {
+        for (const pos1 of neuronPositions[i]) {
+            for (const pos2 of neuronPositions[i + 1]) {
+                drawConnection(pos1.x, pos1.y, pos2.x, pos2.y);
+            }
+        }
+    }
+}
 
 // Make trainModel available globally
 (window as any).trainModel = trainModel;
