@@ -279,22 +279,15 @@ function drawNetworkArchitecture(): void {
     const ctx = canvas.getContext('2d')!;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const layerGap = 150;
-    const neuronRadius = 15;
+    const layerGap = 40;
+    const nodeWidth = 20;
+    const nodeHeight = 10;
     const layers = [1, 2, 2, 1]; // Input, Hidden 1, Hidden 2, Output
 
-    // Function to draw a neuron
-    function drawNeuron(x: number, y: number, text: string): void {
-        ctx.beginPath();
-        ctx.arc(x, y, neuronRadius, 0, 2 * Math.PI);
-        ctx.fillStyle = 'white';
-        ctx.fill();
-        ctx.strokeStyle = 'black';
-        ctx.stroke();
+    // Function to draw a node (filled rectangle)
+    function drawNode(x: number, y: number): void {
         ctx.fillStyle = 'black';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, x, y);
+        ctx.fillRect(x - nodeWidth / 2, y - nodeHeight / 2, nodeWidth, nodeHeight);
     }
 
     // Function to draw a connection
@@ -306,38 +299,34 @@ function drawNetworkArchitecture(): void {
         ctx.stroke();
     }
 
-    const startX = 50;
-    const canvasHeight = canvas.height;
+    const startY = 30;
+    const canvasWidth = canvas.width;
 
     // Store neuron positions
     const neuronPositions: { x: number, y: number }[][] = [];
 
     // Draw neurons and labels
     for (let i = 0; i < layers.length; i++) {
-        const layerX = startX + i * layerGap;
+        const layerY = startY + i * layerGap;
         const numNeurons = layers[i];
         const layerPositions: { x: number, y: number }[] = [];
 
         for (let j = 0; j < numNeurons; j++) {
-            const neuronY = (canvasHeight - (numNeurons - 1) * 60) / 2 + j * 60;
-            layerPositions.push({ x: layerX, y: neuronY });
-
-            let neuronText = '';
-            if (i > 0 && i < layers.length - 1) {
-                neuronText = 'ReLU';
-            }
-            drawNeuron(layerX, neuronY, neuronText);
+            const neuronX = (canvasWidth / 2) - ((numNeurons - 1) * 60 / 2) + j * 60;
+            layerPositions.push({ x: neuronX, y: layerY });
+            drawNode(neuronX, layerY);
         }
         neuronPositions.push(layerPositions);
 
-        // Draw layer labels
+        // Draw layer labels on the right
         ctx.fillStyle = 'black';
-        ctx.textAlign = 'center';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
         let label = '';
         if (i === 0) label = 'Input';
         else if (i === layers.length - 1) label = 'Linear Output';
         else label = `Hidden Layer ${i}`;
-        ctx.fillText(label, layerX, canvasHeight - 20);
+        ctx.fillText(label, canvasWidth - 120, layerY);
     }
 
     // Draw connections
