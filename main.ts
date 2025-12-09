@@ -9,6 +9,13 @@ type Sequential = import('@tensorflow/tfjs').Sequential;
 type Logs = import('@tensorflow/tfjs').Logs;
 type Tensor = import('@tensorflow/tfjs').Tensor;
 
+// --- Global State ---
+let model: Sequential;
+let data: TrainingData;
+let isTraining = false;
+let currentEpoch = 0;
+const lossHistory: { epoch: number, loss: number }[] = [];
+
 interface TrainingData {
     xs: Tensor2D;
     ys: Tensor2D;
@@ -71,71 +78,122 @@ function generateData(): TrainingData {
     return { xs: xsTensor, ys: ysTensor, xsArray: xs, ysArray: ys };
 }
 
-// Train the model
-async function trainModel(): Promise<void> {
-    const statusElement = document.getElementById('status')!;
-    const resultsElement = document.getElementById('results')!;
-    const paramsElement = document.getElementById('params')!;
-    const predictionsElement = document.getElementById('predictions')!;
-    
-    statusElement.innerHTML = 'Training model...';
-    resultsElement.style.display = 'none';
-    
-    // Create model
-    const model = createModel();
-    
-    // Generate data
-    const data = generateData();
-    
-    // Train the model
-    await model.fit(data.xs, data.ys, {
-        epochs: 100,
-        callbacks: {
-            onEpochEnd: (epoch: number, logs?: Logs) => {
-                if (epoch % 10 === 0 && logs) {
-                    statusElement.innerHTML = 
-                        `Training... Epoch ${epoch}/100 - Loss: ${logs.loss.toFixed(4)}`;
-                }
-            }
-        }
-    });
-    
-    // Get the learned parameters - This is no longer a simple line
-    // We will visualize the learned function by predicting over a range
-    
-    // Make predictions for visualization
-    const xRange = tf.linspace(-5, 5, 100);
-    const yPreds = model.predict(xRange.reshape([100, 1])) as Tensor;
-    const xRangeArray = await xRange.array();
-    const yPredsArray = await yPreds.array();
+// --- Training Control ---
+async function trainModel() {
+    isTraining = !isTraining;
+    const trainButton = document.getElementById('train-button')!;
 
-    // Make predictions for the table
-    const testX = tf.tensor2d([0, 1, 2, 3, 4], [5, 1]);
-    const predictions = model.predict(testX) as Tensor;
-    const predArray = await predictions.array() as number[][];
-    
-    // Display results
-    statusElement.innerHTML = 'Training complete!';
-    resultsElement.style.display = 'block';
-    paramsElement.innerHTML = `The model is a 2x2 ReLU network with a linear output.`;
-    
-    let predText = '<strong>Sample predictions:</strong><br>';
-    for (let i = 0; i < 5; i++) {
-        predText += `x = ${i}, predicted y = ${predArray[i][0].toFixed(4)}, actual y = ${2 * i - 1}<br>`;
+    if (isTraining) {
+        trainButton.innerText = 'Pause';
+        requestAnimationFrame(trainingStep);
+    } else {
+        trainButton.innerText = 'Train Model';
     }
-    predictionsElement.innerHTML = predText;
+}
+
+async function trainingStep() {
+    if (!isTraining) {
+        // Update the results table when training is paused
+        await updateResults();
+        return;
+    }
+
+    const statusElement = document.getElementById('status')!;
+
+    // Train for one epoch
+    const history = await model.fit(data.xs, data.ys, {
+        epochs: 1,
+        verbose: 0
+    });
+
+    // Get the loss
+    const loss = history.history.loss[0] as number;
+    currentEpoch++;
+
+    statusElement.innerHTML = `Training... Epoch ${currentEpoch} - Loss: ${loss.toFixed(4)}`;
     
-    // Visualize
-    visualize(data.xsArray, data.ysArray, xRangeArray, (yPredsArray as number[][]).flat());
-    drawNetworkArchitecture();
+    // Update visualizations every 10 epochs
+    if (currentEpoch % 10 === 0) {
+        lossHistory.push({ epoch: currentEpoch, loss });
+        await updatePredictionCurve();
+        drawLossCurve();
+    }
+    
+    // Request the next frame
+    requestAnimationFrame(trainingStep);
+}
+
+// --- Visualization Updates ---
+async function updatePredictionCurve(): Promise<void> {
+    const xRange = tf.linspace(-5, 5, 100);
+    const yPredsTensor = model.predict(xRange.reshape([100, 1])) as Tensor;
+    
+    const xRangeArray = await xRange.array();
+    const yPredsArray = (await yPredsTensor.array() as number[][]).flat();
+    
+    visualize(data.xsArray, data.ysArray, xRangeArray, yPredsArray);
     
     // Clean up tensors
-    data.xs.dispose();
-    data.ys.dispose();
-    testX.dispose();
-    predictions.dispose();
     xRange.dispose();
-    yPreds.dispose();
+    yPredsTensor.dispose();
+}
+
+function drawLossCurve(): void {
+    if (lossHistory.length < 2) {
+        return;
+    }
+
+    const canvas = document.getElementById('loss-canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Find data range
+    const minLoss = Math.min(...lossHistory.map(d => d.loss));
+    const maxLoss = Math.max(...lossHistory.map(d => d.loss));
+    const minEpoch = lossHistory[0].epoch;
+    const maxEpoch = lossHistory[lossHistory.length - 1].epoch;
+
+    // Helper functions to convert data coordinates to canvas coordinates
+    function toCanvasX(epoch: number): number {
+        return ((epoch - minEpoch) / (maxEpoch - minEpoch)) * (canvas.width - 60) + 30;
+    }
+
+    function toCanvasY(loss: number): number {
+        const range = maxLoss - minLoss;
+        // Add a small epsilon to the range to avoid division by zero if all losses are the same
+        const effectiveRange = range === 0 ? 1 : range;
+        return canvas.height - 30 - ((loss - minLoss) / effectiveRange) * (canvas.height - 60);
+    }
+
+    // Draw axes
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(30, canvas.height - 30);
+    ctx.lineTo(canvas.width - 30, canvas.height - 30);
+    ctx.moveTo(30, 30);
+    ctx.lineTo(30, canvas.height - 30);
+    ctx.stroke();
+
+    // Draw loss curve
+    ctx.strokeStyle = 'purple';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(toCanvasX(lossHistory[0].epoch), toCanvasY(lossHistory[0].loss));
+    for (let i = 1; i < lossHistory.length; i++) {
+        ctx.lineTo(toCanvasX(lossHistory[i].epoch), toCanvasY(lossHistory[i].loss));
+    }
+    ctx.stroke();
+
+    // Add labels
+    ctx.font = '12px Arial';
+    ctx.fillStyle = 'black';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Epoch: ${maxEpoch}`, canvas.width / 2, canvas.height - 10);
+    ctx.save();
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(`Loss: ${maxLoss.toFixed(4)}`, -canvas.height / 2, 15);
+    ctx.restore();
 }
 
 // Visualize the data and learned model
@@ -180,14 +238,16 @@ function visualize(xs: number[], ys: number[], xPred: number[], yPred: number[])
     }
     
     // Draw learned function
-    ctx.strokeStyle = 'red';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(toCanvasX(xPred[0]), toCanvasY(yPred[0]));
-    for (let i = 1; i < xPred.length; i++) {
-        ctx.lineTo(toCanvasX(xPred[i]), toCanvasY(yPred[i]));
+    if (xPred.length > 0 && yPred.length > 0) {
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(toCanvasX(xPred[0]), toCanvasY(yPred[0]));
+        for (let i = 1; i < xPred.length; i++) {
+            ctx.lineTo(toCanvasX(xPred[i]), toCanvasY(yPred[i]));
+        }
+        ctx.stroke();
     }
-    ctx.stroke();
     
     // Draw true line (green, dashed)
     ctx.strokeStyle = 'green';
@@ -271,16 +331,82 @@ async function setBackend() {
 
 // Set up backend selection when the DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
-    // Set the initial backend
-    await setBackend();
-
     // Add event listener for changes
     const backendSelector = document.getElementById('backend-selector') as HTMLSelectElement;
-    backendSelector.addEventListener('change', setBackend);
+    backendSelector.addEventListener('change', async () => {
+        // Stop training and clean up old tensors before changing backend
+        if (isTraining) {
+            trainModel(); // Toggles isTraining to false
+        }
+        if (data) {
+            data.xs.dispose();
+            data.ys.dispose();
+        }
 
-    // Draw the initial network architecture
+        await setBackend();
+        initializeNewModel(); // Initialize a new model for the new backend
+    });
+
+    // Initial setup
+    await setBackend();
+    initializeNewModel();
     drawNetworkArchitecture();
 });
+
+function initializeNewModel(): void {
+    // Create a new model
+    if (model) {
+        model.dispose();
+    }
+    model = createModel();
+
+    // Generate new data
+    // No need to clean up old data tensors here, it's handled on backend change
+    data = generateData();
+
+    // Reset training state
+    currentEpoch = 0;
+    lossHistory.length = 0;
+
+    // Clear canvases and update UI
+    const statusElement = document.getElementById('status')!;
+    const resultsElement = document.getElementById('results')!;
+    const lossCanvas = document.getElementById('loss-canvas') as HTMLCanvasElement;
+
+    statusElement.innerHTML = 'Ready to train!';
+    resultsElement.style.display = 'none';
+
+    const lossCtx = lossCanvas.getContext('2d')!;
+    lossCtx.clearRect(0, 0, lossCanvas.width, lossCanvas.height);
+
+    // Visualize the initial (untrained) state
+    updatePredictionCurve();
+}
+
+async function updateResults(): Promise<void> {
+    const resultsElement = document.getElementById('results')!;
+    const paramsElement = document.getElementById('params')!;
+    const predictionsElement = document.getElementById('predictions')!;
+
+    // Make predictions for the table
+    const testX = tf.tensor2d([0, 1, 2, 3, 4], [5, 1]);
+    const predictions = model.predict(testX) as Tensor;
+    const predArray = await predictions.array() as number[][];
+
+    // Display results
+    resultsElement.style.display = 'block';
+    paramsElement.innerHTML = `The model is a 2x2 ReLU network with a linear output.`;
+
+    let predText = '<strong>Sample predictions:</strong><br>';
+    for (let i = 0; i < 5; i++) {
+        predText += `x = ${i}, predicted y = ${predArray[i][0].toFixed(4)}, actual y = ${2 * i - 1}<br>`;
+    }
+    predictionsElement.innerHTML = predText;
+
+    // Clean up tensors
+    testX.dispose();
+    predictions.dispose();
+}
 
 // Visualize the network architecture
 function drawNetworkArchitecture(): void {
