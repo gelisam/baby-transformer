@@ -164,8 +164,8 @@ function drawLossCurve(): void {
     }
 
     // Draw loss curve
-    ctx.strokeStyle = 'purple';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'lightgrey';
+    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(toCanvasX(lossHistory[0].epoch), toCanvasY(lossHistory[0].loss));
     for (let i = 1; i < lossHistory.length; i++) {

@@ -21,8 +21,13 @@
             border-radius: 5px;
         }
         canvas {
-            border: 1px solid #ddd;
             margin-top: 20px;
+        }
+        #loss-canvas {
+            border: none;
+        }
+        .bordered-canvas {
+            border: 1px solid #ddd;
         }
         button {
             padding: 10px 20px;
@@ -75,10 +80,10 @@
     
     <div id="status">Click the button to start training...</div>
     
-    <canvas id="canvas" width="600" height="400"></canvas>
     <h3>Loss Curve</h3>
-    <canvas id="loss-canvas" width="600" height="200"></canvas>
+    <canvas id="loss-canvas" width="600" height="150"></canvas>
+    <canvas id="canvas" class="bordered-canvas" width="600" height="400"></canvas>
     <h3>Network Architecture</h3>
-    <canvas id="network-canvas" width="600" height="200"></canvas>
+    <canvas id="network-canvas" class="bordered-canvas" width="600" height="200"></canvas>
 </body>
 </html>
