@@ -163,16 +163,6 @@ function drawLossCurve(): void {
         return canvas.height - 30 - ((loss - minLoss) / effectiveRange) * (canvas.height - 60);
     }
 
-    // Draw axes
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(30, canvas.height - 30);
-    ctx.lineTo(canvas.width - 30, canvas.height - 30);
-    ctx.moveTo(30, 30);
-    ctx.lineTo(30, canvas.height - 30);
-    ctx.stroke();
-
     // Draw loss curve
     ctx.strokeStyle = 'purple';
     ctx.lineWidth = 2;
@@ -182,16 +172,6 @@ function drawLossCurve(): void {
         ctx.lineTo(toCanvasX(lossHistory[i].epoch), toCanvasY(lossHistory[i].loss));
     }
     ctx.stroke();
-
-    // Add labels
-    ctx.font = '12px Arial';
-    ctx.fillStyle = 'black';
-    ctx.textAlign = 'center';
-    ctx.fillText(`Epoch: ${maxEpoch}`, canvas.width / 2, canvas.height - 10);
-    ctx.save();
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText(`Loss: ${maxLoss.toFixed(4)}`, -canvas.height / 2, 15);
-    ctx.restore();
 }
 
 // Visualize the data and learned model
