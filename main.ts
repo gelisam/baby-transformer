@@ -93,8 +93,7 @@ async function trainModel() {
 
 async function trainingStep() {
     if (!isTraining) {
-        // Update the results table when training is paused
-        await updateResults();
+        // Training has been paused
         return;
     }
 
@@ -106,14 +105,14 @@ async function trainingStep() {
         verbose: 0
     });
 
-    // Get the loss
-    const loss = history.history.loss[0] as number;
     currentEpoch++;
 
-    statusElement.innerHTML = `Training... Epoch ${currentEpoch} - Loss: ${loss.toFixed(4)}`;
-    
     // Update visualizations every 10 epochs
     if (currentEpoch % 10 === 0) {
+        // Get the loss
+        const loss = history.history.loss[0] as number;
+        statusElement.innerHTML = `Training... Epoch ${currentEpoch} - Loss: ${loss.toFixed(4)}`;
+    
         lossHistory.push({ epoch: currentEpoch, loss });
         await updatePredictionCurve();
         drawLossCurve();
@@ -287,7 +286,6 @@ function showError(message: string): void {
 async function setBackend() {
     const backendSelector = document.getElementById('backend-selector') as HTMLSelectElement;
     const statusElement = document.getElementById('status')!;
-    const resultsElement = document.getElementById('results')!;
     const canvas = document.getElementById('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
 
@@ -301,7 +299,6 @@ async function setBackend() {
                 await tf.setBackend(backend);
                 console.log(`TensorFlow.js backend set to: ${tf.getBackend()}`);
                 statusElement.innerHTML = `Backend set to <strong>${tf.getBackend()}</strong>. Click the button to start training...`;
-                resultsElement.style.display = 'none';
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 return; // Exit after successful backend setting
             } catch (error) {
@@ -321,7 +318,6 @@ async function setBackend() {
         await tf.setBackend(requestedBackend);
         console.log(`TensorFlow.js backend set to: ${tf.getBackend()}`);
         statusElement.innerHTML = `Backend set to <strong>${tf.getBackend()}</strong>. Click the button to start training...`;
-        resultsElement.style.display = 'none';
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     } catch (error) {
         console.error(`Failed to set backend to ${requestedBackend}:`, error);
@@ -370,42 +366,15 @@ function initializeNewModel(): void {
 
     // Clear canvases and update UI
     const statusElement = document.getElementById('status')!;
-    const resultsElement = document.getElementById('results')!;
     const lossCanvas = document.getElementById('loss-canvas') as HTMLCanvasElement;
 
     statusElement.innerHTML = 'Ready to train!';
-    resultsElement.style.display = 'none';
 
     const lossCtx = lossCanvas.getContext('2d')!;
     lossCtx.clearRect(0, 0, lossCanvas.width, lossCanvas.height);
 
     // Visualize the initial (untrained) state
     updatePredictionCurve();
-}
-
-async function updateResults(): Promise<void> {
-    const resultsElement = document.getElementById('results')!;
-    const paramsElement = document.getElementById('params')!;
-    const predictionsElement = document.getElementById('predictions')!;
-
-    // Make predictions for the table
-    const testX = tf.tensor2d([0, 1, 2, 3, 4], [5, 1]);
-    const predictions = model.predict(testX) as Tensor;
-    const predArray = await predictions.array() as number[][];
-
-    // Display results
-    resultsElement.style.display = 'block';
-    paramsElement.innerHTML = `The model is a 2x2 ReLU network with a linear output.`;
-
-    let predText = '<strong>Sample predictions:</strong><br>';
-    for (let i = 0; i < 5; i++) {
-        predText += `x = ${i}, predicted y = ${predArray[i][0].toFixed(4)}, actual y = ${2 * i - 1}<br>`;
-    }
-    predictionsElement.innerHTML = predText;
-
-    // Clean up tensors
-    testX.dispose();
-    predictions.dispose();
 }
 
 // Visualize the network architecture
