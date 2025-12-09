@@ -109,8 +109,8 @@ async function trainingStep() {
 
     currentEpoch += EPOCHS_PER_BATCH;
 
-    // Get the loss
-    const loss = history.history.loss[0] as number;
+    // Get the loss from the last epoch in the batch
+    const loss = history.history.loss[history.history.loss.length - 1] as number;
     statusElement.innerHTML = `Training... Epoch ${currentEpoch} - Loss: ${loss.toFixed(4)}`;
 
     lossHistory.push({ epoch: currentEpoch, loss });
