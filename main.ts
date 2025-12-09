@@ -26,6 +26,8 @@ interface TrainingData {
 // Define the model based on a shared configuration
 const HIDDEN_LAYER_SIZES = [2, 2];
 
+const EPOCHS_PER_BATCH = 10;
+
 function createModel(): Sequential {
     const model = tf.sequential();
 
@@ -101,22 +103,19 @@ async function trainingStep() {
 
     // Train for one epoch
     const history = await model.fit(data.xs, data.ys, {
-        epochs: 1,
+        epochs: EPOCHS_PER_BATCH,
         verbose: 0
     });
 
-    currentEpoch++;
+    currentEpoch += EPOCHS_PER_BATCH;
 
-    // Update visualizations every 10 epochs
-    if (currentEpoch % 10 === 0) {
-        // Get the loss
-        const loss = history.history.loss[0] as number;
-        statusElement.innerHTML = `Training... Epoch ${currentEpoch} - Loss: ${loss.toFixed(4)}`;
-    
-        lossHistory.push({ epoch: currentEpoch, loss });
-        await updatePredictionCurve();
-        drawLossCurve();
-    }
+    // Get the loss
+    const loss = history.history.loss[0] as number;
+    statusElement.innerHTML = `Training... Epoch ${currentEpoch} - Loss: ${loss.toFixed(4)}`;
+
+    lossHistory.push({ epoch: currentEpoch, loss });
+    await updatePredictionCurve();
+    drawLossCurve();
     
     // Request the next frame
     requestAnimationFrame(trainingStep);
