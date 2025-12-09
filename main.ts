@@ -54,7 +54,7 @@ function createModel(): Sequential {
     // Compile the model with mean squared error loss
     model.compile({
         loss: 'meanSquaredError',
-        optimizer: tf.train.sgd(0.1) // Stochastic Gradient Descent with learning rate 0.1
+        optimizer: tf.train.sgd(0.001) // Stochastic Gradient Descent with a small learning rate
     });
 
     return model;
