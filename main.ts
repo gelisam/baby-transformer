@@ -290,7 +290,7 @@ function drawNetworkArchitecture(): void {
 
     const layerGap = 40;
     const nodeWidth = 20;
-    const nodeHeight = 10;
+    const nodeHeight = 20;
     const layers = [1, ...HIDDEN_LAYER_SIZES, 1]; // Input, Hidden Layers, Output
 
     // Function to draw a node (filled rectangle)
@@ -314,7 +314,7 @@ function drawNetworkArchitecture(): void {
     // Store neuron positions
     const neuronPositions: { x: number, y: number }[][] = [];
 
-    // Draw neurons and labels
+    // First, calculate all neuron positions
     for (let i = 0; i < layers.length; i++) {
         const layerY = startY + i * layerGap;
         const numNeurons = layers[i];
@@ -323,9 +323,25 @@ function drawNetworkArchitecture(): void {
         for (let j = 0; j < numNeurons; j++) {
             const neuronX = (canvasWidth / 2) - ((numNeurons - 1) * 60 / 2) + j * 60;
             layerPositions.push({ x: neuronX, y: layerY });
-            drawNode(neuronX, layerY);
         }
         neuronPositions.push(layerPositions);
+    }
+
+    // Then, draw connections
+    for (let i = 0; i < neuronPositions.length - 1; i++) {
+        for (const pos1 of neuronPositions[i]) {
+            for (const pos2 of neuronPositions[i + 1]) {
+                drawConnection(pos1.x, pos1.y, pos2.x, pos2.y);
+            }
+        }
+    }
+
+    // Finally, draw neurons and labels on top
+    for (let i = 0; i < neuronPositions.length; i++) {
+        const layerY = neuronPositions[i][0].y;
+        for (const pos of neuronPositions[i]) {
+            drawNode(pos.x, pos.y);
+        }
 
         // Draw layer labels on the right
         ctx.fillStyle = 'black';
@@ -336,15 +352,6 @@ function drawNetworkArchitecture(): void {
         else if (i === layers.length - 1) label = 'Linear Output';
         else label = `Hidden Layer ${i}`;
         ctx.fillText(label, canvasWidth - 120, layerY);
-    }
-
-    // Draw connections
-    for (let i = 0; i < neuronPositions.length - 1; i++) {
-        for (const pos1 of neuronPositions[i]) {
-            for (const pos2 of neuronPositions[i + 1]) {
-                drawConnection(pos1.x, pos1.y, pos2.x, pos2.y);
-            }
-        }
     }
 }
 
