@@ -321,16 +321,60 @@ function drawNetworkArchitecture(): void {
         layerGeometries.push({ x: layerX, y: layerY, width: layerWidth, height: layerHeight });
     }
 
-    // Draw connections ("XXXX")
-    ctx.fillStyle = 'gray';
-    ctx.font = '20px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    // Draw connections (subset of edges between layers)
+    ctx.strokeStyle = 'lightgray';
+    ctx.lineWidth = 1;
     for (let i = 0; i < layerGeometries.length - 1; i++) {
         const currentLayer = layerGeometries[i];
         const nextLayer = layerGeometries[i + 1];
-        const connectionY = currentLayer.y + currentLayer.height + (layerGapY - currentLayer.height) / 2;
-        ctx.fillText('XXXX', canvasWidth / 2, connectionY);
+        const currentNeurons = layers[i];
+        const nextNeurons = layers[i + 1];
+        
+        // Calculate positions of individual neurons in each layer
+        const currentNeuronPositions: { x: number, y: number }[] = [];
+        for (let n = 0; n < currentNeurons; n++) {
+            const x = currentLayer.x + (currentLayer.width / currentNeurons) * (n + 0.5);
+            const y = currentLayer.y + currentLayer.height;
+            currentNeuronPositions.push({ x, y });
+        }
+        
+        const nextNeuronPositions: { x: number, y: number }[] = [];
+        for (let n = 0; n < nextNeurons; n++) {
+            const x = nextLayer.x + (nextLayer.width / nextNeurons) * (n + 0.5);
+            const y = nextLayer.y;
+            nextNeuronPositions.push({ x, y });
+        }
+        
+        // Determine which side has fewer neurons
+        const smallerIsSource = currentNeurons <= nextNeurons;
+        const sourcePositions = smallerIsSource ? currentNeuronPositions : nextNeuronPositions;
+        const targetPositions = smallerIsSource ? nextNeuronPositions : currentNeuronPositions;
+        
+        // Draw 3 edges from each node on the smaller side to the 3 closest nodes on the other side
+        for (let s = 0; s < sourcePositions.length; s++) {
+            const sourcePos = sourcePositions[s];
+            
+            // Calculate distances to all target nodes and sort to find the 3 closest
+            const distances = targetPositions.map((targetPos, idx) => ({
+                idx,
+                dist: Math.hypot(targetPos.x - sourcePos.x, targetPos.y - sourcePos.y)
+            }));
+            distances.sort((a, b) => a.dist - b.dist);
+            
+            // Draw edges to the 3 closest target nodes
+            for (let e = 0; e < Math.min(3, targetPositions.length); e++) {
+                const targetPos = targetPositions[distances[e].idx];
+                ctx.beginPath();
+                if (smallerIsSource) {
+                    ctx.moveTo(sourcePos.x, sourcePos.y);
+                    ctx.lineTo(targetPos.x, targetPos.y);
+                } else {
+                    ctx.moveTo(targetPos.x, targetPos.y);
+                    ctx.lineTo(sourcePos.x, sourcePos.y);
+                }
+                ctx.stroke();
+            }
+        }
     }
 
     // Draw layers and their labels
