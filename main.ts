@@ -161,6 +161,11 @@ async function drawOutput(): Promise<void> {
         const sectionX = col * sectionWidth;
         const sectionY = row * sectionHeight;
 
+        // Draw thin black border around section
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sectionX, sectionY, sectionWidth, sectionHeight);
+
         ctx.font = '16px Arial';
         ctx.fillStyle = 'black';
         ctx.fillText(labels[i], sectionX + sectionWidth / 2 - 10, sectionY + 20);
