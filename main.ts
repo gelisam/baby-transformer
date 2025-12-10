@@ -365,13 +365,8 @@ function drawNetworkArchitecture(): void {
             for (let e = 0; e < Math.min(3, targetPositions.length); e++) {
                 const targetPos = targetPositions[distances[e].idx];
                 ctx.beginPath();
-                if (smallerIsSource) {
-                    ctx.moveTo(sourcePos.x, sourcePos.y);
-                    ctx.lineTo(targetPos.x, targetPos.y);
-                } else {
-                    ctx.moveTo(targetPos.x, targetPos.y);
-                    ctx.lineTo(sourcePos.x, sourcePos.y);
-                }
+                ctx.moveTo(sourcePos.x, sourcePos.y);
+                ctx.lineTo(targetPos.x, targetPos.y);
                 ctx.stroke();
             }
         }
