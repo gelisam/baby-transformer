@@ -19,14 +19,11 @@ const lossHistory: { epoch: number, loss: number }[] = [];
 interface TrainingData {
     xs: Tensor2D;
     ys: Tensor2D;
-    xsArray: number[];
-    ysArray: number[];
 }
 
-// Define the model based on a shared configuration
+const INPUT_SIZE = 6;
 const HIDDEN_LAYER_SIZES = [10];
 const OUTPUT_SIZE = 6;
-const INPUT_SIZE = 6;
 
 const EPOCHS_PER_BATCH = 10;
 
@@ -73,9 +70,7 @@ function generateData(): TrainingData {
 
     return {
         xs: xs as Tensor2D,
-        ys: ys as Tensor2D,
-        xsArray: [], // Not used in this version
-        ysArray: []  // Not used in this version
+        ys: ys as Tensor2D
     };
 }
 
