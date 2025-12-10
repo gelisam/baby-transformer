@@ -24,7 +24,9 @@ interface TrainingData {
 }
 
 // Define the model based on a shared configuration
-const HIDDEN_LAYER_SIZES = [2, 2];
+const HIDDEN_LAYER_SIZES = [10];
+const OUTPUT_SIZE = 6;
+const INPUT_SIZE = 6;
 
 const EPOCHS_PER_BATCH = 10;
 
@@ -34,7 +36,7 @@ function createModel(): Sequential {
     // Add the first hidden layer with inputShape
     model.add(tf.layers.dense({
         units: HIDDEN_LAYER_SIZES[0],
-        inputShape: [1],
+        inputShape: [INPUT_SIZE],
         activation: 'relu'
     }));
 
@@ -48,36 +50,33 @@ function createModel(): Sequential {
 
     // Add the linear output layer
     model.add(tf.layers.dense({
-        units: 1
+        units: OUTPUT_SIZE,
+        activation: 'softmax'
     }));
 
     // Compile the model with mean squared error loss
     model.compile({
-        loss: 'meanSquaredError',
-        optimizer: tf.train.sgd(0.001) // Stochastic Gradient Descent with a small learning rate
+        loss: 'categoricalCrossentropy',
+        optimizer: 'adam'
     });
 
     return model;
 }
 
-// Generate training data for y = 2x - 1
+// Generate training data for the classification task
 function generateData(): TrainingData {
-    const xs: number[] = [];
-    const ys: number[] = [];
-    
-    // Create 100 training examples
-    for (let i = 0; i < 100; i++) {
-        const x = Math.random() * 10 - 5; // Random values between -5 and 5
-        const y = 2 * x - 1; // True relationship
-        xs.push(x);
-        ys.push(y);
-    }
-    
-    // Convert to tensors
-    const xsTensor = tf.tensor2d(xs, [xs.length, 1]);
-    const ysTensor = tf.tensor2d(ys, [ys.length, 1]);
-    
-    return { xs: xsTensor, ys: ysTensor, xsArray: xs, ysArray: ys };
+    const inputs = [1, 2, 3, 4, 5, 6];
+    const outputs = [4, 5, 6, 1, 2, 3];
+
+    const xs = tf.oneHot(tf.tensor1d(inputs.map(i => i - 1), 'int32'), OUTPUT_SIZE);
+    const ys = tf.oneHot(tf.tensor1d(outputs.map(o => o - 1), 'int32'), OUTPUT_SIZE);
+
+    return {
+        xs: xs as Tensor2D,
+        ys: ys as Tensor2D,
+        xsArray: [], // Not used in this version
+        ysArray: []  // Not used in this version
+    };
 }
 
 // --- Training Control ---
@@ -114,7 +113,7 @@ async function trainingStep() {
     statusElement.innerHTML = `Training... Epoch ${currentEpoch} - Loss: ${loss.toFixed(4)}`;
 
     lossHistory.push({ epoch: currentEpoch, loss });
-    await updatePredictionCurve();
+    await drawOutput();
     drawLossCurve();
     
     // Request the next frame
@@ -122,18 +121,39 @@ async function trainingStep() {
 }
 
 // --- Visualization Updates ---
-async function updatePredictionCurve(): Promise<void> {
-    const xRange = tf.linspace(-5, 5, 100);
-    const yPredsTensor = model.predict(xRange.reshape([100, 1])) as Tensor;
-    
-    const xRangeArray = await xRange.array();
-    const yPredsArray = (await yPredsTensor.array() as number[][]).flat();
-    
-    visualize(data.xsArray, data.ysArray, xRangeArray, yPredsArray);
-    
-    // Clean up tensors
-    xRange.dispose();
-    yPredsTensor.dispose();
+async function drawOutput(): Promise<void> {
+    const canvas = document.getElementById('output-canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const allInputs = tf.oneHot(tf.tensor1d([0, 1, 2, 3, 4, 5], 'int32'), OUTPUT_SIZE);
+    const predictions = model.predict(allInputs) as Tensor;
+    const predictionsArray = await predictions.array() as number[][];
+
+    const labels = ["1", "2", "3", "A=", "B=", "C="];
+    const sectionWidth = canvas.width / labels.length;
+
+    for (let i = 0; i < labels.length; i++) {
+        const sectionX = i * sectionWidth;
+        ctx.font = '16px Arial';
+        ctx.fillStyle = 'black';
+        ctx.fillText(labels[i], sectionX + sectionWidth / 2 - 10, 20);
+
+        const probabilities = predictionsArray[i];
+        const barWidth = sectionWidth / (probabilities.length * 1.5);
+
+        for (let j = 0; j < probabilities.length; j++) {
+            const barHeight = probabilities[j] * (canvas.height - 60);
+            const barX = sectionX + (j * barWidth * 1.5) + (barWidth / 2);
+            const barY = canvas.height - barHeight - 30;
+
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+        }
+    }
+
+    allInputs.dispose();
+    predictions.dispose();
 }
 
 function drawLossCurve(): void {
@@ -174,78 +194,6 @@ function drawLossCurve(): void {
     ctx.stroke();
 }
 
-// Visualize the data and learned model
-function visualize(xs: number[], ys: number[], xPred: number[], yPred: number[]): void {
-    const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-    const ctx = canvas.getContext('2d')!;
-    
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Find data range
-    const xMin = -5;
-    const xMax = 5;
-    const yMin = -15;
-    const yMax = 15;
-    
-    // Helper function to convert data coordinates to canvas coordinates
-    function toCanvasX(x: number): number {
-        return ((x - xMin) / (xMax - xMin)) * (canvas.width - 60) + 30;
-    }
-    
-    function toCanvasY(y: number): number {
-        return canvas.height - 30 - ((y - yMin) / (yMax - yMin)) * (canvas.height - 60);
-    }
-    
-    // Draw axes
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(30, canvas.height - 30);
-    ctx.lineTo(canvas.width - 30, canvas.height - 30);
-    ctx.moveTo(30, 30);
-    ctx.lineTo(30, canvas.height - 30);
-    ctx.stroke();
-    
-    // Draw data points
-    ctx.fillStyle = 'blue';
-    for (let i = 0; i < xs.length; i++) {
-        ctx.beginPath();
-        ctx.arc(toCanvasX(xs[i]), toCanvasY(ys[i]), 3, 0, 2 * Math.PI);
-        ctx.fill();
-    }
-    
-    // Draw learned function
-    if (xPred.length > 0 && yPred.length > 0) {
-        ctx.strokeStyle = 'red';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(toCanvasX(xPred[0]), toCanvasY(yPred[0]));
-        for (let i = 1; i < xPred.length; i++) {
-            ctx.lineTo(toCanvasX(xPred[i]), toCanvasY(yPred[i]));
-        }
-        ctx.stroke();
-    }
-    
-    // Draw true line (green, dashed)
-    ctx.strokeStyle = 'green';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.moveTo(toCanvasX(xMin), toCanvasY(2 * xMin - 1));
-    ctx.lineTo(toCanvasX(xMax), toCanvasY(2 * xMax - 1));
-    ctx.stroke();
-    ctx.setLineDash([]);
-    
-    // Add legend
-    ctx.font = '14px Arial';
-    ctx.fillStyle = 'blue';
-    ctx.fillText('● Training data', canvas.width - 150, 20);
-    ctx.fillStyle = 'red';
-    ctx.fillText('— Learned model', canvas.width - 150, 40);
-    ctx.fillStyle = 'green';
-    ctx.fillText('- - True model (y=2x-1)', canvas.width - 200, 60);
-}
 
 // --- Backend Selection Logic ---
 
@@ -265,7 +213,7 @@ function showError(message: string): void {
 async function setBackend() {
     const backendSelector = document.getElementById('backend-selector') as HTMLSelectElement;
     const statusElement = document.getElementById('status')!;
-    const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+    const canvas = document.getElementById('output-canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
 
     const requestedBackend = backendSelector.value;
@@ -353,7 +301,7 @@ function initializeNewModel(): void {
     lossCtx.clearRect(0, 0, lossCanvas.width, lossCanvas.height);
 
     // Visualize the initial (untrained) state
-    updatePredictionCurve();
+    drawOutput();
 }
 
 // Visualize the network architecture
@@ -365,7 +313,7 @@ function drawNetworkArchitecture(): void {
     const layerGap = 40;
     const nodeWidth = 20;
     const nodeHeight = 20;
-    const layers = [1, ...HIDDEN_LAYER_SIZES, 1]; // Input, Hidden Layers, Output
+    const layers = [INPUT_SIZE, ...HIDDEN_LAYER_SIZES, OUTPUT_SIZE]; // Input, Hidden Layers, Output
 
     // Function to draw a node (filled rectangle)
     function drawNode(x: number, y: number): void {
