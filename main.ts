@@ -125,22 +125,32 @@ async function drawOutput(): Promise<void> {
     const predictions = model.predict(allInputs) as Tensor;
     const predictionsArray = await predictions.array() as number[][];
 
-    const labels = ["1", "2", "3", "A=", "B=", "C="];
-    const sectionWidth = canvas.width / labels.length;
+    const labels = ["1", "2", "3", "4", "5", "6"];
+    const numRows = 2;
+    const numCols = 3;
+    const sectionWidth = canvas.width / numCols;
+    const sectionHeight = canvas.height / numRows;
 
     for (let i = 0; i < labels.length; i++) {
-        const sectionX = i * sectionWidth;
+        const col = i % numCols;
+        // The first 3 items (0, 1, 2) go to the bottom row (row 1)
+        // The next 3 items (3, 4, 5) go to the top row (row 0)
+        const row = i < 3 ? 1 : 0;
+
+        const sectionX = col * sectionWidth;
+        const sectionY = row * sectionHeight;
+
         ctx.font = '16px Arial';
         ctx.fillStyle = 'black';
-        ctx.fillText(labels[i], sectionX + sectionWidth / 2 - 10, 20);
+        ctx.fillText(labels[i], sectionX + sectionWidth / 2 - 10, sectionY + 20);
 
         const probabilities = predictionsArray[i];
         const barWidth = sectionWidth / (probabilities.length * 1.5);
 
         for (let j = 0; j < probabilities.length; j++) {
-            const barHeight = probabilities[j] * (canvas.height - 60);
+            const barHeight = probabilities[j] * (sectionHeight - 60);
             const barX = sectionX + (j * barWidth * 1.5) + (barWidth / 2);
-            const barY = canvas.height - barHeight - 30;
+            const barY = sectionY + sectionHeight - barHeight - 30;
 
             ctx.fillStyle = 'blue';
             ctx.fillRect(barX, barY, barWidth, barHeight);
