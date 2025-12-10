@@ -146,7 +146,7 @@ async function drawOutput(): Promise<void> {
     const predictions = model.predict(allInputs) as Tensor;
     const predictionsArray = await predictions.array() as number[][];
 
-    const labels = ["1", "2", "3", "4", "5", "6"];
+    const labels = ["1 ", "2 ", "3 ", "A=", "B=", "C="];
     const numRows = 2;
     const numCols = 3;
     const sectionWidth = canvas.width / numCols;
