@@ -62,11 +62,32 @@ function createModel(): Sequential {
 
 // Generate training data for the classification task
 function generateData(): TrainingData {
-    const inputs = [1, 2, 3, 4, 5, 6];
-    const outputs = [4, 5, 6, 1, 2, 3];
+    const inputs1 = [1, 2, 3];
+    const outputs1 = [4, 5, 6];
+    const inputs2 = [4, 5, 6];
+    const outputs2 = [1, 2, 3];
 
-    const xs = tf.oneHot(tf.tensor1d(inputs.map(i => i - 1), 'int32'), OUTPUT_SIZE);
-    const ys = tf.oneHot(tf.tensor1d(outputs.map(o => o - 1), 'int32'), OUTPUT_SIZE);
+    const allInputs: number[] = [];
+    const allOutputs: number[] = [];
+
+    // First set of mappings
+    for (const input of inputs1) {
+        for (const output of outputs1) {
+            allInputs.push(input);
+            allOutputs.push(output);
+        }
+    }
+
+    // Second set of mappings
+    for (const input of inputs2) {
+        for (const output of outputs2) {
+            allInputs.push(input);
+            allOutputs.push(output);
+        }
+    }
+
+    const xs = tf.oneHot(tf.tensor1d(allInputs.map(i => i - 1), 'int32'), OUTPUT_SIZE);
+    const ys = tf.oneHot(tf.tensor1d(allOutputs.map(o => o - 1), 'int32'), OUTPUT_SIZE);
 
     return {
         xs: xs as Tensor2D,
