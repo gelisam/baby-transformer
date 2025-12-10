@@ -357,14 +357,26 @@ function drawNetworkArchitecture(): void {
         
         if (bothEvenOrOdd) {
             // Use X-shaped pairs between consecutive neurons from smaller to larger
-            const pairsFromSmaller = Math.floor(smallerCount / 2);
+            // Leftover neurons are at the edges of the larger layer
+            const leftoverCount = largerCount - smallerCount;
+            const leftoverLeft = Math.floor(leftoverCount / 2);
+            const leftoverRight = leftoverCount - leftoverLeft;
             
-            // Draw X patterns for pairs
+            // Connect leftmost smaller neuron to leftover left neurons
+            for (let l = 0; l < leftoverLeft; l++) {
+                ctx.beginPath();
+                ctx.moveTo(smallerPositions[0].x, smallerPositions[0].y);
+                ctx.lineTo(largerPositions[l].x, largerPositions[l].y);
+                ctx.stroke();
+            }
+            
+            // Draw X patterns for pairs in the middle
+            const pairsFromSmaller = Math.floor(smallerCount / 2);
             for (let p = 0; p < pairsFromSmaller; p++) {
                 const small1 = p * 2;
                 const small2 = p * 2 + 1;
-                const large1 = p * 2;
-                const large2 = p * 2 + 1;
+                const large1 = leftoverLeft + p * 2;
+                const large2 = leftoverLeft + p * 2 + 1;
                 
                 // X pattern: small1 -> large2, small2 -> large1
                 ctx.beginPath();
@@ -378,28 +390,12 @@ function drawNetworkArchitecture(): void {
                 ctx.stroke();
             }
             
-            // Handle leftover neurons on the larger side
-            const pairedLarge = pairsFromSmaller * 2;
-            if (pairedLarge < largerCount) {
-                const leftoverCount = largerCount - pairedLarge;
-                const leftoverLeft = Math.floor(leftoverCount / 2);
-                const leftoverRight = leftoverCount - leftoverLeft;
-                
-                // Connect leftmost smaller neuron to leftover left neurons
-                for (let l = 0; l < leftoverLeft; l++) {
-                    ctx.beginPath();
-                    ctx.moveTo(smallerPositions[0].x, smallerPositions[0].y);
-                    ctx.lineTo(largerPositions[l].x, largerPositions[l].y);
-                    ctx.stroke();
-                }
-                
-                // Connect rightmost smaller neuron to leftover right neurons
-                for (let r = 0; r < leftoverRight; r++) {
-                    ctx.beginPath();
-                    ctx.moveTo(smallerPositions[smallerCount - 1].x, smallerPositions[smallerCount - 1].y);
-                    ctx.lineTo(largerPositions[pairedLarge + r].x, largerPositions[pairedLarge + r].y);
-                    ctx.stroke();
-                }
+            // Connect rightmost smaller neuron to leftover right neurons
+            for (let r = 0; r < leftoverRight; r++) {
+                ctx.beginPath();
+                ctx.moveTo(smallerPositions[smallerCount - 1].x, smallerPositions[smallerCount - 1].y);
+                ctx.lineTo(largerPositions[largerCount - leftoverRight + r].x, largerPositions[largerCount - leftoverRight + r].y);
+                ctx.stroke();
             }
         } else {
             // One odd, one even: zig-zag in the middle
