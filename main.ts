@@ -15,6 +15,7 @@ let data: TrainingData;
 let isTraining = false;
 let currentEpoch = 0;
 const lossHistory: { epoch: number, loss: number }[] = [];
+let visualizationInputs: number[][] = [];  // Pre-generated test inputs for visualization
 
 interface TrainingData {
   xs: Tensor2D;
@@ -204,14 +205,9 @@ async function trainingStep() {
 }
 
 // --- Visualization Updates ---
-async function drawOutput(): Promise<void> {
-  const canvas = document.getElementById('output-canvas') as HTMLCanvasElement;
-  const ctx = canvas.getContext('2d')!;
 
-  // Token vocabulary: 0=A, 1=B, 2=C, 3==, 4=1, 5=2, 6=3
-  const tokenNames = ["A", "B", "C", "=", "1", "2", "3"];
-  
-  // Generate 6 random valid input sequences
+// Generate random test inputs for visualization (called once at initialization)
+function generateVisualizationInputs(): number[][] {
   const A = 0, B = 1, C = 2, EQ = 3, ONE = 4, TWO = 5, THREE = 6;
   const letters = [A, B, C];
   const numbers = [ONE, TWO, THREE];
@@ -254,6 +250,19 @@ async function drawOutput(): Promise<void> {
     // Take the first 5 tokens as input (fullSeq has at least 6 tokens)
     testInputs.push(fullSeq.slice(0, INPUT_SIZE));
   }
+  
+  return testInputs;
+}
+
+async function drawOutput(): Promise<void> {
+  const canvas = document.getElementById('output-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+
+  // Token vocabulary: 0=A, 1=B, 2=C, 3='=', 4=1, 5=2, 6=3
+  const tokenNames = ["A", "B", "C", "=", "1", "2", "3"];
+  
+  // Use pre-generated visualization inputs (generated once at initialization)
+  const testInputs = visualizationInputs;
 
   // Convert to tensor and get predictions
   const inputsTensor = tf.tensor2d(testInputs, [testInputs.length, INPUT_SIZE], 'int32');
@@ -421,6 +430,9 @@ function initializeNewModel(): void {
   // Generate new data
   // No need to clean up old data tensors here, it's handled on backend change
   data = generateData();
+
+  // Generate visualization inputs (only once, not on every frame)
+  visualizationInputs = generateVisualizationInputs();
 
   // Reset training state
   currentEpoch = 0;
