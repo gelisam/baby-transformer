@@ -152,6 +152,10 @@ async function drawOutput(): Promise<void> {
     const sectionWidth = canvas.width / numCols;
     const sectionHeight = canvas.height / numRows;
 
+    // Set style for section borders
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 1;
+
     for (let i = 0; i < labels.length; i++) {
         const col = i % numCols;
         // The first 3 items (0, 1, 2) go to the bottom row (row 1)
@@ -160,6 +164,9 @@ async function drawOutput(): Promise<void> {
 
         const sectionX = col * sectionWidth;
         const sectionY = row * sectionHeight;
+
+        // Draw thin black border around section
+        ctx.strokeRect(sectionX, sectionY, sectionWidth, sectionHeight);
 
         ctx.font = '16px Arial';
         ctx.fillStyle = 'black';
