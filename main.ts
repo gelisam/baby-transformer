@@ -22,7 +22,7 @@ interface TrainingData {
 }
 
 const INPUT_SIZE = 6;
-const HIDDEN_LAYER_SIZES = [4, 4, 2, 3];
+const HIDDEN_LAYER_SIZES = [4, 2, 3];
 const OUTPUT_SIZE = 6;
 
 const EPOCHS_PER_BATCH = 10;
@@ -131,7 +131,7 @@ async function trainingStep() {
   lossHistory.push({ epoch: currentEpoch, loss });
   await drawOutput();
   drawLossCurve();
-  
+
   // Request the next frame
   requestAnimationFrame(trainingStep);
 }
@@ -144,7 +144,7 @@ async function drawOutput(): Promise<void> {
   const allInputs = tf.oneHot(tf.tensor1d([0, 1, 2, 3, 4, 5], 'int32'), OUTPUT_SIZE);
   const predictions = model.predict(allInputs) as Tensor;
   const predictionsArray = await predictions.array() as number[][];
-  
+
   // Clear canvas only after predictions are ready to avoid flickering
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -344,7 +344,7 @@ function drawNetworkArchitecture(): void {
     const nextLayer = layerGeometries[i + 1];
     const currentNeurons = layers[i];
     const nextNeurons = layers[i + 1];
-    
+
     // Calculate positions of individual neurons in each layer
     const currentNeuronPositions: { x: number, y: number }[] = [];
     for (let n = 0; n < currentNeurons; n++) {
@@ -352,148 +352,80 @@ function drawNetworkArchitecture(): void {
       const y = currentLayer.y + currentLayer.height;
       currentNeuronPositions.push({ x, y });
     }
-    
+
     const nextNeuronPositions: { x: number, y: number }[] = [];
     for (let n = 0; n < nextNeurons; n++) {
       const x = nextLayer.x + (nextLayer.width / nextNeurons) * (n + 0.5);
       const y = nextLayer.y;
       nextNeuronPositions.push({ x, y });
     }
-    
+
     // Determine which layer is smaller
     const smallerCount = Math.min(currentNeurons, nextNeurons);
     const largerCount = Math.max(currentNeurons, nextNeurons);
     const isCurrentSmaller = currentNeurons <= nextNeurons;
     const smallerPositions = isCurrentSmaller ? currentNeuronPositions : nextNeuronPositions;
     const largerPositions = isCurrentSmaller ? nextNeuronPositions : currentNeuronPositions;
-    
+
+    // Leftover neurons are at the edges of the larger layer
+    const leftoverCount = Math.ceil((largerCount - smallerCount) / 2);
+    const leftoverLeft = leftoverCount;
+    const leftoverRight = leftoverCount;
+
+    // Connect leftmost smaller neuron to leftover left neurons
+    for (let l = 0; l < leftoverLeft; l++) {
+      ctx.beginPath();
+      ctx.moveTo(smallerPositions[0].x, smallerPositions[0].y);
+      ctx.lineTo(largerPositions[l].x, largerPositions[l].y);
+      ctx.stroke();
+    }
+
     // Check if both have same parity (both even or both odd)
     const bothEvenOrOdd = (currentNeurons % 2) === (nextNeurons % 2);
-    
+
     if (bothEvenOrOdd) {
-      // Use X-shaped pairs between consecutive neurons from smaller to larger
-      // Leftover neurons are at the edges of the larger layer
-      const leftoverCount = largerCount - smallerCount;
-      const leftoverLeft = Math.floor(leftoverCount / 2);
-      const leftoverRight = leftoverCount - leftoverLeft;
-      
-      // Connect leftmost smaller neuron to leftover left neurons
-      for (let l = 0; l < leftoverLeft; l++) {
-        ctx.beginPath();
-        ctx.moveTo(smallerPositions[0].x, smallerPositions[0].y);
-        ctx.lineTo(largerPositions[l].x, largerPositions[l].y);
-        ctx.stroke();
-      }
-      
       // Draw X patterns for pairs in the middle
-      const pairsFromSmaller = Math.floor(smallerCount / 2);
-      for (let p = 0; p < pairsFromSmaller; p++) {
-        const small1 = p * 2;
-        const small2 = p * 2 + 1;
-        const large1 = leftoverLeft + p * 2;
-        const large2 = leftoverLeft + p * 2 + 1;
-        
+      const pairCount = smallerCount - 1;
+      for (let p = 0; p < pairCount; p++) {
+        const small1 = p;
+        const small2 = p + 1;
+        const large1 = leftoverLeft + p;
+        const large2 = leftoverLeft + p + 1;
+
         // X pattern: small1 -> large2, small2 -> large1
         ctx.beginPath();
         ctx.moveTo(smallerPositions[small1].x, smallerPositions[small1].y);
         ctx.lineTo(largerPositions[large2].x, largerPositions[large2].y);
         ctx.stroke();
-        
+
         ctx.beginPath();
         ctx.moveTo(smallerPositions[small2].x, smallerPositions[small2].y);
         ctx.lineTo(largerPositions[large1].x, largerPositions[large1].y);
         ctx.stroke();
       }
-      
-      // Connect rightmost smaller neuron to leftover right neurons
-      for (let r = 0; r < leftoverRight; r++) {
+    } else {
+      // Draw a zig-zag in the middle
+      const zigCount = smallerCount - 1;
+      for (let z = 0; z < zigCount; z++) {
+        const small1 = z;
+        const small2 = z + 1;
+        const large = leftoverLeft + z;
+
+        // zig-zag pattern: small1 -> large -> small2
         ctx.beginPath();
-        ctx.moveTo(smallerPositions[smallerCount - 1].x, smallerPositions[smallerCount - 1].y);
-        ctx.lineTo(largerPositions[largerCount - leftoverRight + r].x, largerPositions[largerCount - leftoverRight + r].y);
+        ctx.moveTo(smallerPositions[small1].x, smallerPositions[small1].y);
+        ctx.lineTo(largerPositions[large].x, largerPositions[large].y);
+        ctx.lineTo(smallerPositions[small2].x, smallerPositions[small2].y);
         ctx.stroke();
       }
-    } else {
-      // One odd, one even: zig-zag in the middle
-      const smallerIsOdd = smallerCount % 2 === 1;
-      
-      if (smallerIsOdd) {
-        // Smaller is odd, larger is even
-        const middleIdx = Math.floor(smallerCount / 2);
-        
-        // Process each neuron in smaller layer
-        for (let s = 0; s < smallerCount; s++) {
-          if (s < middleIdx) {
-            // Left side: X pattern
-            const large1 = s * 2;
-            const large2 = s * 2 + 1;
-            
-            ctx.beginPath();
-            ctx.moveTo(smallerPositions[s].x, smallerPositions[s].y);
-            ctx.lineTo(largerPositions[large1].x, largerPositions[large1].y);
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(smallerPositions[s].x, smallerPositions[s].y);
-            ctx.lineTo(largerPositions[large2].x, largerPositions[large2].y);
-            ctx.stroke();
-          } else if (s === middleIdx) {
-            // Middle: zig-zag
-            const large1 = s * 2;
-            const large2 = s * 2 + 1;
-            
-            if (large1 < largerCount) {
-              ctx.beginPath();
-              ctx.moveTo(smallerPositions[s].x, smallerPositions[s].y);
-              ctx.lineTo(largerPositions[large1].x, largerPositions[large1].y);
-              ctx.stroke();
-            }
-            
-            if (large2 < largerCount) {
-              ctx.beginPath();
-              ctx.moveTo(smallerPositions[s].x, smallerPositions[s].y);
-              ctx.lineTo(largerPositions[large2].x, largerPositions[large2].y);
-              ctx.stroke();
-            }
-          } else {
-            // Right side: X pattern
-            const offset = middleIdx * 2 + 2;
-            const localIdx = s - middleIdx - 1;
-            const large1 = offset + localIdx * 2;
-            const large2 = offset + localIdx * 2 + 1;
-            
-            if (large1 < largerCount) {
-              ctx.beginPath();
-              ctx.moveTo(smallerPositions[s].x, smallerPositions[s].y);
-              ctx.lineTo(largerPositions[large1].x, largerPositions[large1].y);
-              ctx.stroke();
-            }
-            
-            if (large2 < largerCount) {
-              ctx.beginPath();
-              ctx.moveTo(smallerPositions[s].x, smallerPositions[s].y);
-              ctx.lineTo(largerPositions[large2].x, largerPositions[large2].y);
-              ctx.stroke();
-            }
-          }
-        }
-      } else {
-        // Smaller is even, larger is odd
-        const middleIdx = largerCount / 2;
-        
-        // Each smaller neuron connects to corresponding larger neurons
-        for (let s = 0; s < smallerCount; s++) {
-          const ratio = largerCount / smallerCount;
-          const start = Math.floor(s * ratio);
-          const end = Math.ceil((s + 1) * ratio);
-          
-          for (let l = start; l < end && l < largerCount; l++) {
-            ctx.beginPath();
-            ctx.moveTo(smallerPositions[s].x, smallerPositions[s].y);
-            ctx.lineTo(largerPositions[l].x, largerPositions[l].y);
-            ctx.stroke();
-          }
-        }
-      }
+    }
+
+    // Connect rightmost smaller neuron to leftover right neurons
+    for (let r = 0; r < leftoverRight; r++) {
+      ctx.beginPath();
+      ctx.moveTo(smallerPositions[smallerCount - 1].x, smallerPositions[smallerCount - 1].y);
+      ctx.lineTo(largerPositions[largerCount - leftoverRight + r].x, largerPositions[largerCount - leftoverRight + r].y);
+      ctx.stroke();
     }
   }
 
