@@ -140,11 +140,13 @@ async function trainingStep() {
 async function drawOutput(): Promise<void> {
     const canvas = document.getElementById('output-canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const allInputs = tf.oneHot(tf.tensor1d([0, 1, 2, 3, 4, 5], 'int32'), OUTPUT_SIZE);
     const predictions = model.predict(allInputs) as Tensor;
     const predictionsArray = await predictions.array() as number[][];
+    
+    // Clear canvas only after predictions are ready to avoid flickering
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const labels = ["1 ", "2 ", "3 ", "A=", "B=", "C="];
     const numRows = 2;
