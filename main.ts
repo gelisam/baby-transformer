@@ -149,8 +149,12 @@ async function drawOutput(): Promise<void> {
     const labels = ["1 ", "2 ", "3 ", "A=", "B=", "C="];
     const numRows = 2;
     const numCols = 3;
-    const sectionWidth = canvas.width / numCols;
-    const sectionHeight = canvas.height / numRows;
+    const spacing = 10;
+
+    const availableWidth = canvas.width - (spacing * (numCols + 1));
+    const sectionWidth = availableWidth / numCols;
+    const availableHeight = canvas.height - (spacing * (numRows + 1));
+    const sectionHeight = availableHeight / numRows;
 
     // Set style for section borders
     ctx.strokeStyle = 'black';
@@ -162,8 +166,8 @@ async function drawOutput(): Promise<void> {
         // The next 3 items (3, 4, 5) go to the top row (row 0)
         const row = i < 3 ? 1 : 0;
 
-        const sectionX = col * sectionWidth;
-        const sectionY = row * sectionHeight;
+        const sectionX = spacing + col * (sectionWidth + spacing);
+        const sectionY = spacing + row * (sectionHeight + spacing);
 
         // Draw thin black border around section
         ctx.strokeRect(sectionX, sectionY, sectionWidth, sectionHeight);
