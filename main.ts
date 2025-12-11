@@ -31,9 +31,10 @@ function createModel(): Sequential {
   const model = tf.sequential();
 
   // Add the first hidden layer with inputShape
+  // Input is one-hot encoded, so each token becomes OUTPUT_SIZE dimensions
   model.add(tf.layers.dense({
     units: HIDDEN_LAYER_SIZES[0],
-    inputShape: [INPUT_SIZE],
+    inputShape: [INPUT_SIZE * OUTPUT_SIZE],  // Flattened one-hot encoded input
     activation: 'relu'
   }));
 
@@ -51,7 +52,7 @@ function createModel(): Sequential {
     activation: 'softmax'
   }));
 
-  // Compile the model with mean squared error loss
+  // Compile the model with categorical cross-entropy loss
   model.compile({
     loss: 'categoricalCrossentropy',
     optimizer: 'adam'
@@ -61,7 +62,7 @@ function createModel(): Sequential {
 }
 
 // Generate training data for the classification task
-// Vocabulary: 0=A, 1=B, 2=C, 3==, 4=1, 5=2, 6=3
+// Vocabulary: 0=A, 1=B, 2=C, 3='=', 4=1, 5=2, 6=3
 function generateData(): TrainingData {
   const A = 0, B = 1, C = 2, EQ = 3, ONE = 4, TWO = 5, THREE = 6;
   
@@ -147,12 +148,16 @@ function generateData(): TrainingData {
   const xs = tf.tensor2d(xsData, [numExamples, INPUT_SIZE], 'int32');
   const xsOneHot = tf.oneHot(xs, OUTPUT_SIZE);
   
+  // Flatten the one-hot encoded input from [batch, INPUT_SIZE, OUTPUT_SIZE] to [batch, INPUT_SIZE * OUTPUT_SIZE]
+  const xsFlattened = xsOneHot.reshape([numExamples, INPUT_SIZE * OUTPUT_SIZE]);
+  
   const ys = tf.oneHot(tf.tensor1d(allOutputs, 'int32'), OUTPUT_SIZE);
 
   xs.dispose();
+  xsOneHot.dispose();
 
   return {
-    xs: xsOneHot as Tensor2D,
+    xs: xsFlattened as Tensor2D,
     ys: ys as Tensor2D
   };
 }
@@ -231,7 +236,7 @@ async function drawOutput(): Promise<void> {
     mapping.set(B, shuffledNumbers[1]);
     mapping.set(C, shuffledNumbers[2]);
     
-    // Pick a random sequence of letters
+    // Pick a random sequence of letters (at least 2 pairs to ensure we have 5+ tokens)
     const seqLength = 2 + Math.floor(Math.random() * 2); // 2 or 3 pairs
     const letterSeq: number[] = [];
     for (let j = 0; j < seqLength; j++) {
@@ -246,14 +251,15 @@ async function drawOutput(): Promise<void> {
       fullSeq.push(mapping.get(letter)!);
     }
     
-    // Take the first 5 tokens as input
+    // Take the first 5 tokens as input (fullSeq has at least 6 tokens)
     testInputs.push(fullSeq.slice(0, INPUT_SIZE));
   }
 
   // Convert to tensor and get predictions
   const inputsTensor = tf.tensor2d(testInputs, [testInputs.length, INPUT_SIZE], 'int32');
   const inputsOneHot = tf.oneHot(inputsTensor, OUTPUT_SIZE);
-  const predictions = model.predict(inputsOneHot) as Tensor;
+  const inputsFlattened = inputsOneHot.reshape([testInputs.length, INPUT_SIZE * OUTPUT_SIZE]);
+  const predictions = model.predict(inputsFlattened) as Tensor;
   const predictionsArray = await predictions.array() as number[][];
 
   // Clear canvas only after predictions are ready to avoid flickering
@@ -311,6 +317,7 @@ async function drawOutput(): Promise<void> {
 
   inputsTensor.dispose();
   inputsOneHot.dispose();
+  inputsFlattened.dispose();
   predictions.dispose();
 }
 
