@@ -21,9 +21,9 @@ interface TrainingData {
     ys: Tensor2D;
 }
 
-const INPUT_SIZE = 6;
-const HIDDEN_LAYER_SIZES = [10];
-const OUTPUT_SIZE = 6;
+const INPUT_SIZE = 8;
+const HIDDEN_LAYER_SIZES = [5, 2, 4];
+const OUTPUT_SIZE = 7;
 
 const EPOCHS_PER_BATCH = 10;
 
@@ -62,32 +62,14 @@ function createModel(): Sequential {
 
 // Generate training data for the classification task
 function generateData(): TrainingData {
-    const inputs1 = [1, 2, 3];
-    const outputs1 = [4, 5, 6];
-    const inputs2 = [4, 5, 6];
-    const outputs2 = [1, 2, 3];
+    // Generate some synthetic data for the new architecture
+    const numSamples = 100;
+    const allInputs = tf.randomUniform([numSamples, INPUT_SIZE]);
+    const allOutputs = tf.randomUniform([numSamples, OUTPUT_SIZE]);
 
-    const allInputs: number[] = [];
-    const allOutputs: number[] = [];
-
-    // First set of mappings
-    for (const input of inputs1) {
-        for (const output of outputs1) {
-            allInputs.push(input);
-            allOutputs.push(output);
-        }
-    }
-
-    // Second set of mappings
-    for (const input of inputs2) {
-        for (const output of outputs2) {
-            allInputs.push(input);
-            allOutputs.push(output);
-        }
-    }
-
-    const xs = tf.oneHot(tf.tensor1d(allInputs.map(i => i - 1), 'int32'), OUTPUT_SIZE);
-    const ys = tf.oneHot(tf.tensor1d(allOutputs.map(o => o - 1), 'int32'), OUTPUT_SIZE);
+    // Ensure the data is in a one-hot format for classification
+    const xs = tf.oneHot(tf.argMax(allInputs, 1), INPUT_SIZE);
+    const ys = tf.oneHot(tf.argMax(allOutputs, 1), OUTPUT_SIZE);
 
     return {
         xs: xs as Tensor2D,
@@ -142,36 +124,34 @@ async function drawOutput(): Promise<void> {
     const ctx = canvas.getContext('2d')!;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const allInputs = tf.oneHot(tf.tensor1d([0, 1, 2, 3, 4, 5], 'int32'), OUTPUT_SIZE);
+    const allInputs = tf.oneHot(tf.tensor1d(Array.from(Array(INPUT_SIZE).keys()), 'int32'), INPUT_SIZE);
     const predictions = model.predict(allInputs) as Tensor;
     const predictionsArray = await predictions.array() as number[][];
 
-    const labels = ["1 ", "2 ", "3 ", "A=", "B=", "C="];
+    const labels = Array.from(Array(INPUT_SIZE).keys()).map(i => `Input ${i + 1}`);
     const numRows = 2;
-    const numCols = 3;
+    const numCols = Math.ceil(INPUT_SIZE / numRows);
     const sectionWidth = canvas.width / numCols;
     const sectionHeight = canvas.height / numRows;
 
-    for (let i = 0; i < labels.length; i++) {
+    for (let i = 0; i < INPUT_SIZE; i++) {
         const col = i % numCols;
-        // The first 3 items (0, 1, 2) go to the bottom row (row 1)
-        // The next 3 items (3, 4, 5) go to the top row (row 0)
-        const row = i < 3 ? 1 : 0;
+        const row = Math.floor(i / numCols);
 
         const sectionX = col * sectionWidth;
         const sectionY = row * sectionHeight;
 
-        ctx.font = '16px Arial';
+        ctx.font = '12px Arial';
         ctx.fillStyle = 'black';
-        ctx.fillText(labels[i], sectionX + sectionWidth / 2 - 10, sectionY + 20);
+        ctx.fillText(labels[i], sectionX + sectionWidth / 2 - 20, sectionY + 15);
 
         const probabilities = predictionsArray[i];
         const barWidth = sectionWidth / (probabilities.length * 1.5);
 
         for (let j = 0; j < probabilities.length; j++) {
-            const barHeight = probabilities[j] * (sectionHeight - 60);
+            const barHeight = probabilities[j] * (sectionHeight - 40);
             const barX = sectionX + (j * barWidth * 1.5) + (barWidth / 2);
-            const barY = sectionY + sectionHeight - barHeight - 30;
+            const barY = sectionY + sectionHeight - barHeight - 20;
 
             ctx.fillStyle = 'blue';
             ctx.fillRect(barX, barY, barWidth, barHeight);
@@ -321,16 +301,112 @@ function drawNetworkArchitecture(): void {
         layerGeometries.push({ x: layerX, y: layerY, width: layerWidth, height: layerHeight });
     }
 
-    // Draw connections ("XXXX")
-    ctx.fillStyle = 'gray';
-    ctx.font = '20px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    for (let i = 0; i < layerGeometries.length - 1; i++) {
-        const currentLayer = layerGeometries[i];
-        const nextLayer = layerGeometries[i + 1];
-        const connectionY = currentLayer.y + currentLayer.height + (layerGapY - currentLayer.height) / 2;
-        ctx.fillText('XXXX', canvasWidth / 2, connectionY);
+    // Draw connections
+    ctx.strokeStyle = 'lightgray';
+    ctx.lineWidth = 1;
+
+    for (let i = 0; i < layers.length - 1; i++) {
+        const currentLayerNeurons = layers[i];
+        const nextLayerNeurons = layers[i+1];
+        const currentGeom = layerGeometries[i];
+        const nextGeom = layerGeometries[i+1];
+
+        const currentNeuronsX = Array.from({length: currentLayerNeurons}, (_, j) => currentGeom.x + (j / (currentLayerNeurons - 1)) * currentGeom.width);
+        const nextNeuronsX = Array.from({length: nextLayerNeurons}, (_, j) => nextGeom.x + (j / (nextLayerNeurons - 1)) * nextGeom.width);
+
+        const startY = currentGeom.y + currentGeom.height;
+        const endY = nextGeom.y;
+
+        const smallerLayerSize = Math.min(currentLayerNeurons, nextLayerNeurons);
+        const largerLayerSize = Math.max(currentLayerNeurons, nextLayerNeurons);
+
+        const isCurrentLayerSmaller = currentLayerNeurons < nextLayerNeurons;
+
+        const smallerNeuronsX = isCurrentLayerSmaller ? currentNeuronsX : nextNeuronsX;
+        const largerNeuronsX = isCurrentLayerSmaller ? nextNeuronsX : currentNeuronsX;
+
+        const middleSectionSize = Math.floor(smallerLayerSize / 2) * 2; // Largest even number <= smallerLayerSize
+        const leftoverSize = largerLayerSize - middleSectionSize;
+        const sideSize = Math.floor(leftoverSize / 2);
+
+        // --- Draw middle connections ---
+        // Case 1: Layers have the same parity (even-even or odd-odd)
+        if ((currentLayerNeurons % 2 === 0 && nextLayerNeurons % 2 === 0) || (currentLayerNeurons % 2 !== 0 && nextLayerNeurons % 2 !== 0)) {
+            // Draw X-shaped connections for pairs of neurons.
+            for (let j = 0; j < middleSectionSize / 2; j++) {
+                const idx1 = j * 2;
+                const idx2 = j * 2 + 1;
+
+                const startX1 = isCurrentLayerSmaller ? smallerNeuronsX[idx1] : largerNeuronsX[sideSize + idx1];
+                const startX2 = isCurrentLayerSmaller ? smallerNeuronsX[idx2] : largerNeuronsX[sideSize + idx2];
+                const endX1 = isCurrentLayerSmaller ? largerNeuronsX[sideSize + idx1] : smallerNeuronsX[idx1];
+                const endX2 = isCurrentLayerSmaller ? largerNeuronsX[sideSize + idx2] : smallerNeuronsX[idx2];
+
+                // Draw the two lines that form the "X"
+                ctx.beginPath();
+                ctx.moveTo(startX1, startY);
+                ctx.lineTo(endX2, endY);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(startX2, startY);
+                ctx.lineTo(endX1, endY);
+                ctx.stroke();
+            }
+        } else {
+            // Case 2: Layers have different parity (even-odd or odd-even)
+            // Draw a fan-out connection pattern from the middle neurons.
+            for (let j = 0; j < middleSectionSize; j++) {
+                const startX = isCurrentLayerSmaller ? smallerNeuronsX[j] : largerNeuronsX[sideSize + j];
+                const endX = isCurrentLayerSmaller ? largerNeuronsX[sideSize + j] : smallerNeuronsX[j];
+
+                // Each neuron connects straight to its counterpart.
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+
+                // Each neuron also connects to the next neuron in the opposite layer to create the fan effect.
+                if (j < middleSectionSize - 1) {
+                    const nextEndX = isCurrentLayerSmaller ? largerNeuronsX[sideSize + j + 1] : smallerNeuronsX[j + 1];
+                    ctx.beginPath();
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(nextEndX, endY);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // --- Draw side connections ---
+        const firstSmallerX = smallerNeuronsX[0];
+        const lastSmallerX = smallerNeuronsX[smallerLayerSize - 1];
+
+        // Left side
+        for(let j=0; j<sideSize; ++j){
+            ctx.beginPath();
+            ctx.moveTo(isCurrentLayerSmaller ? firstSmallerX : largerNeuronsX[j], startY);
+            ctx.lineTo(isCurrentLayerSmaller ? largerNeuronsX[j] : firstSmallerX, endY);
+            ctx.stroke();
+        }
+
+        // Right side
+        for(let j=0; j<sideSize; ++j){
+            ctx.beginPath();
+            ctx.moveTo(isCurrentLayerSmaller ? lastSmallerX : largerNeuronsX[largerLayerSize - 1 - j], startY);
+            ctx.lineTo(isCurrentLayerSmaller ? largerNeuronsX[largerLayerSize - 1 - j] : lastSmallerX, endY);
+            ctx.stroke();
+        }
+
+        // Connect the middle leftover neuron if it exists
+        if(leftoverSize % 2 !== 0){
+             const middleX = largerNeuronsX[sideSize + middleSectionSize];
+             const smallerLayerIndex = middleSectionSize > 0 ? middleSectionSize -1 : 0;
+
+             ctx.beginPath();
+             ctx.moveTo(isCurrentLayerSmaller ? smallerNeuronsX[smallerLayerIndex] : middleX, startY);
+             ctx.lineTo(isCurrentLayerSmaller ? middleX : smallerNeuronsX[smallerLayerIndex], endY);
+             ctx.stroke();
+        }
     }
 
     // Draw layers and their labels
