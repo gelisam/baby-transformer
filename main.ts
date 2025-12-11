@@ -151,11 +151,12 @@ async function drawOutput(): Promise<void> {
     const labels = ["1 ", "2 ", "3 ", "A=", "B=", "C="];
     const numRows = 2;
     const numCols = 3;
-    const spacing = 10;
+    const sectionSpacing = 10;
+    const barSpacing = 3;
 
-    const availableWidth = canvas.width - (spacing * (numCols + 1));
+    const availableWidth = canvas.width - (sectionSpacing * (numCols + 1));
     const sectionWidth = availableWidth / numCols;
-    const availableHeight = canvas.height - (spacing * (numRows + 1));
+    const availableHeight = canvas.height - (sectionSpacing * (numRows + 1));
     const sectionHeight = availableHeight / numRows;
 
     // Set style for section borders
@@ -168,8 +169,8 @@ async function drawOutput(): Promise<void> {
         // The next 3 items (3, 4, 5) go to the top row (row 0)
         const row = i < 3 ? 1 : 0;
 
-        const sectionX = spacing + col * (sectionWidth + spacing);
-        const sectionY = spacing + row * (sectionHeight + spacing);
+        const sectionX = sectionSpacing + col * (sectionWidth + sectionSpacing);
+        const sectionY = sectionSpacing + row * (sectionHeight + sectionSpacing);
 
         // Draw thin black border around section
         ctx.strokeRect(sectionX, sectionY, sectionWidth, sectionHeight);
@@ -179,12 +180,13 @@ async function drawOutput(): Promise<void> {
         ctx.fillText(labels[i], sectionX + sectionWidth / 2 - 10, sectionY + 20);
 
         const probabilities = predictionsArray[i];
-        const barWidth = sectionWidth / (probabilities.length * 1.5);
+        const numBars = probabilities.length;
+        const barWidth = (sectionWidth - barSpacing * (numBars + 1)) / numBars;
 
         for (let j = 0; j < probabilities.length; j++) {
             const barHeight = probabilities[j] * (sectionHeight - 60);
-            const barX = sectionX + (j * barWidth * 1.5) + (barWidth / 2);
-            const barY = sectionY + sectionHeight - barHeight - 30;
+            const barX = sectionX + barSpacing + j * (barWidth + barSpacing);
+            const barY = sectionY + sectionHeight - barHeight - barSpacing;
 
             ctx.fillStyle = 'blue';
             ctx.fillRect(barX, barY, barWidth, barHeight);
