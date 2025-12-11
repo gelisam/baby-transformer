@@ -15,6 +15,8 @@ let data: TrainingData;
 let isTraining = false;
 let currentEpoch = 0;
 const lossHistory: { epoch: number, loss: number }[] = [];
+let lastFrameTime = performance.now();
+let dynamicBatchSize = 10; // Start with a reasonable batch size
 
 interface TrainingData {
     xs: Tensor2D;
@@ -24,8 +26,6 @@ interface TrainingData {
 const INPUT_SIZE = 6;
 const HIDDEN_LAYER_SIZES = [4, 4, 2, 3];
 const OUTPUT_SIZE = 6;
-
-const EPOCHS_PER_BATCH = 10;
 
 function createModel(): Sequential {
     const model = tf.sequential();
@@ -114,19 +114,38 @@ async function trainingStep() {
         return;
     }
 
+    // --- FPS and Batch Size Calculation ---
+    const now = performance.now();
+    const delta = now - lastFrameTime;
+    lastFrameTime = now;
+    const fps = 1000 / delta;
+
+    // Adjust batch size to aim for 30 FPS
+    const targetFps = 30;
+    if (fps > targetFps + 2) { // Increase workload if we're too fast
+        dynamicBatchSize++;
+    } else if (fps < targetFps - 2) { // Decrease workload if we're too slow
+        dynamicBatchSize--;
+    }
+
+    // Ensure batch size is at least 1
+    if (dynamicBatchSize < 1) {
+        dynamicBatchSize = 1;
+    }
+
     const statusElement = document.getElementById('status')!;
 
-    // Train for one epoch
+    // Train for the dynamic number of epochs
     const history = await model.fit(data.xs, data.ys, {
-        epochs: EPOCHS_PER_BATCH,
+        epochs: dynamicBatchSize,
         verbose: 0
     });
 
-    currentEpoch += EPOCHS_PER_BATCH;
+    currentEpoch += dynamicBatchSize;
 
     // Get the loss from the last epoch in the batch
     const loss = history.history.loss[history.history.loss.length - 1] as number;
-    statusElement.innerHTML = `Training... Epoch ${currentEpoch} - Loss: ${loss.toFixed(4)}`;
+    statusElement.innerHTML = `Training... FPS: ${fps.toFixed(1)} | Batch: ${dynamicBatchSize} | Epoch: ${currentEpoch} | Loss: ${loss.toFixed(4)}`;
 
     lossHistory.push({ epoch: currentEpoch, loss });
     await drawOutput();
