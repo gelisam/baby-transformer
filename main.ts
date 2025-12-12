@@ -38,7 +38,7 @@ const TOKENS = [...NUMBERS, ...LETTERS];
 
 const EXAMPLES_GIVEN = 2;
 const INPUT_SIZE = EXAMPLES_GIVEN * 2 + 1;  // <letter>=<number> <letter>=<number> <letter>=____
-const HIDDEN_LAYER_SIZES = [4, 2, 3];
+let HIDDEN_LAYER_SIZES = [4, 2, 3];
 const OUTPUT_SIZE = TOKENS.length;
 
 const EPOCHS_PER_BATCH = 1;
@@ -222,6 +222,76 @@ async function trainingStep() {
 
   // Request the next frame
   requestAnimationFrame(trainingStep);
+}
+
+async function setPerfectWeights(): Promise<void> {
+  if (isTraining) {
+    trainModel();
+  }
+
+  HIDDEN_LAYER_SIZES = [14, 15, 9];
+  initializeNewModel();
+
+  const M = 100;
+  const eps = 0.01;
+
+  const k1b = tf.buffer([INPUT_SIZE, 14]);
+  const b1b = tf.buffer([14]);
+  const numbers = NUMBERS.map(tokenStringToTokenNumber);
+  k1b.set(1, 0, 0); k1b.set(-1, 4, 0); k1b.set(-1, 0, 1); k1b.set(1, 4, 1);
+  k1b.set(1, 2, 2); k1b.set(-1, 4, 2); k1b.set(-1, 2, 3); k1b.set(1, 4, 3);
+  k1b.set(1, 0, 4); k1b.set(-1, 2, 4); k1b.set(-1, 0, 5); k1b.set(1, 2, 5);
+  k1b.set(1, 1, 6); k1b.set(-1, 3, 6); k1b.set(-1, 1, 7); k1b.set(1, 3, 7);
+  k1b.set(1, 1, 8); b1b.set(-numbers[0], 8); k1b.set(-1, 1, 9); b1b.set(numbers[0], 9);
+  k1b.set(1, 1, 10); b1b.set(-numbers[1], 10); k1b.set(-1, 1, 11); b1b.set(numbers[1], 11);
+  k1b.set(1, 3, 12); b1b.set(-numbers[2], 12); k1b.set(-1, 3, 13); b1b.set(numbers[2], 13);
+  const kernel1 = k1b.toTensor();
+  const bias1 = b1b.toTensor();
+
+  const k2b = tf.buffer([14, 15]);
+  const b2b = tf.buffer([15]);
+  for (let i = 0; i < 7; ++i) { k2b.set(M, 2 * i, i); k2b.set(M, 2 * i + 1, i); b2b.set(-M * eps, i); }
+  for (let i = 0; i < 3; ++i) { k2b.set(-M, i, i + 7); b2b.set(M, i + 7); }
+  k2b.set(M, 10, 10); b2b.set(M, 10);
+  k2b.set(M, 3, 11); b2b.set(0, 11);
+  k2b.set(M, 11, 12); b2b.set(M * eps, 12);
+  k2b.set(-M, 11, 13); b2b.set(M, 13);
+  k2b.set(M, 6, 14); b2b.set(0, 14);
+  const kernel2 = k2b.toTensor();
+  const bias2 = b2b.toTensor();
+
+  const k3b = tf.buffer([15, 9]);
+  const b3b = tf.buffer([9]);
+  const h2True = (idx: number) => k3b.set(M, idx, h3Idx);
+  for (var h3Idx = 0; h3Idx < 9; ++h3Idx) {
+      const case_i = Math.floor(h3Idx / 3);
+      const case_j = h3Idx % 3;
+      if (case_i == 0) h2True(0);
+      if (case_i == 1) h2True(1);
+      if (case_i == 2) { h2True(7); h2True(8); }
+      if (case_j == 0) h2True(4);
+      if (case_j == 1) h2True(5);
+      if (case_j == 2) h2True(6);
+      b3b.set(-((k3b.toTensor().arraySync() as number[][])[h3Idx].filter((x: number) => x > 0).length - 0.5) * M, h3Idx);
+  }
+  const kernel3 = k3b.toTensor();
+  const bias3 = b3b.toTensor();
+
+  const k4b = tf.buffer([9, OUTPUT_SIZE]);
+  const b4b = tf.buffer([OUTPUT_SIZE]);
+  for (let i = 0; i < 3; ++i) k4b.set(M, i, i);
+  for (let i = 0; i < 3; ++i) k4b.set(M, 3 + i, i == 1 ? 2 : (i == 2 ? 1 : i));
+  for (let i = 0; i < 3; ++i) k4b.set(M, 6 + i, i == 0 ? 2 : (i == 2 ? 0 : i));
+  const kernel4 = k4b.toTensor();
+  const bias4 = b4b.toTensor();
+
+  const perfectWeights = [kernel1, bias1, kernel2, bias2, kernel3, bias3, kernel4, bias4];
+  model.setWeights(perfectWeights);
+
+  await drawViz(vizData);
+  const statusElement = document.getElementById('status')!;
+  statusElement.innerHTML = 'Perfect weights have been set. The model will now predict with 100% accuracy.';
+  perfectWeights.forEach(tensor => tensor.dispose());
 }
 
 // --- Visualization Updates ---
@@ -428,6 +498,9 @@ function initializeNewModel(): void {
 
   // Visualize the initial (untrained) state
   drawViz(vizData);
+
+  // Redraw the architecture in case it changed
+  drawNetworkArchitecture();
 }
 
 // Visualize the network architecture
