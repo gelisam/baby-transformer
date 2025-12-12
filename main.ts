@@ -11,22 +11,63 @@ type Tensor = import('@tensorflow/tfjs').Tensor;
 
 // --- Global State ---
 let model: Sequential;
-let data: TrainingData;
 let isTraining = false;
 let currentEpoch = 0;
-const lossHistory: { epoch: number, loss: number }[] = [];
-let visualizationInputs: number[][] = [];  // Pre-generated test inputs for visualization
+let lossHistory: { epoch: number, loss: number }[] = [];
 
 interface TrainingData {
-  xs: Tensor2D;
-  ys: Tensor2D;
+  inputArray: number[][];
+  outputArray: number[];
+  inputTensor: Tensor2D;
+  outputTensor: Tensor2D;
 }
+let data: TrainingData;
 
-const INPUT_SIZE = 5;
+const VIZ_ROWS = 2;
+const VIZ_COLUMNS = 3;
+const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
+let vizData: TrainingData;
+
+
+const SHORT_NUMBERS = ["1", "2", "3"];
+const SHORT_LETTERS = ["A", "B", "C"];
+const SHORT_TOKENS = [...SHORT_NUMBERS, ...SHORT_LETTERS];
+const NUMBERS = SHORT_NUMBERS.map(n => n + " ");
+const LETTERS = SHORT_LETTERS.map(l => l + "=");
+const TOKENS = [...NUMBERS, ...LETTERS];
+
+const EXAMPLES_GIVEN = 2;
+const INPUT_SIZE = EXAMPLES_GIVEN * 2 + 1;  // <letter>=<number> <letter>=<number> <letter>=____
 const HIDDEN_LAYER_SIZES = [4, 2, 3];
-const OUTPUT_SIZE = 7;  // Vocabulary: A, B, C, =, 1, 2, 3
+const OUTPUT_SIZE = TOKENS.length;
 
-const EPOCHS_PER_BATCH = 10;
+const EPOCHS_PER_BATCH = 1;
+
+const TOKEN_STRING_TO_INDEX: { [key: string]: number } = {};
+for (let i = 0; i < TOKENS.length; i++) {
+  TOKEN_STRING_TO_INDEX[TOKENS[i]] = i;
+}
+function indexToTokenNumber(index: number): number {
+  return index + 1;
+}
+function indexToShortTokenString(index: number): string {
+  return SHORT_TOKENS[index];
+}
+function indexToTokenString(index: number): string {
+  return TOKENS[index];
+}
+function tokenNumberToIndex(tokenNum: number): number {
+  return tokenNum - 1;
+}
+function tokenStringToIndex(token: string): number {
+  return TOKEN_STRING_TO_INDEX[token];
+}
+function tokenStringToTokenNumber(token: string): number {
+  return TOKEN_STRING_TO_INDEX[token] + 1;
+}
+function tokenNumberToTokenString(tokenNum: number): string {
+  return TOKENS[tokenNum - 1];
+}
 
 function createModel(): Sequential {
   const model = tf.sequential();
@@ -35,7 +76,7 @@ function createModel(): Sequential {
   // Input is one-hot encoded, so each token becomes OUTPUT_SIZE dimensions
   model.add(tf.layers.dense({
     units: HIDDEN_LAYER_SIZES[0],
-    inputShape: [INPUT_SIZE * OUTPUT_SIZE],  // Flattened one-hot encoded input
+    inputShape: [INPUT_SIZE],
     activation: 'relu'
   }));
 
@@ -65,19 +106,17 @@ function createModel(): Sequential {
 // Generate training data for the classification task
 // Vocabulary: 0=A, 1=B, 2=C, 3='=', 4=1, 5=2, 6=3
 function generateData(): TrainingData {
-  const A = 0, B = 1, C = 2, EQ = 3, ONE = 4, TWO = 5, THREE = 6;
-  
-  const allInputs: number[][] = [];
-  const allOutputs: number[] = [];
+  const inputArray: number[][] = [];
+  const outputArray: number[] = [];
 
   // Generate all valid sequences of the form: letter=number letter=number ...
   // where the same letter always maps to the same number within a sequence
-  
+
   // We'll generate examples with different mappings
   // Each mapping is a function from {A,B,C} to {1,2,3}
-  const letters = [A, B, C];
-  const numbers = [ONE, TWO, THREE];
-  
+  const letters: number[] = LETTERS.map(tokenStringToTokenNumber);
+  const numbers: number[] = NUMBERS.map(tokenStringToTokenNumber);
+
   // Generate all possible mappings (permutations)
   function generatePermutations(arr: number[]): number[][] {
     if (arr.length <= 1) return [arr];
@@ -91,75 +130,56 @@ function generateData(): TrainingData {
     }
     return result;
   }
-  
+
   const numberPerms = generatePermutations(numbers);
-  
+
   // For each permutation (mapping), generate various sequences
-  for (const numPerm of numberPerms) {
+  for (const perm of numberPerms) {
     const mapping = new Map<number, number>();
-    mapping.set(A, numPerm[0]);
-    mapping.set(B, numPerm[1]);
-    mapping.set(C, numPerm[2]);
-    
+    for (let i = 0; i < letters.length; i++) {
+      mapping.set(letters[i], perm[i]);
+    }
+
     // Generate sequences using this mapping
     // We need sequences of 5 tokens (input) + 1 token (output)
-    // Pattern: L1 = N1 L2 = N2 ... where we predict the next token
-    
-    // Generate all possible sequences of up to 3 pairs
-    for (let numPairs = 1; numPairs <= 3; numPairs++) {
-      // Generate all sequences of `numPairs` letter choices
-      function generateSequences(length: number, choices: number[]): number[][] {
-        if (length === 0) return [[]];
-        const result: number[][] = [];
-        const subSeqs = generateSequences(length - 1, choices);
-        for (const choice of choices) {
-          for (const subSeq of subSeqs) {
-            result.push([choice, ...subSeq]);
-          }
-        }
-        return result;
-      }
-      
-      const letterSequences = generateSequences(numPairs, letters);
-      
-      for (const letterSeq of letterSequences) {
-        // Build the full token sequence
-        const fullSeq: number[] = [];
-        for (const letter of letterSeq) {
-          fullSeq.push(letter);
-          fullSeq.push(EQ);
-          fullSeq.push(mapping.get(letter)!);
-        }
-        
-        // Create training examples by sliding a window
-        // Input: 5 tokens, Output: 6th token
-        for (let i = 0; i + INPUT_SIZE < fullSeq.length; i++) {
-          const input = fullSeq.slice(i, i + INPUT_SIZE);
-          const output = fullSeq[i + INPUT_SIZE];
-          allInputs.push(input);
-          allOutputs.push(output);
+    // input: <letter>=<number>  <letter>=<number> <letter>=
+    // output:                                              <number>
+
+    // Generate n <letter>=<number> pairs from the mapping
+    function generateSequences(length: number): number[][] {
+      if (length === 0) return [[]];
+      const result: number[][] = [];
+      const subSeqs = generateSequences(length - 1);
+      for (const letter of letters) {
+        const n = mapping.get(letter)!;
+        for (const subSeq of subSeqs) {
+          result.push([letter, n, ...subSeq]);
         }
       }
+      return result;
+    }
+
+    const numPairs = 3;
+    const sequences = generateSequences(numPairs);
+
+    for (const sequence of sequences) {
+      const input = sequence.slice(0, INPUT_SIZE);
+      const output = sequence[INPUT_SIZE];
+      inputArray.push(input);
+      outputArray.push(output);
     }
   }
 
   // Convert to tensors
-  const xsData = allInputs.flat();
-  const numExamples = allInputs.length;
-  const xs = tf.tensor2d(xsData, [numExamples, INPUT_SIZE], 'int32');
-  const xsOneHot = tf.oneHot(xs, OUTPUT_SIZE);
-  
-  // Flatten the one-hot encoded input from [batch, INPUT_SIZE, OUTPUT_SIZE] to [batch, INPUT_SIZE * OUTPUT_SIZE]
-  const xsFlattened = xsOneHot.reshape([numExamples, INPUT_SIZE * OUTPUT_SIZE]);
-  
-  const ys = tf.oneHot(tf.tensor1d(allOutputs, 'int32'), OUTPUT_SIZE);
-
-  xs.dispose();
-  xsOneHot.dispose();
+  const numExamples = inputArray.length;
+  const inputTensor = tf.tensor2d(inputArray, [numExamples, INPUT_SIZE]);
+  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
   return {
-    xs: xsFlattened as Tensor2D,
-    ys: ys as Tensor2D
+    inputArray,
+    outputArray,
+    inputTensor,
+    outputTensor
   };
 }
 
@@ -185,7 +205,7 @@ async function trainingStep() {
   const statusElement = document.getElementById('status')!;
 
   // Train for one epoch
-  const history = await model.fit(data.xs, data.ys, {
+  const history = await model.fit(data.inputTensor, data.outputTensor, {
     epochs: EPOCHS_PER_BATCH,
     verbose: 0
   });
@@ -197,7 +217,7 @@ async function trainingStep() {
   statusElement.innerHTML = `Training... Epoch ${currentEpoch} - Loss: ${loss.toFixed(4)}`;
 
   lossHistory.push({ epoch: currentEpoch, loss });
-  await drawOutput();
+  await drawViz(vizData);
   drawLossCurve();
 
   // Request the next frame
@@ -206,91 +226,55 @@ async function trainingStep() {
 
 // --- Visualization Updates ---
 
-// Generate random test inputs for visualization (called once at initialization)
-function generateVisualizationInputs(): number[][] {
-  const A = 0, B = 1, C = 2, EQ = 3, ONE = 4, TWO = 5, THREE = 6;
-  const letters = [A, B, C];
-  const numbers = [ONE, TWO, THREE];
-  
-  const testInputs: number[][] = [];
-  
-  // Helper to shuffle array
-  function shuffle<T>(array: T[]): T[] {
-    const arr = [...array];
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
+// Pick random test inputs for visualization (called once at initialization)
+function pickRandomInputs(data: TrainingData): TrainingData {
+  let inputArray: number[][] = [];
+  let outputArray: number[] = [];
+  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
+    const randomIndex = Math.floor(Math.random() * data.inputArray.length);
+    inputArray.push(data.inputArray[randomIndex]);
+    outputArray.push(data.outputArray[randomIndex]);
   }
-  
-  // Generate 6 random examples with different mappings
-  for (let i = 0; i < 6; i++) {
-    const mapping = new Map<number, number>();
-    const shuffledNumbers = shuffle(numbers);
-    mapping.set(A, shuffledNumbers[0]);
-    mapping.set(B, shuffledNumbers[1]);
-    mapping.set(C, shuffledNumbers[2]);
-    
-    // Pick a random sequence of letters (at least 2 pairs to ensure we have 5+ tokens)
-    const seqLength = 2 + Math.floor(Math.random() * 2); // 2 or 3 pairs
-    const letterSeq: number[] = [];
-    for (let j = 0; j < seqLength; j++) {
-      letterSeq.push(letters[Math.floor(Math.random() * letters.length)]);
-    }
-    
-    // Build the full sequence
-    const fullSeq: number[] = [];
-    for (const letter of letterSeq) {
-      fullSeq.push(letter);
-      fullSeq.push(EQ);
-      fullSeq.push(mapping.get(letter)!);
-    }
-    
-    // Take the first 5 tokens as input (fullSeq has at least 6 tokens)
-    testInputs.push(fullSeq.slice(0, INPUT_SIZE));
-  }
-  
-  return testInputs;
+  const inputTensor = tf.tensor2d(inputArray, [VIZ_EXAMPLES_COUNT, INPUT_SIZE]);
+  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
+  return {
+    inputArray,
+    outputArray,
+    inputTensor,
+    outputTensor
+  };
 }
 
-async function drawOutput(): Promise<void> {
+async function drawViz(vizData: TrainingData): Promise<void> {
   const canvas = document.getElementById('output-canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
 
-  // Token vocabulary: 0=A, 1=B, 2=C, 3='=', 4=1, 5=2, 6=3
-  const tokenNames = ["A", "B", "C", "=", "1", "2", "3"];
-  
-  // Use pre-generated visualization inputs (generated once at initialization)
-  const testInputs = visualizationInputs;
+  const inputArray = vizData.inputArray;
+  const outputArray = vizData.outputArray;
+  const inputTensor = vizData.inputTensor;
 
-  // Convert to tensor and get predictions
-  const inputsTensor = tf.tensor2d(testInputs, [testInputs.length, INPUT_SIZE], 'int32');
-  const inputsOneHot = tf.oneHot(inputsTensor, OUTPUT_SIZE);
-  const inputsFlattened = inputsOneHot.reshape([testInputs.length, INPUT_SIZE * OUTPUT_SIZE]);
-  const predictions = model.predict(inputsFlattened) as Tensor;
-  const predictionsArray = await predictions.array() as number[][];
+  // Get predictions
+  const predictionTensor = model.predict(inputTensor) as Tensor2D;
+  const predictionArray = await predictionTensor.array() as number[][];
 
   // Clear canvas only after predictions are ready to avoid flickering
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const numRows = 2;
-  const numCols = 3;
   const sectionSpacing = 10;
   const barSpacing = 3;
 
-  const availableWidth = canvas.width - (sectionSpacing * (numCols + 1));
-  const sectionWidth = availableWidth / numCols;
-  const availableHeight = canvas.height - (sectionSpacing * (numRows + 1));
-  const sectionHeight = availableHeight / numRows;
+  const availableWidth = canvas.width - (sectionSpacing * (VIZ_COLUMNS + 1));
+  const sectionWidth = availableWidth / VIZ_COLUMNS;
+  const availableHeight = canvas.height - (sectionSpacing * (VIZ_ROWS + 1));
+  const sectionHeight = availableHeight / VIZ_ROWS;
 
   // Set style for section borders
   ctx.strokeStyle = 'black';
   ctx.lineWidth = 1;
 
-  for (let i = 0; i < testInputs.length; i++) {
-    const col = i % numCols;
-    const row = Math.floor(i / numCols);
+  for (let i = 0; i < inputArray.length; i++) {
+    const col = i % VIZ_COLUMNS;
+    const row = Math.floor(i / VIZ_COLUMNS);
 
     const sectionX = sectionSpacing + col * (sectionWidth + sectionSpacing);
     const sectionY = sectionSpacing + row * (sectionHeight + sectionSpacing);
@@ -299,12 +283,12 @@ async function drawOutput(): Promise<void> {
     ctx.strokeRect(sectionX, sectionY, sectionWidth, sectionHeight);
 
     // Display the input sequence
-    const inputTokens = testInputs[i].map(t => tokenNames[t]).join(' ');
+    const inputTokenStrings = inputArray[i].map(tokenNumberToTokenString).join('');
     ctx.font = '12px monospace';
     ctx.fillStyle = 'black';
-    ctx.fillText(inputTokens, sectionX + 5, sectionY + 15);
+    ctx.fillText(inputTokenStrings, sectionX + 5, sectionY + 15);
 
-    const probabilities = predictionsArray[i];
+    const probabilities = predictionArray[i];
     const numBars = probabilities.length;
     const barWidth = (sectionWidth - barSpacing * (numBars + 1)) / numBars;
 
@@ -316,18 +300,15 @@ async function drawOutput(): Promise<void> {
 
       ctx.fillStyle = 'blue';
       ctx.fillRect(barX, barY, barWidth, barHeight);
-      
+
       // Draw token label below bar
       ctx.font = '10px monospace';
       ctx.fillStyle = 'black';
-      ctx.fillText(tokenNames[j], barX, sectionY + sectionHeight - 5);
+      ctx.fillText(indexToShortTokenString(j), barX, sectionY + sectionHeight - 5);
     }
   }
 
-  inputsTensor.dispose();
-  inputsOneHot.dispose();
-  inputsFlattened.dispose();
-  predictions.dispose();
+  predictionTensor.dispose();
 }
 
 function drawLossCurve(): void {
@@ -406,8 +387,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       trainModel(); // Toggles isTraining to false
     }
     if (data) {
-      data.xs.dispose();
-      data.ys.dispose();
+      data.inputTensor.dispose();
+      data.outputTensor.dispose();
+    }
+    if (vizData) {
+      vizData.inputTensor.dispose();
+      vizData.outputTensor.dispose();
     }
 
     await setBackend();
@@ -432,7 +417,7 @@ function initializeNewModel(): void {
   data = generateData();
 
   // Generate visualization inputs (only once, not on every frame)
-  visualizationInputs = generateVisualizationInputs();
+  vizData = pickRandomInputs(data);
 
   // Reset training state
   currentEpoch = 0;
@@ -442,7 +427,7 @@ function initializeNewModel(): void {
   statusElement.innerHTML = 'Ready to train!';
 
   // Visualize the initial (untrained) state
-  drawOutput();
+  drawViz(vizData);
 }
 
 // Visualize the network architecture
@@ -590,6 +575,3 @@ function drawNetworkArchitecture(): void {
     ctx.fillText(labelText, canvasWidth - 20, geom.y + geom.height / 2);
   }
 }
-
-// Make trainModel available globally
-(window as any).trainModel = trainModel;
