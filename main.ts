@@ -116,66 +116,45 @@ function generateData(): TrainingData {
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
 
-  // Generate all valid sequences of the form: letter=number letter=number ...
-  // where the same letter always maps to the same number within a sequence
-
-  // We'll generate examples with different mappings
-  // Each mapping is a function from {A,B,C} to {1,2,3}
   const letters: number[] = LETTERS.map(tokenStringToTokenNumber);
   const numbers: number[] = NUMBERS.map(tokenStringToTokenNumber);
 
-  // Generate all possible mappings (permutations)
-  function generatePermutations(arr: number[]): number[][] {
-    if (arr.length <= 1) return [arr];
-    const result: number[][] = [];
-    for (let i = 0; i < arr.length; i++) {
-      const rest = [...arr.slice(0, i), ...arr.slice(i + 1)];
-      const perms = generatePermutations(rest);
-      for (const perm of perms) {
-        result.push([arr[i], ...perm]);
+  function generate(
+      k: number, // number of pairs to generate
+      sequence: number[],
+      mapping: Map<number, number>,
+      availableNumbers: number[]
+  ) {
+      if (k === 0) {
+          const input = sequence.slice(0, INPUT_SIZE);
+          const output = sequence[INPUT_SIZE];
+          inputArray.push(input);
+          outputArray.push(output);
+          return;
       }
-    }
-    return result;
-  }
 
-  const numberPerms = generatePermutations(numbers);
-
-  // For each permutation (mapping), generate various sequences
-  for (const perm of numberPerms) {
-    const mapping = new Map<number, number>();
-    for (let i = 0; i < letters.length; i++) {
-      mapping.set(letters[i], perm[i]);
-    }
-
-    // Generate sequences using this mapping
-    // We need sequences of 5 tokens (input) + 1 token (output)
-    // input: <letter>=<number>  <letter>=<number> <letter>=
-    // output:                                              <number>
-
-    // Generate n <letter>=<number> pairs from the mapping
-    function generateSequences(length: number): number[][] {
-      if (length === 0) return [[]];
-      const result: number[][] = [];
-      const subSeqs = generateSequences(length - 1);
       for (const letter of letters) {
-        const n = mapping.get(letter)!;
-        for (const subSeq of subSeqs) {
-          result.push([letter, n, ...subSeq]);
-        }
+          if (mapping.has(letter)) {
+              const number = mapping.get(letter)!;
+              generate(k - 1, [...sequence, letter, number], mapping, availableNumbers);
+          } else {
+              // If we are out of numbers, we can't assign a new letter.
+              if (availableNumbers.length === 0) {
+                  continue;
+              }
+              for (let i = 0; i < availableNumbers.length; i++) {
+                  const number = availableNumbers[i];
+                  const newMapping = new Map(mapping);
+                  newMapping.set(letter, number);
+                  const newAvailableNumbers = [...availableNumbers];
+                  newAvailableNumbers.splice(i, 1);
+                  generate(k - 1, [...sequence, letter, number], newMapping, newAvailableNumbers);
+              }
+          }
       }
-      return result;
-    }
-
-    const numPairs = 3;
-    const sequences = generateSequences(numPairs);
-
-    for (const sequence of sequences) {
-      const input = sequence.slice(0, INPUT_SIZE);
-      const output = sequence[INPUT_SIZE];
-      inputArray.push(input);
-      outputArray.push(output);
-    }
   }
+
+  generate(3, [], new Map(), numbers);
 
   // Convert to tensors
   const numExamples = inputArray.length;
