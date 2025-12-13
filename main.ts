@@ -121,6 +121,10 @@ function createModel(): Sequential {
   const weights = tf.tensor2d(weightMatrix);
   const bias = tf.tensor1d(biases);
   outputLayer.setWeights([weights, bias]);
+  
+  // Dispose tensors to prevent memory leaks
+  weights.dispose();
+  bias.dispose();
 
   return model;
 }
