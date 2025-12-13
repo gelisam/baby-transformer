@@ -237,12 +237,105 @@ function pickRandomInputs(data: TrainingData): TrainingData {
   }
   const inputTensor = tf.tensor2d(inputArray, [VIZ_EXAMPLES_COUNT, INPUT_SIZE]);
   const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
+  
+  // Populate the textboxes with these random inputs
+  updateTextboxesFromInputs(inputArray, outputArray);
+  
   return {
     inputArray,
     outputArray,
     inputTensor,
     outputTensor
   };
+}
+
+// Update textboxes with the current inputs
+function updateTextboxesFromInputs(inputArray: number[][], outputArray: number[]): void {
+  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
+    const inputElement = document.getElementById(`input-${i}`) as HTMLInputElement;
+    if (inputElement) {
+      const inputTokenStrings = inputArray[i].map(tokenNumberToTokenString).join('');
+      inputElement.value = inputTokenStrings;
+    }
+  }
+}
+
+// Parse input string into token numbers
+function parseInputString(inputStr: string): number[] | null {
+  const tokens: number[] = [];
+  let i = 0;
+  
+  while (i < inputStr.length) {
+    let matched = false;
+    
+    // Try to match each token
+    for (const token of TOKENS) {
+      if (inputStr.substring(i, i + token.length) === token) {
+        tokens.push(tokenStringToTokenNumber(token));
+        i += token.length;
+        matched = true;
+        break;
+      }
+    }
+    
+    if (!matched) {
+      return null; // Invalid input
+    }
+  }
+  
+  return tokens.length === INPUT_SIZE ? tokens : null;
+}
+
+// Update visualization data from textboxes
+function updateVizDataFromTextboxes(): void {
+  const inputArray: number[][] = [];
+  const outputArray: number[] = [];
+  
+  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
+    const inputElement = document.getElementById(`input-${i}`) as HTMLInputElement;
+    if (inputElement) {
+      const parsed = parseInputString(inputElement.value);
+      if (parsed) {
+        inputArray.push(parsed);
+        // Find the corresponding output from the original data
+        const matchingIndex = data.inputArray.findIndex(arr => 
+          arr.every((val, idx) => val === parsed[idx])
+        );
+        if (matchingIndex >= 0) {
+          outputArray.push(data.outputArray[matchingIndex]);
+        } else {
+          // If not found in training data, use a default output
+          outputArray.push(NUMBERS.map(tokenStringToTokenNumber)[0]);
+        }
+      } else {
+        // If invalid, keep the previous value or use a default
+        if (vizData && vizData.inputArray[i]) {
+          inputArray.push(vizData.inputArray[i]);
+          outputArray.push(vizData.outputArray[i]);
+        }
+      }
+    }
+  }
+  
+  // Dispose old tensors
+  if (vizData) {
+    vizData.inputTensor.dispose();
+    vizData.outputTensor.dispose();
+  }
+  
+  // Create new vizData
+  const inputTensor = tf.tensor2d(inputArray, [VIZ_EXAMPLES_COUNT, INPUT_SIZE]);
+  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
+  
+  vizData = {
+    inputArray,
+    outputArray,
+    inputTensor,
+    outputTensor
+  };
+  
+  // Redraw visualization
+  drawViz(vizData);
 }
 
 async function drawViz(vizData: TrainingData): Promise<void> {
@@ -398,6 +491,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     await setBackend();
     initializeNewModel(); // Initialize a new model for the new backend
   });
+
+  // Add event listeners to the input textboxes
+  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
+    const inputElement = document.getElementById(`input-${i}`) as HTMLInputElement;
+    if (inputElement) {
+      inputElement.addEventListener('input', () => {
+        updateVizDataFromTextboxes();
+      });
+    }
+  }
 
   // Initial setup
   drawNetworkArchitecture();
