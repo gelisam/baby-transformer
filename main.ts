@@ -258,14 +258,13 @@ async function drawViz(vizData: TrainingData): Promise<void> {
   const layerNames: string[] = [];
   
   // Process each layer
-  let currentInput = inputTensor;
   for (let layerIdx = 0; layerIdx < model.layers.length; layerIdx++) {
     const layer = model.layers[layerIdx];
     const layerModel = tf.model({
       inputs: model.input,
       outputs: layer.output as any
     });
-    const layerOutput = layerModel.predict(currentInput) as Tensor2D;
+    const layerOutput = layerModel.predict(inputTensor) as Tensor2D;
     const layerArray = await layerOutput.array() as number[][];
     layerOutputs.push(layerArray);
     
@@ -309,7 +308,7 @@ async function drawViz(vizData: TrainingData): Promise<void> {
     const numBars = activations.length;
     
     // Find max activation for scaling
-    const maxActivation = Math.max(...activations, 1.0); // At least 1.0 for scale
+    const maxActivation = Math.max(...activations);
     
     // Draw layer label
     ctx.font = '12px monospace';
@@ -325,23 +324,26 @@ async function drawViz(vizData: TrainingData): Promise<void> {
     ctx.fillStyle = '#f5f5f5';
     ctx.fillRect(sectionSpacing, currentY + 15, barAreaWidth, barAreaHeight);
     
-    // Draw graded 1 axis line (indicating scale of 1.0)
-    const oneLineY = currentY + 15 + barAreaHeight - (1.0 / maxActivation) * barAreaHeight;
-    ctx.strokeStyle = '#00aa00';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.moveTo(sectionSpacing, oneLineY);
-    ctx.lineTo(canvas.width - sectionSpacing, oneLineY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    
-    // Draw scale indicator
-    ctx.font = '10px monospace';
-    ctx.fillStyle = '#00aa00';
-    ctx.fillText('1.0', canvas.width - sectionSpacing - 25, oneLineY - 2);
+    // Draw reference line at 1.0 if maxActivation >= 1.0
+    if (maxActivation >= 1.0) {
+      const oneLineY = currentY + 15 + barAreaHeight - (1.0 / maxActivation) * barAreaHeight;
+      ctx.strokeStyle = '#00aa00';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(sectionSpacing, oneLineY);
+      ctx.lineTo(canvas.width - sectionSpacing, oneLineY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Draw scale indicator
+      ctx.font = '10px monospace';
+      ctx.fillStyle = '#00aa00';
+      ctx.fillText('1.0', canvas.width - sectionSpacing - 25, oneLineY - 2);
+    }
     
     // Draw max scale indicator
+    ctx.font = '10px monospace';
     ctx.fillStyle = '#666666';
     ctx.fillText(`max=${maxActivation.toFixed(2)}`, canvas.width - sectionSpacing - 65, currentY + 27);
     
