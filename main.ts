@@ -305,13 +305,17 @@ function updateVizDataFromTextboxes(): void {
           outputArray.push(data.outputArray[matchingIndex]);
         } else {
           // If not found in training data, use a default output
-          outputArray.push(NUMBERS.map(tokenStringToTokenNumber)[0]);
+          outputArray.push(tokenStringToTokenNumber(NUMBERS[0]));
         }
       } else {
         // If invalid, keep the previous value or use a default
         if (vizData && vizData.inputArray[i]) {
           inputArray.push(vizData.inputArray[i]);
           outputArray.push(vizData.outputArray[i]);
+        } else {
+          // Fallback: use the first valid input from training data
+          inputArray.push(data.inputArray[0]);
+          outputArray.push(data.outputArray[0]);
         }
       }
     }
