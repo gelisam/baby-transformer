@@ -11,6 +11,7 @@ type Tensor = import('@tensorflow/tfjs').Tensor;
 
 // --- Global State ---
 let model: Sequential;
+let layerModels: any[] = []; // Models for extracting intermediate layer outputs
 let isTraining = false;
 let currentEpoch = 0;
 let lossHistory: { epoch: number, loss: number }[] = [];
@@ -257,13 +258,9 @@ async function drawViz(vizData: TrainingData): Promise<void> {
   const layerOutputs: number[][][] = [];
   const layerNames: string[] = [];
   
-  // Process each layer
-  for (let layerIdx = 0; layerIdx < model.layers.length; layerIdx++) {
-    const layer = model.layers[layerIdx];
-    const layerModel = tf.model({
-      inputs: model.input,
-      outputs: layer.output as any
-    });
+  // Process each layer using pre-created layer models
+  for (let layerIdx = 0; layerIdx < layerModels.length; layerIdx++) {
+    const layerModel = layerModels[layerIdx];
     const layerOutput = layerModel.predict(inputTensor) as Tensor2D;
     const layerArray = await layerOutput.array() as number[][];
     layerOutputs.push(layerArray);
@@ -275,7 +272,6 @@ async function drawViz(vizData: TrainingData): Promise<void> {
     }
     
     layerOutput.dispose();
-    layerModel.dispose();
   }
 
   // Clear canvas only after predictions are ready to avoid flickering
@@ -472,7 +468,24 @@ function initializeNewModel(): void {
   if (model) {
     model.dispose();
   }
+  
+  // Dispose old layer models
+  for (const layerModel of layerModels) {
+    layerModel.dispose();
+  }
+  layerModels = [];
+  
   model = createModel();
+  
+  // Create intermediate models for each layer
+  for (let layerIdx = 0; layerIdx < model.layers.length; layerIdx++) {
+    const layer = model.layers[layerIdx];
+    const layerModel = tf.model({
+      inputs: model.input,
+      outputs: layer.output as any
+    });
+    layerModels.push(layerModel);
+  }
 
   // Generate new data
   // No need to clean up old data tensors here, it's handled on backend change
