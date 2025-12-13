@@ -38,7 +38,7 @@ const TOKENS = [...NUMBERS, ...LETTERS];
 
 const EXAMPLES_GIVEN = 2;
 const INPUT_SIZE = EXAMPLES_GIVEN * 2 + 1;  // <letter>=<number> <letter>=<number> <letter>=____
-const HIDDEN_LAYER_SIZES = [4, 2, 3];
+const HIDDEN_LAYER_SIZES = [4, 2, 3, 3];
 const OUTPUT_SIZE = TOKENS.length;
 
 const EPOCHS_PER_BATCH = 1;
@@ -88,17 +88,39 @@ function createModel(): Sequential {
     }));
   }
 
-  // Add the linear output layer
-  model.add(tf.layers.dense({
+  // Add the output layer with identity function (first 3 inputs) and 3 zeros
+  // The last hidden layer has size 3, so we need a 3x6 weight matrix:
+  // [1, 0, 0, 0, 0, 0]
+  // [0, 1, 0, 0, 0, 0]
+  // [0, 0, 1, 0, 0, 0]
+  // This creates an identity mapping for the first 3 outputs and zeros for the last 3
+  const outputLayer = tf.layers.dense({
     units: OUTPUT_SIZE,
-    activation: 'softmax'
-  }));
+    activation: 'softmax',
+    useBias: true,
+    trainable: false  // Keep weights fixed during training
+  });
+  model.add(outputLayer);
 
   // Compile the model with categorical cross-entropy loss
   model.compile({
     loss: 'categoricalCrossentropy',
     optimizer: 'adam'
   });
+
+  // Set custom weights for the output layer
+  // Weight matrix: 3x6 (input size 3, output size 6)
+  // Identity for first 3 columns, zeros for last 3 columns
+  const weightMatrix = [
+    [1, 0, 0, 0, 0, 0],
+    [0, 1, 0, 0, 0, 0],
+    [0, 0, 1, 0, 0, 0]
+  ];
+  const biases = [0, 0, 0, 0, 0, 0];
+  
+  const weights = tf.tensor2d(weightMatrix);
+  const bias = tf.tensor1d(biases);
+  outputLayer.setWeights([weights, bias]);
 
   return model;
 }
