@@ -23,8 +23,8 @@ interface TrainingData {
 }
 let data: TrainingData;
 
-const VIZ_ROWS = 2;
-const VIZ_COLUMNS = 3;
+const VIZ_ROWS = 1;
+const VIZ_COLUMNS = 1;
 const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
 let vizData: TrainingData;
 
@@ -253,62 +253,122 @@ async function drawViz(vizData: TrainingData): Promise<void> {
   const outputArray = vizData.outputArray;
   const inputTensor = vizData.inputTensor;
 
-  // Get predictions
-  const predictionTensor = model.predict(inputTensor) as Tensor2D;
-  const predictionArray = await predictionTensor.array() as number[][];
+  // Get activations from all layers
+  const layerOutputs: number[][][] = [];
+  const layerNames: string[] = [];
+  
+  // Process each layer
+  let currentInput = inputTensor;
+  for (let layerIdx = 0; layerIdx < model.layers.length; layerIdx++) {
+    const layer = model.layers[layerIdx];
+    const layerModel = tf.model({
+      inputs: model.input,
+      outputs: layer.output as any
+    });
+    const layerOutput = layerModel.predict(currentInput) as Tensor2D;
+    const layerArray = await layerOutput.array() as number[][];
+    layerOutputs.push(layerArray);
+    
+    if (layerIdx < HIDDEN_LAYER_SIZES.length) {
+      layerNames.push(`Hidden Layer ${layerIdx + 1}`);
+    } else {
+      layerNames.push('Output Layer');
+    }
+    
+    layerOutput.dispose();
+    layerModel.dispose();
+  }
 
   // Clear canvas only after predictions are ready to avoid flickering
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const sectionSpacing = 10;
   const barSpacing = 3;
+  const layerSpacing = 20;
+  const headerHeight = 30;
+  
+  // We'll show only the first example (i=0)
+  const exampleIdx = 0;
+  
+  // Display the input sequence at the top
+  const inputTokenStrings = inputArray[exampleIdx].map(tokenNumberToTokenString).join('');
+  ctx.font = '14px monospace';
+  ctx.fillStyle = 'black';
+  ctx.fillText('Input: ' + inputTokenStrings, sectionSpacing, 20);
 
-  const availableWidth = canvas.width - (sectionSpacing * (VIZ_COLUMNS + 1));
-  const sectionWidth = availableWidth / VIZ_COLUMNS;
-  const availableHeight = canvas.height - (sectionSpacing * (VIZ_ROWS + 1));
-  const sectionHeight = availableHeight / VIZ_ROWS;
-
-  // Set style for section borders
-  ctx.strokeStyle = 'black';
-  ctx.lineWidth = 1;
-
-  for (let i = 0; i < inputArray.length; i++) {
-    const col = i % VIZ_COLUMNS;
-    const row = Math.floor(i / VIZ_COLUMNS);
-
-    const sectionX = sectionSpacing + col * (sectionWidth + sectionSpacing);
-    const sectionY = sectionSpacing + row * (sectionHeight + sectionSpacing);
-
-    // Draw thin black border around section
-    ctx.strokeRect(sectionX, sectionY, sectionWidth, sectionHeight);
-
-    // Display the input sequence
-    const inputTokenStrings = inputArray[i].map(tokenNumberToTokenString).join('');
+  // Calculate layout for layers
+  const numLayers = layerOutputs.length;
+  const availableHeight = canvas.height - headerHeight - sectionSpacing * 2;
+  const layerHeight = (availableHeight - layerSpacing * (numLayers - 1)) / numLayers;
+  
+  // Draw each layer's activations
+  let currentY = headerHeight + sectionSpacing;
+  
+  for (let layerIdx = 0; layerIdx < layerOutputs.length; layerIdx++) {
+    const activations = layerOutputs[layerIdx][exampleIdx];
+    const numBars = activations.length;
+    
+    // Find max activation for scaling
+    const maxActivation = Math.max(...activations, 1.0); // At least 1.0 for scale
+    
+    // Draw layer label
     ctx.font = '12px monospace';
     ctx.fillStyle = 'black';
-    ctx.fillText(inputTokenStrings, sectionX + 5, sectionY + 15);
-
-    const probabilities = predictionArray[i];
-    const numBars = probabilities.length;
-    const barWidth = (sectionWidth - barSpacing * (numBars + 1)) / numBars;
-
-    // Draw probability bars for each possible next token
-    for (let j = 0; j < probabilities.length; j++) {
-      const barHeight = probabilities[j] * (sectionHeight - 40);
-      const barX = sectionX + barSpacing + j * (barWidth + barSpacing);
-      const barY = sectionY + sectionHeight - barHeight - barSpacing - 15;
-
-      ctx.fillStyle = 'blue';
+    ctx.fillText(layerNames[layerIdx], sectionSpacing, currentY + 12);
+    
+    // Calculate bar dimensions
+    const barAreaWidth = canvas.width - sectionSpacing * 2;
+    const barWidth = (barAreaWidth - barSpacing * (numBars + 1)) / numBars;
+    const barAreaHeight = layerHeight - 25; // Leave space for labels
+    
+    // Draw a light background for the bar area
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(sectionSpacing, currentY + 15, barAreaWidth, barAreaHeight);
+    
+    // Draw graded 1 axis line (indicating scale of 1.0)
+    const oneLineY = currentY + 15 + barAreaHeight - (1.0 / maxActivation) * barAreaHeight;
+    ctx.strokeStyle = '#00aa00';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(sectionSpacing, oneLineY);
+    ctx.lineTo(canvas.width - sectionSpacing, oneLineY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Draw scale indicator
+    ctx.font = '10px monospace';
+    ctx.fillStyle = '#00aa00';
+    ctx.fillText('1.0', canvas.width - sectionSpacing - 25, oneLineY - 2);
+    
+    // Draw max scale indicator
+    ctx.fillStyle = '#666666';
+    ctx.fillText(`max=${maxActivation.toFixed(2)}`, canvas.width - sectionSpacing - 65, currentY + 27);
+    
+    // Draw activation bars
+    for (let j = 0; j < activations.length; j++) {
+      const activation = activations[j];
+      const barHeight = (activation / maxActivation) * barAreaHeight;
+      const barX = sectionSpacing + barSpacing + j * (barWidth + barSpacing);
+      const barY = currentY + 15 + barAreaHeight - barHeight;
+      
+      // Color bars based on activation value
+      const intensity = Math.min(255, Math.floor((activation / maxActivation) * 255));
+      ctx.fillStyle = `rgb(${intensity}, ${Math.floor(intensity * 0.5)}, ${255 - intensity})`;
       ctx.fillRect(barX, barY, barWidth, barHeight);
-
-      // Draw token label below bar
-      ctx.font = '10px monospace';
-      ctx.fillStyle = 'black';
-      ctx.fillText(indexToShortTokenString(j), barX, sectionY + sectionHeight - 5);
+      
+      // Draw activation value on top of bar if space allows
+      if (barHeight > 15) {
+        ctx.font = '8px monospace';
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.fillText(activation.toFixed(2), barX + barWidth / 2, barY + 10);
+        ctx.textAlign = 'left';
+      }
     }
+    
+    currentY += layerHeight + layerSpacing;
   }
-
-  predictionTensor.dispose();
 }
 
 function drawLossCurve(): void {
