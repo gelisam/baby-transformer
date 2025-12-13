@@ -111,71 +111,63 @@ function createModel(): Sequential {
 }
 
 // Generate training data for the classification task
-// Vocabulary: 0=A, 1=B, 2=C, 3='=', 4=1, 5=2, 6=3
 function generateData(): TrainingData {
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
-
-  // Generate all valid sequences of the form: letter=number letter=number ...
-  // where the same letter always maps to the same number within a sequence
-
-  // We'll generate examples with different mappings
-  // Each mapping is a function from {A,B,C} to {1,2,3}
-  const letters: number[] = LETTERS.map(tokenStringToTokenNumber);
-  const numbers: number[] = NUMBERS.map(tokenStringToTokenNumber);
-
-  // Generate all possible mappings (permutations)
-  function generatePermutations(arr: number[]): number[][] {
-    if (arr.length <= 1) return [arr];
-    const result: number[][] = [];
-    for (let i = 0; i < arr.length; i++) {
-      const rest = [...arr.slice(0, i), ...arr.slice(i + 1)];
-      const perms = generatePermutations(rest);
-      for (const perm of perms) {
-        result.push([arr[i], ...perm]);
-      }
-    }
-    return result;
+  function addExample(sequence: number[]) {
+    //console.log(sequence.map(tokenNumberToTokenString).join(''));
+    const input = sequence.slice(0, INPUT_SIZE);
+    const output = sequence[INPUT_SIZE];
+    inputArray.push(input);
+    outputArray.push(output);
   }
 
-  const numberPerms = generatePermutations(numbers);
+  function removeElementAt(arr: number[], index: number): number[] {
+    const newArr = arr.slice(); // ["a", "b", "c"]
+    newArr.splice(index, 1); // returns ["b"] and mutates 'newArr' to ["a", "c"]
+    return newArr;
+  }
 
-  // For each permutation (mapping), generate various sequences
-  for (const perm of numberPerms) {
-    const mapping = new Map<number, number>();
-    for (let i = 0; i < letters.length; i++) {
-      mapping.set(letters[i], perm[i]);
-    }
+  function insert(mapping: Map<number, number>, key: number, value: number): Map<number, number> {
+    const newMapping = new Map(mapping);
+    newMapping.set(key, value);
+    return newMapping;
+  }
 
-    // Generate sequences using this mapping
-    // We need sequences of 5 tokens (input) + 1 token (output)
-    // input: <letter>=<number>  <letter>=<number> <letter>=
-    // output:                                              <number>
-
-    // Generate n <letter>=<number> pairs from the mapping
-    function generateSequences(length: number): number[][] {
-      if (length === 0) return [[]];
-      const result: number[][] = [];
-      const subSeqs = generateSequences(length - 1);
-      for (const letter of letters) {
-        const n = mapping.get(letter)!;
-        for (const subSeq of subSeqs) {
-          result.push([letter, n, ...subSeq]);
+  const allLetters = LETTERS.map(tokenStringToTokenNumber);
+  const allNumbers = NUMBERS.map(tokenStringToTokenNumber);
+  function generate(
+      n: number, // number of examples to generate before the final pair
+      sequence: number[],
+      mapping: Map<number, number>,
+      availableLetters: number[],
+      availableNumbers: number[]
+  ) {
+    if (n === 0) {
+      for (const letter of allLetters) {
+        if (mapping.has(letter)) {
+          addExample([...sequence, letter, mapping.get(letter)!]);
+        } else {
+          for (const number of availableNumbers) {
+            addExample([...sequence, letter, number]);
+          }
         }
       }
-      return result;
-    }
-
-    const numPairs = 3;
-    const sequences = generateSequences(numPairs);
-
-    for (const sequence of sequences) {
-      const input = sequence.slice(0, INPUT_SIZE);
-      const output = sequence[INPUT_SIZE];
-      inputArray.push(input);
-      outputArray.push(output);
+    } else {
+      for (let i = 0; i < availableLetters.length; i++) {
+        const letter = availableLetters[i];
+        const newAvailableLetters = removeElementAt(availableLetters, i);
+        for (let j = 0; j < availableNumbers.length; j++) {
+          const number = availableNumbers[j];
+          const newAvailableNumbers = removeElementAt(availableNumbers, j);
+          const newMapping = insert(mapping, letter, number);
+          generate(n - 1, [...sequence, letter, number], newMapping, newAvailableLetters, newAvailableNumbers);
+        }
+      }
     }
   }
+
+  generate(2, [], new Map(), allLetters, allNumbers);
 
   // Convert to tensors
   const numExamples = inputArray.length;
@@ -483,10 +475,10 @@ function pickRandomInputs(data: TrainingData): TrainingData {
   }
   const inputTensor = tf.tensor2d(inputArray, [VIZ_EXAMPLES_COUNT, INPUT_SIZE]);
   const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
-  
+
   // Populate the textboxes with these random inputs
   updateTextboxesFromInputs(inputArray, outputArray);
-  
+
   return {
     inputArray,
     outputArray,
@@ -510,10 +502,10 @@ function updateTextboxesFromInputs(inputArray: number[][], outputArray: number[]
 function parseInputString(inputStr: string): number[] | null {
   const tokens: number[] = [];
   let i = 0;
-  
+
   while (i < inputStr.length) {
     let matched = false;
-    
+
     // Try to match each token
     for (const token of TOKENS) {
       if (inputStr.substring(i, i + token.length) === token) {
@@ -523,12 +515,12 @@ function parseInputString(inputStr: string): number[] | null {
         break;
       }
     }
-    
+
     if (!matched) {
       return null; // Invalid input
     }
   }
-  
+
   return tokens.length === INPUT_SIZE ? tokens : null;
 }
 
@@ -536,7 +528,7 @@ function parseInputString(inputStr: string): number[] | null {
 function updateVizDataFromTextboxes(): void {
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
-  
+
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
     const inputElement = document.getElementById(`input-${i}`) as HTMLInputElement;
     if (inputElement) {
@@ -544,7 +536,7 @@ function updateVizDataFromTextboxes(): void {
       if (parsed) {
         inputArray.push(parsed);
         // Find the corresponding output from the original data
-        const matchingIndex = data.inputArray.findIndex(arr => 
+        const matchingIndex = data.inputArray.findIndex(arr =>
           arr.every((val, idx) => val === parsed[idx])
         );
         if (matchingIndex >= 0) {
@@ -566,24 +558,24 @@ function updateVizDataFromTextboxes(): void {
       }
     }
   }
-  
+
   // Dispose old tensors
   if (vizData) {
     vizData.inputTensor.dispose();
     vizData.outputTensor.dispose();
   }
-  
+
   // Create new vizData
   const inputTensor = tf.tensor2d(inputArray, [VIZ_EXAMPLES_COUNT, INPUT_SIZE]);
   const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
-  
+
   vizData = {
     inputArray,
     outputArray,
     inputTensor,
     outputTensor
   };
-  
+
   // Redraw visualization
   drawViz(vizData);
 }
