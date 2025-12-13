@@ -38,7 +38,7 @@ const TOKENS = [...NUMBERS, ...LETTERS];
 
 const EXAMPLES_GIVEN = 2;
 const INPUT_SIZE = EXAMPLES_GIVEN * 2 + 1;  // <letter>=<number> <letter>=<number> <letter>=____
-const HIDDEN_LAYER_SIZES: number[] = [6, 2, 6];
+const HIDDEN_LAYER_SIZES: number[] = [6, 2, 6, 3];
 const OUTPUT_SIZE = TOKENS.length;
 
 const EPOCHS_PER_BATCH = 1;
@@ -257,10 +257,7 @@ async function setPerfectWeights(): Promise<void> {
   //     oneHot(v) = [
   //       isEqual(v, 1),
   //       isEqual(v, 2),
-  //       isEqual(v, 3),
-  //       0,
-  //       0,
-  //       0
+  //       isEqual(v, 3)
   //     ]
   //     valueIfEqual(v, x, y) = relu(v - 1000 * notEqual(x, y))
   //     notEqual(x, y) = relu(x - y) + relu(y - x)
@@ -268,40 +265,37 @@ async function setPerfectWeights(): Promise<void> {
   //
   // Inlining everything:
   //
-  //   let not1 = relu(letter3 - letter1) + relu(letter1 - letter3)
-  //   let not2 = relu(letter3 - letter2) + relu(letter2 - letter3)
-  //   let contribution1 = relu(number1 - 1000 * not1)
-  //   let contribution2 = relu(number2 - 1000 * not2)
-  //   let output = contribution1 + contribution2
-  //   let sub1fromOut = relu(output - 1)
-  //   let sub2fromOut = relu(output - 2)
-  //   let sub3fromOut = relu(output - 3)
-  //   let subOutFrom1 = relu(1 - output)
-  //   let subOutFrom2 = relu(2 - output)
-  //   let subOutFrom3 = relu(3 - output)
+  //   const not1 = relu(letter3 - letter1) + relu(letter1 - letter3)
+  //   const not2 = relu(letter3 - letter2) + relu(letter2 - letter3)
+  //   const contribution1 = relu(number1 - 1000 * not1)
+  //   const contribution2 = relu(number2 - 1000 * not2)
+  //   const output = contribution1 + contribution2
+  //   const sub1fromOut = relu(output - 1)
+  //   const sub2fromOut = relu(output - 2)
+  //   const sub3fromOut = relu(output - 3)
+  //   const subOutFrom1 = relu(1 - output)
+  //   const subOutFrom2 = relu(2 - output)
+  //   const subOutFrom3 = relu(3 - output)
   //   [
   //     relu(1 - sub1FromOut - subOutFrom1),
   //     relu(1 - sub2FromOut - subOutFrom2),
-  //     relu(1 - sub3FromOut - subOutFrom3),
-  //     0,
-  //     0,
-  //     0
+  //     relu(1 - sub3FromOut - subOutFrom3)
   //   ]
   //
   // Simplifying:
   //
-  //   let sub1from3 = relu(letter3 - letter1)
-  //   let sub2from3 = relu(letter3 - letter2)
-  //   let sub3from1 = relu(letter1 - letter3)
-  //   let sub3from2 = relu(letter2 - letter3)
-  //   let contribution1 = relu(number1 - 1000 * sub1from3 - 1000 * sub3from1)
-  //   let contribution2 = relu(number2 - 1000 * sub2from3 - 1000 * sub3from2)
-  //   let sub1fromOut = relu(contribution1 + contribution2 - 1)
-  //   let sub2fromOut = relu(contribution1 + contribution2 - 2)
-  //   let sub3fromOut = relu(contribution1 + contribution2 - 3)
-  //   let subOutFrom1 = relu(1 - contribution1 - contribution2)
-  //   let subOutFrom2 = relu(2 - contribution1 - contribution2)
-  //   let subOutFrom3 = relu(3 - contribution1 - contribution2)
+  //   const sub1from3 = relu(letter3 - letter1)
+  //   const sub2from3 = relu(letter3 - letter2)
+  //   const sub3from1 = relu(letter1 - letter3)
+  //   const sub3from2 = relu(letter2 - letter3)
+  //   const contribution1 = relu(number1 - 1000 * sub1from3 - 1000 * sub3from1)
+  //   const contribution2 = relu(number2 - 1000 * sub2from3 - 1000 * sub3from2)
+  //   const sub1fromOut = relu(contribution1 + contribution2 - 1)
+  //   const sub2fromOut = relu(contribution1 + contribution2 - 2)
+  //   const sub3fromOut = relu(contribution1 + contribution2 - 3)
+  //   const subOutFrom1 = relu(1 - contribution1 - contribution2)
+  //   const subOutFrom2 = relu(2 - contribution1 - contribution2)
+  //   const subOutFrom3 = relu(3 - contribution1 - contribution2)
   //   [
   //     relu(1 - sub1FromOut - subOutFrom1),
   //     relu(1 - sub2FromOut - subOutFrom2),
@@ -314,26 +308,26 @@ async function setPerfectWeights(): Promise<void> {
   // Spelling out the weights and layers:
   //
   //   // hidden layer 1
-  //   let sub1from3 = relu(1.0 * letter3 + -1.0 * letter1)
-  //   let sub3from1 = relu(1.0 * letter1 + -1.0 * letter3)
-  //   let sub2from3 = relu(1.0 * letter3 + -1.0 * letter2)
-  //   let sub3from2 = relu(1.0 * letter2 + -1.0 * letter3)
-  //   let number1layer1 = relu(1.0 * number1)
-  //   let number2layer1 = relu(1.0 * number2)
+  //   const sub1from3 = relu(1.0 * letter3 + -1.0 * letter1)
+  //   const sub3from1 = relu(1.0 * letter1 + -1.0 * letter3)
+  //   const sub2from3 = relu(1.0 * letter3 + -1.0 * letter2)
+  //   const sub3from2 = relu(1.0 * letter2 + -1.0 * letter3)
+  //   const number1layer1 = relu(1.0 * number1)
+  //   const number2layer1 = relu(1.0 * number2)
   //
   //   // hidden layer 2
-  //   let contribution1 = relu(1.0 * number1layer1 + -1000.0 * sub1from3 + -1000.0 * sub3from1)
-  //   let contribution2 = relu(1.0 * number2layer1 + -1000.0 * sub2from3 + -1000.0 * sub3from2)
+  //   const contribution1 = relu(1.0 * number1layer1 + -1000.0 * sub1from3 + -1000.0 * sub3from1)
+  //   const contribution2 = relu(1.0 * number2layer1 + -1000.0 * sub2from3 + -1000.0 * sub3from2)
   //
   //   // hidden layer 3
-  //   let sub1fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 1.0)
-  //   let sub2fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 2.0)
-  //   let sub3fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 3.0)
-  //   let subOutFrom1 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 1.0)
-  //   let subOutFrom2 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 2.0)
-  //   let subOutFrom3 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 3.0)
+  //   const sub1fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 1.0)
+  //   const sub2fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 2.0)
+  //   const sub3fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 3.0)
+  //   const subOutFrom1 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 1.0)
+  //   const subOutFrom2 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 2.0)
+  //   const subOutFrom3 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 3.0)
   //
-  //   // output layer
+  //   // hidden layer 4
   //   [
   //     relu(-1.0 * sub1FromOut + -1.0 * subOutFrom1 + 1.0),
   //     relu(-1.0 * sub2FromOut + -1.0 * subOutFrom2 + 1.0),
@@ -344,105 +338,130 @@ async function setPerfectWeights(): Promise<void> {
   //   ]
 
   // Name the index of the neuron implementing the corresponding variable
-  let letter1 = 0;
-  let number1 = 1;
-  let letter2 = 2;
-  let number2 = 3;
-  let letter3 = 4;
+  const letter1 = 0;
+  const number1 = 1;
+  const letter2 = 2;
+  const number2 = 3;
+  const letter3 = 4;
 
-  let layer1weights = tf.buffer([INPUT_SIZE, 6])
-  let layer1bias = tf.buffer([6]);
-  let sub1from3 = 0;
-  let sub3from1 = 1;
-  let sub2from3 = 2;
-  let sub3from2 = 3;
-  let number1layer1 = 4;
-  let number2layer1 = 5;
-  // let sub1from3 = relu(1.0 * letter3 + -1.0 * letter1)
+  const /*mut*/ layer1weights = tf.buffer([INPUT_SIZE, 6])
+  const /*mut*/ layer1bias = tf.buffer([6]);
+  const sub1from3 = 0;
+  const sub3from1 = 1;
+  const sub2from3 = 2;
+  const sub3from2 = 3;
+  const number1layer1 = 4;
+  const number2layer1 = 5;
+  // const sub1from3 = relu(1.0 * letter3 + -1.0 * letter1)
   layer1weights.set(1.0, letter3, sub1from3);
   layer1weights.set(-1.0, letter1, sub1from3);
-  // let sub3from1 = relu(1.0 * letter1 + -1.0 * letter3)
+  // const sub3from1 = relu(1.0 * letter1 + -1.0 * letter3)
   layer1weights.set(1.0, letter1, sub3from1);
   layer1weights.set(-1.0, letter3, sub3from1);
-  // let sub2from3 = relu(1.0 * letter3 + -1.0 * letter2)
+  // const sub2from3 = relu(1.0 * letter3 + -1.0 * letter2)
   layer1weights.set(1.0, letter3, sub2from3);
   layer1weights.set(-1.0, letter2, sub2from3);
-  // let sub3from2 = relu(1.0 * letter2 + -1.0 * letter3)
+  // const sub3from2 = relu(1.0 * letter2 + -1.0 * letter3)
   layer1weights.set(1.0, letter2, sub3from2);
   layer1weights.set(-1.0, letter3, sub3from2);
-  // let number1layer1 = relu(1.0 * number1)
+  // const number1layer1 = relu(1.0 * number1)
   layer1weights.set(1.0, number1, number1layer1);
-  // let number2layer1 = relu(1.0 * number2)
+  // const number2layer1 = relu(1.0 * number2)
   layer1weights.set(1.0, number2, number2layer1);
 
-  let layer2weights = tf.buffer([6, 2])
-  let layer2bias = tf.buffer([2]);
-  let contribution1 = 0;
-  let contribution2 = 1;
-  // let contribution1 = relu(1.0 * number1layer1 + -1000.0 * sub1from3 + -1000.0 * sub3from1)
+  const /*mut*/ layer2weights = tf.buffer([6, 2])
+  const /*mut*/ layer2bias = tf.buffer([2]);
+  const contribution1 = 0;
+  const contribution2 = 1;
+  // const contribution1 = relu(1.0 * number1layer1 + -1000.0 * sub1from3 + -1000.0 * sub3from1)
   layer2weights.set(1.0, number1layer1, contribution1);
   layer2weights.set(-1000.0, sub1from3, contribution1);
   layer2weights.set(-1000.0, sub3from1, contribution1);
-  // let contribution2 = relu(1.0 * number2layer1 + -1000.0 * sub2from3 + -1000.0 * sub3from2)
+  // const contribution2 = relu(1.0 * number2layer1 + -1000.0 * sub2from3 + -1000.0 * sub3from2)
   layer2weights.set(1.0, number2layer1, contribution2);
   layer2weights.set(-1000.0, sub2from3, contribution2);
   layer2weights.set(-1000.0, sub3from2, contribution2);
 
-  let layer3weights = tf.buffer([2, 6])
-  let layer3bias = tf.buffer([6]);
-  let sub1fromOut = 0;
-  let sub2fromOut = 1;
-  let sub3fromOut = 2;
-  let subOutFrom1 = 3;
-  let subOutFrom2 = 4;
-  let subOutFrom3 = 5;
-  // let sub1fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 1.0)
+  const /*mut*/ layer3weights = tf.buffer([2, 6])
+  const /*mut*/ layer3bias = tf.buffer([6]);
+  const sub1fromOut = 0;
+  const sub2fromOut = 1;
+  const sub3fromOut = 2;
+  const subOutFrom1 = 3;
+  const subOutFrom2 = 4;
+  const subOutFrom3 = 5;
+  // const sub1fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 1.0)
   layer3weights.set(1.0, contribution1, sub1fromOut);
   layer3weights.set(1.0, contribution2, sub1fromOut);
   layer3bias.set(-1.0, sub1fromOut);
-  // let sub2fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 2.0)
+  // const sub2fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 2.0)
   layer3weights.set(1.0, contribution1, sub2fromOut);
   layer3weights.set(1.0, contribution2, sub2fromOut);
   layer3bias.set(-2.0, sub2fromOut);
-  // let sub3fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 3.0)
+  // const sub3fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 3.0)
   layer3weights.set(1.0, contribution1, sub3fromOut);
   layer3weights.set(1.0, contribution2, sub3fromOut);
   layer3bias.set(-3.0, sub3fromOut);
-  // let subOutFrom1 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 1.0)
+  // const subOutFrom1 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 1.0)
   layer3weights.set(-1.0, contribution1, subOutFrom1);
   layer3weights.set(-1.0, contribution2, subOutFrom1);
   layer3bias.set(1.0, subOutFrom1);
-  // let subOutFrom2 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 2.0)
+  // const subOutFrom2 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 2.0)
   layer3weights.set(-1.0, contribution1, subOutFrom2);
   layer3weights.set(-1.0, contribution2, subOutFrom2);
   layer3bias.set(2.0, subOutFrom2);
-  // let subOutFrom3 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 3.0)
+  // const subOutFrom3 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 3.0)
   layer3weights.set(-1.0, contribution1, subOutFrom3);
   layer3weights.set(-1.0, contribution2, subOutFrom3);
   layer3bias.set(3.0, subOutFrom3);
 
-  let outputWeights = tf.buffer([6, OUTPUT_SIZE])
-  let outputBias = tf.buffer([OUTPUT_SIZE]);
-  let probability1 = 0;
-  let probability2 = 1;
-  let probability3 = 2;
+  const /*mut*/ layer4weights = tf.buffer([6, 3])
+  const /*mut*/ layer4bias = tf.buffer([3]);
+  const probability1 = 0;
+  const probability2 = 1;
+  const probability3 = 2;
   // relu(-1.0 * sub1FromOut + -1.0 * subOutFrom1 + 1.0),
-  outputWeights.set(-1.0, sub1fromOut, probability1);
-  outputWeights.set(-1.0, subOutFrom1, probability1);
-  outputBias.set(1.0, probability1);
+  layer4weights.set(-1.0, sub1fromOut, probability1);
+  layer4weights.set(-1.0, subOutFrom1, probability1);
+  layer4bias.set(1.0, probability1);
   // relu(-1.0 * sub2FromOut + -1.0 * subOutFrom2 + 1.0),
-  outputWeights.set(-1.0, sub2fromOut, probability2);
-  outputWeights.set(-1.0, subOutFrom2, probability2);
-  outputBias.set(1.0, probability2);
+  layer4weights.set(-1.0, sub2fromOut, probability2);
+  layer4weights.set(-1.0, subOutFrom2, probability2);
+  layer4bias.set(1.0, probability2);
   // relu(-1.0 * sub3FromOut + -1.0 * subOutFrom3 + 1.0),
-  outputWeights.set(-1.0, sub3fromOut, probability3);
-  outputWeights.set(-1.0, subOutFrom3, probability3);
-  outputBias.set(1.0, probability3);
+  layer4weights.set(-1.0, sub3fromOut, probability3);
+  layer4weights.set(-1.0, subOutFrom3, probability3);
+  layer4bias.set(1.0, probability3);
+
+  // At this point we have
+  //   A=1 B=2 A=___
+  //             P(A=1) = 1
+  //             P(A=2) = 0
+  //             P(A=3) = 0
+  //   A=1 B=2 C=___
+  //             P(B=1) = 0
+  //             P(B=2) = 0
+  //             P(B=3) = 0
+  // but looks great but softmax will mess this up so we need to push P(A=1) way
+  // up and P(A="A=") way down.
+
+  const /*mut*/ outputWeights = tf.buffer([3, OUTPUT_SIZE])
+  const /*mut*/ outputBias = tf.buffer([OUTPUT_SIZE]);
+  outputWeights.set(1000.0, probability1, probability1);
+  outputWeights.set(1000.0, probability2, probability2);
+  outputWeights.set(1000.0, probability3, probability3);
+  outputBias.set(-100, 0);
+  outputBias.set(-100, 1);
+  outputBias.set(-100, 2);
+  outputBias.set(-Infinity, 3);
+  outputBias.set(-Infinity, 4);
+  outputBias.set(-Infinity, 5);
 
   const perfectWeights = [
     layer1weights.toTensor(), layer1bias.toTensor(),
     layer2weights.toTensor(), layer2bias.toTensor(),
     layer3weights.toTensor(), layer3bias.toTensor(),
+    layer4weights.toTensor(), layer4bias.toTensor(),
     outputWeights.toTensor(), outputBias.toTensor()
   ];
   model.setWeights(perfectWeights);
