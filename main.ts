@@ -38,7 +38,7 @@ const TOKENS = [...NUMBERS, ...LETTERS];
 
 const EXAMPLES_GIVEN = 2;
 const INPUT_SIZE = EXAMPLES_GIVEN * 2 + 1;  // <letter>=<number> <letter>=<number> <letter>=____
-const HIDDEN_LAYER_SIZES: number[] = [6, 2, 6];
+const HIDDEN_LAYER_SIZES: number[] = [6, 2, 6, 3];
 const OUTPUT_SIZE = TOKENS.length;
 
 const EPOCHS_PER_BATCH = 1;
@@ -94,11 +94,19 @@ function createModel(): Sequential {
       }));
     }
 
-    // Add the linear output layer
-    model.add(tf.layers.dense({
+    // Add the output layer with identity function (first 3 inputs) and 3 zeros
+    // The last hidden layer has size 3, so we need a 3x6 weight matrix:
+    // [1, 0, 0, 0, 0, 0]
+    // [0, 1, 0, 0, 0, 0]
+    // [0, 0, 1, 0, 0, 0]
+    // This creates an identity mapping for the first 3 outputs and zeros for the last 3
+    const outputLayer = tf.layers.dense({
       units: OUTPUT_SIZE,
-      activation: 'softmax'
-    }));
+      activation: 'softmax',
+      useBias: true,
+      trainable: false  // Keep weights fixed during training
+    });
+    model.add(outputLayer);
   }
 
   // Compile the model with categorical cross-entropy loss
@@ -106,6 +114,30 @@ function createModel(): Sequential {
     loss: 'categoricalCrossentropy',
     optimizer: 'adam'
   });
+
+  // Set custom weights for the output layer if HIDDEN_LAYER_SIZES is not empty
+  if (HIDDEN_LAYER_SIZES.length > 0) {
+    const outputLayer = model.layers[model.layers.length - 1];
+    // Weight matrix shape: [3, 6] - each row represents one input neuron's weights to all 6 outputs
+    // Row 0: input 0 -> [1, 0, 0, 0, 0, 0] (connects to output 0 with weight 1, others 0)
+    // Row 1: input 1 -> [0, 1, 0, 0, 0, 0] (connects to output 1 with weight 1, others 0)
+    // Row 2: input 2 -> [0, 0, 1, 0, 0, 0] (connects to output 2 with weight 1, others 0)
+    // This creates an identity mapping for outputs 0-2, and zeros for outputs 3-5
+    const weightMatrix = [
+      [1, 0, 0, 0, 0, 0],
+      [0, 1, 0, 0, 0, 0],
+      [0, 0, 1, 0, 0, 0]
+    ];
+    const biases = [0, 0, 0, 0, 0, 0];
+    
+    const weights = tf.tensor2d(weightMatrix);
+    const bias = tf.tensor1d(biases);
+    outputLayer.setWeights([weights, bias]);
+    
+    // Dispose tensors to prevent memory leaks
+    weights.dispose();
+    bias.dispose();
+  }
 
   return model;
 }
