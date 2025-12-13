@@ -109,8 +109,11 @@ function createModel(): Sequential {
   });
 
   // Set custom weights for the output layer
-  // Weight matrix: 3x6 (input size 3, output size 6)
-  // Identity for first 3 columns, zeros for last 3 columns
+  // Weight matrix shape: [3, 6] - each row represents one input neuron's weights to all 6 outputs
+  // Row 0: input 0 -> [1, 0, 0, 0, 0, 0] (connects to output 0 with weight 1, others 0)
+  // Row 1: input 1 -> [0, 1, 0, 0, 0, 0] (connects to output 1 with weight 1, others 0)
+  // Row 2: input 2 -> [0, 0, 1, 0, 0, 0] (connects to output 2 with weight 1, others 0)
+  // This creates an identity mapping for outputs 0-2, and zeros for outputs 3-5
   const weightMatrix = [
     [1, 0, 0, 0, 0, 0],
     [0, 1, 0, 0, 0, 0],
