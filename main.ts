@@ -210,12 +210,20 @@ function applyHiddenLayers(): void {
     toggleTrainingMode(); // Toggles isTraining to false
   }
   if (data) {
-    data.inputTensor.dispose();
-    data.outputTensor.dispose();
+    try {
+      data.inputTensor.dispose();
+      data.outputTensor.dispose();
+    } catch (e) {
+      // Tensors may already be disposed
+    }
   }
   if (vizData) {
-    vizData.inputTensor.dispose();
-    vizData.outputTensor.dispose();
+    try {
+      vizData.inputTensor.dispose();
+      vizData.outputTensor.dispose();
+    } catch (e) {
+      // Tensors may already be disposed
+    }
   }
   
   initializeNewModel();
@@ -229,7 +237,7 @@ function canUsePerfectWeights(): { canUse: boolean, reason: string } {
   if (HIDDEN_LAYER_SIZES.length !== requiredLayers.length) {
     return {
       canUse: false,
-      reason: `Requires exactly ${requiredLayers.length} hidden layers, but ${HIDDEN_LAYER_SIZES.length} ${HIDDEN_LAYER_SIZES.length === 1 ? 'is' : 'are'} configured.`
+      reason: `Requires exactly ${requiredLayers.length} hidden layers, but currently configured with ${HIDDEN_LAYER_SIZES.length}.`
     };
   }
   
