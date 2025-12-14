@@ -14,6 +14,7 @@ let model: Sequential;
 let isTraining = false;
 let currentEpoch = 0;
 let lossHistory: { epoch: number, loss: number }[] = [];
+let durationHistory: { epoch: number, duration: number }[] = [];
 
 interface TrainingData {
   inputArray: number[][];
@@ -287,21 +288,29 @@ async function trainingStep() {
 
   const statusElement = document.getElementById('status')!;
 
+  // Measure wall clock duration
+  const startTime = performance.now();
+
   // Train for one epoch
   const history = await model.fit(data.inputTensor, data.outputTensor, {
     epochs: EPOCHS_PER_BATCH,
     verbose: 0
   });
 
+  const endTime = performance.now();
+  const duration = endTime - startTime;
+
   currentEpoch += EPOCHS_PER_BATCH;
 
   // Get the loss from the last epoch in the batch
   const loss = history.history.loss[history.history.loss.length - 1] as number;
-  statusElement.innerHTML = `Training... Epoch ${currentEpoch} - Loss: ${loss.toFixed(4)}`;
+  statusElement.innerHTML = `Training... Epoch ${currentEpoch} - Loss: ${loss.toFixed(4)} - Duration: ${duration.toFixed(2)}ms`;
 
   lossHistory.push({ epoch: currentEpoch, loss });
+  durationHistory.push({ epoch: currentEpoch, duration });
   await drawViz(vizData);
   drawLossCurve();
+  drawDurationCurve();
 
   // Request the next frame
   requestAnimationFrame(trainingStep);
@@ -768,6 +777,44 @@ function drawLossCurve(): void {
   ctx.stroke();
 }
 
+function drawDurationCurve(): void {
+  if (durationHistory.length < 2) {
+    return;
+  }
+
+  const canvas = document.getElementById('duration-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Find data range
+  const minDuration = Math.min(...durationHistory.map(d => d.duration));
+  const maxDuration = Math.max(...durationHistory.map(d => d.duration));
+  const minEpoch = durationHistory[0].epoch;
+  const maxEpoch = durationHistory[durationHistory.length - 1].epoch;
+
+  // Helper functions to convert data coordinates to canvas coordinates
+  function toCanvasX(epoch: number): number {
+    return ((epoch - minEpoch) / (maxEpoch - minEpoch)) * (canvas.width - 60) + 30;
+  }
+
+  function toCanvasY(duration: number): number {
+    const range = maxDuration - minDuration;
+    // Add a small epsilon to the range to avoid division by zero if all durations are the same
+    const effectiveRange = range === 0 ? 1 : range;
+    return canvas.height - 30 - ((duration - minDuration) / effectiveRange) * (canvas.height - 60);
+  }
+
+  // Draw duration curve
+  ctx.strokeStyle = 'lightgrey';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(toCanvasX(durationHistory[0].epoch), toCanvasY(durationHistory[0].duration));
+  for (let i = 1; i < durationHistory.length; i++) {
+    ctx.lineTo(toCanvasX(durationHistory[i].epoch), toCanvasY(durationHistory[i].duration));
+  }
+  ctx.stroke();
+}
+
 
 // --- Backend Selection Logic ---
 
@@ -852,6 +899,7 @@ function initializeNewModel(): void {
   // Reset training state
   currentEpoch = 0;
   lossHistory.length = 0;
+  durationHistory.length = 0;
 
   const statusElement = document.getElementById('status')!;
   statusElement.innerHTML = 'Ready to train!';
