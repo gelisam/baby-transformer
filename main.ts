@@ -38,7 +38,7 @@ const TOKENS = [...NUMBERS, ...LETTERS];
 
 const EXAMPLES_GIVEN = 2;
 const INPUT_SIZE = EXAMPLES_GIVEN * 2 + 1;  // <letter>=<number> <letter>=<number> <letter>=____
-const HIDDEN_LAYER_SIZES: number[] = [6, 2, 6, 3];
+let HIDDEN_LAYER_SIZES: number[] = [6, 2, 6, 3];
 const OUTPUT_SIZE = TOKENS.length;
 
 const EPOCHS_PER_BATCH = 1;
@@ -183,6 +183,90 @@ function generateData(): TrainingData {
 }
 
 // --- Training Control ---
+function applyHiddenLayers(): void {
+  const input = document.getElementById('hidden-layers-input') as HTMLInputElement;
+  const value = input.value.trim();
+  
+  if (value === '') {
+    HIDDEN_LAYER_SIZES = [];
+  } else {
+    const parts = value.split(',').map(s => s.trim());
+    const sizes: number[] = [];
+    
+    for (const part of parts) {
+      const num = parseInt(part, 10);
+      if (isNaN(num) || num <= 0) {
+        showError(`Invalid layer size: "${part}". Please use positive integers.`);
+        return;
+      }
+      sizes.push(num);
+    }
+    
+    HIDDEN_LAYER_SIZES = sizes;
+  }
+  
+  // Stop training and reinitialize model
+  if (isTraining) {
+    toggleTrainingMode(); // Toggles isTraining to false
+  }
+  if (data) {
+    try {
+      data.inputTensor.dispose();
+      data.outputTensor.dispose();
+    } catch (e) {
+      // Tensors may already be disposed
+    }
+  }
+  if (vizData) {
+    try {
+      vizData.inputTensor.dispose();
+      vizData.outputTensor.dispose();
+    } catch (e) {
+      // Tensors may already be disposed
+    }
+  }
+  
+  initializeNewModel();
+  updatePerfectWeightsButton();
+}
+
+function canUsePerfectWeights(): { canUse: boolean, reason: string } {
+  // The setPerfectWeights function requires exactly 4 hidden layers with sizes [6, 2, 6, 3]
+  const requiredLayers = [6, 2, 6, 3];
+  
+  if (HIDDEN_LAYER_SIZES.length !== requiredLayers.length) {
+    return {
+      canUse: false,
+      reason: `Requires exactly ${requiredLayers.length} hidden layers, but currently configured with ${HIDDEN_LAYER_SIZES.length}.`
+    };
+  }
+  
+  for (let i = 0; i < requiredLayers.length; i++) {
+    if (HIDDEN_LAYER_SIZES[i] !== requiredLayers[i]) {
+      return {
+        canUse: false,
+        reason: `Layer ${i + 1} must have ${requiredLayers[i]} neurons, but has ${HIDDEN_LAYER_SIZES[i]}.`
+      };
+    }
+  }
+  
+  return { canUse: true, reason: '' };
+}
+
+function updatePerfectWeightsButton(): void {
+  const button = document.getElementById('perfect-weights-button') as HTMLButtonElement;
+  const tooltipText = document.getElementById('perfect-weights-tooltip-text') as HTMLSpanElement;
+  const result = canUsePerfectWeights();
+  
+  button.disabled = !result.canUse;
+  
+  if (!result.canUse) {
+    tooltipText.textContent = result.reason;
+  } else {
+    tooltipText.textContent = '';
+  }
+}
+
 async function toggleTrainingMode() {
   isTraining = !isTraining;
   const trainButton = document.getElementById('train-button')!;
@@ -748,6 +832,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   drawNetworkArchitecture();
   await setBackend();
   initializeNewModel();
+  updatePerfectWeightsButton();
 });
 
 function initializeNewModel(): void {
