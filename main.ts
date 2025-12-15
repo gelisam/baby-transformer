@@ -989,26 +989,60 @@ function drawNetworkArchitecture(): void {
     const geom = layerGeometries[i];
     const isHidden = i > 0 && i < layers.length - 1;
 
-    // Draw main layer rectangle
-    ctx.fillStyle = 'darkblue';
-    ctx.fillRect(geom.x, geom.y, geom.width, geom.height);
+    if (i === 0) {
+      // Input layer: draw only the bottom edge of an unfilled rectangle
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'darkblue';
+      ctx.beginPath();
+      ctx.moveTo(geom.x, geom.y + geom.height);
+      ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
+      ctx.stroke();
 
-    // Color-code the bottom border for activation functions
-    ctx.lineWidth = 4;
-    if (isHidden) {
-      // Hidden layers use ReLU
-      ctx.strokeStyle = '#4682B4'; // SteelBlue for ReLU
+      // Draw thick downward arrow in the middle of the rectangle
+      const arrowX = geom.x + geom.width / 2;
+      const arrowStartY = geom.y + geom.height / 3;
+      const arrowEndY = geom.y + geom.height;
+      const arrowHeadSize = 8;
+
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = 'darkblue';
+      ctx.fillStyle = 'darkblue';
+      
+      // Draw arrow shaft
       ctx.beginPath();
-      ctx.moveTo(geom.x, geom.y + geom.height);
-      ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
+      ctx.moveTo(arrowX, arrowStartY);
+      ctx.lineTo(arrowX, arrowEndY - arrowHeadSize);
       ctx.stroke();
-    } else if (i === layers.length - 1) {
-      // Output layer is followed by Softmax
-      ctx.strokeStyle = 'rgba(255, 165, 0, 1)'; // Orange for Softmax
+
+      // Draw arrow head
       ctx.beginPath();
-      ctx.moveTo(geom.x, geom.y + geom.height);
-      ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
-      ctx.stroke();
+      ctx.moveTo(arrowX, arrowEndY);
+      ctx.lineTo(arrowX - arrowHeadSize, arrowEndY - arrowHeadSize);
+      ctx.lineTo(arrowX + arrowHeadSize, arrowEndY - arrowHeadSize);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // Draw main layer rectangle for non-input layers
+      ctx.fillStyle = 'darkblue';
+      ctx.fillRect(geom.x, geom.y, geom.width, geom.height);
+
+      // Color-code the bottom border for activation functions
+      ctx.lineWidth = 4;
+      if (isHidden) {
+        // Hidden layers use ReLU
+        ctx.strokeStyle = '#4682B4'; // SteelBlue for ReLU
+        ctx.beginPath();
+        ctx.moveTo(geom.x, geom.y + geom.height);
+        ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
+        ctx.stroke();
+      } else if (i === layers.length - 1) {
+        // Output layer is followed by Softmax
+        ctx.strokeStyle = 'rgba(255, 165, 0, 1)'; // Orange for Softmax
+        ctx.beginPath();
+        ctx.moveTo(geom.x, geom.y + geom.height);
+        ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
+        ctx.stroke();
+      }
     }
 
     // Draw layer label
@@ -1026,4 +1060,43 @@ function drawNetworkArchitecture(): void {
     const labelText = `${label} (${numNeurons} neurons)`;
     ctx.fillText(labelText, canvasWidth - 20, geom.y + geom.height / 2);
   }
+
+  // Add extra output rectangle after the output layer
+  const lastLayerGeom = layerGeometries[layerGeometries.length - 1];
+  const extraOutputY = lastLayerGeom.y + lastLayerGeom.height + layerGapY;
+  const extraOutputWidth = lastLayerGeom.width;
+  const extraOutputX = lastLayerGeom.x;
+  const extraOutputHeight = layerHeight;
+
+  // Draw only the top edge of the extra output rectangle
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'darkblue';
+  ctx.beginPath();
+  ctx.moveTo(extraOutputX, extraOutputY);
+  ctx.lineTo(extraOutputX + extraOutputWidth, extraOutputY);
+  ctx.stroke();
+
+  // Draw thick downward arrow in the middle of the extra output rectangle
+  const extraArrowX = extraOutputX + extraOutputWidth / 2;
+  const extraArrowStartY = extraOutputY;
+  const extraArrowEndY = extraOutputY + extraOutputHeight * 2 / 3;
+  const extraArrowHeadSize = 8;
+
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = 'darkblue';
+  ctx.fillStyle = 'darkblue';
+  
+  // Draw arrow shaft
+  ctx.beginPath();
+  ctx.moveTo(extraArrowX, extraArrowStartY + extraArrowHeadSize);
+  ctx.lineTo(extraArrowX, extraArrowEndY - extraArrowHeadSize);
+  ctx.stroke();
+
+  // Draw arrow head
+  ctx.beginPath();
+  ctx.moveTo(extraArrowX, extraArrowEndY);
+  ctx.lineTo(extraArrowX - extraArrowHeadSize, extraArrowEndY - extraArrowHeadSize);
+  ctx.lineTo(extraArrowX + extraArrowHeadSize, extraArrowEndY - extraArrowHeadSize);
+  ctx.closePath();
+  ctx.fill();
 }
