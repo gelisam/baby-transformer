@@ -395,10 +395,20 @@ async function trainingStep() {
 }
 
 async function setPerfectWeights(): Promise<void> {
+  // TODO: This function needs to be completely rewritten to work with the new architecture
+  // that includes embedding and unembedding layers. The main changes needed:
+  // 1. The embedding layer has no trainable weights (fixed mapping)
+  // 2. All layer indices are shifted by 1 due to the embedding layer
+  // 3. The first hidden layer now expects EMBEDDED_INPUT_SIZE (10) instead of INPUT_SIZE (5)
+  // 4. The unembedding layer has a different structure than the old output layer
+  // This function is currently disabled via canUsePerfectWeights() returning false.
+  
   if (appState.isTraining) {
     toggleTrainingMode(); // Toggles isTraining to false
   }
 
+  // Original implementation follows (needs to be updated):
+  
   // We need to complete this:
   //   <letter1>=<number1> <letter2>=<number2> <letter3>=____
   //
