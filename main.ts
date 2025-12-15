@@ -40,7 +40,6 @@ const EXAMPLES_GIVEN = 2;
 const INPUT_SIZE = EXAMPLES_GIVEN * 2 + 1;  // <letter>=<number> <letter>=<number> <letter>=____
 let num_layers: number = 4;
 let neurons_per_layer: number = 6;
-let hidden_layer_sizes: number[] = Array(num_layers).fill(neurons_per_layer);
 const OUTPUT_SIZE = TOKENS.length;
 
 const EPOCHS_PER_BATCH = 1;
@@ -71,10 +70,10 @@ function tokenNumberToTokenString(tokenNum: number): string {
   return TOKENS[tokenNum - 1];
 }
 
-function createModel(): Sequential {
+function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
   const model = tf.sequential();
 
-  if (hidden_layer_sizes.length === 0) {
+  if (numLayers === 0) {
     model.add(tf.layers.dense({
       units: OUTPUT_SIZE,
       inputShape: [INPUT_SIZE],
@@ -83,15 +82,15 @@ function createModel(): Sequential {
   } else {
     // Add the first hidden layer with inputShape
     model.add(tf.layers.dense({
-      units: hidden_layer_sizes[0],
+      units: neuronsPerLayer,
       inputShape: [INPUT_SIZE],
       activation: 'relu'
     }));
 
     // Add the remaining hidden layers
-    for (let i = 1; i < hidden_layer_sizes.length; i++) {
+    for (let i = 1; i < numLayers; i++) {
       model.add(tf.layers.dense({
-        units: hidden_layer_sizes[i],
+        units: neuronsPerLayer,
         activation: 'relu'
       }));
     }
@@ -185,10 +184,7 @@ function generateData(): TrainingData {
 }
 
 // --- Training Control ---
-function updateLayerConfiguration(): void {
-  // Update hidden_layer_sizes based on slider values
-  hidden_layer_sizes = Array(num_layers).fill(neurons_per_layer);
-
+function updateLayerConfiguration(numLayers: number, neuronsPerLayer: number): void {
   // Stop training and reinitialize model
   if (isTraining) {
     toggleTrainingMode(); // Toggles isTraining to false
@@ -214,36 +210,25 @@ function updateLayerConfiguration(): void {
   updatePerfectWeightsButton();
 }
 
-function canUsePerfectWeights(): { canUse: boolean, reason: string } {
-  // The setPerfectWeights function requires at least 4 hidden layers with at least [6, 2, 6, 3] neurons
+function canUsePerfectWeights(numLayers: number, neuronsPerLayer: number): { canUse: boolean, reason: string } {
+  // The setPerfectWeights function requires at least 4 hidden layers with at least 6 neurons per layer
   // Extra layers beyond the first 4 implement identity functions on their first 3 inputs
   // Extra neurons beyond the minimum are set to implement identity functions
-  const minRequiredLayers = [6, 2, 6, 3];
+  const minRequiredLayers = 4;
+  const minRequiredNeurons = 6;
 
-  if (hidden_layer_sizes.length < minRequiredLayers.length) {
+  if (numLayers < minRequiredLayers) {
     return {
       canUse: false,
-      reason: `Requires at least ${minRequiredLayers.length} hidden layers, but currently configured with ${hidden_layer_sizes.length}.`
+      reason: `Requires at least ${minRequiredLayers} hidden layers, but currently configured with ${numLayers}.`
     };
   }
 
-  for (let i = 0; i < minRequiredLayers.length; i++) {
-    if (hidden_layer_sizes[i] < minRequiredLayers[i]) {
-      return {
-        canUse: false,
-        reason: `Layer ${i + 1} must have at least ${minRequiredLayers[i]} neurons, but has ${hidden_layer_sizes[i]}.`
-      };
-    }
-  }
-
-  // Extra layers (5 and beyond) must have at least 3 neurons to pass through layer 4's first 3 outputs
-  for (let i = minRequiredLayers.length; i < hidden_layer_sizes.length; i++) {
-    if (hidden_layer_sizes[i] < 3) {
-      return {
-        canUse: false,
-        reason: `Layer ${i + 1} must have at least 3 neurons to implement identity function, but has ${hidden_layer_sizes[i]}.`
-      };
-    }
+  if (neuronsPerLayer < minRequiredNeurons) {
+    return {
+      canUse: false,
+      reason: `Requires at least ${minRequiredNeurons} neurons per layer, but currently configured with ${neuronsPerLayer}.`
+    };
   }
 
   return { canUse: true, reason: '' };
@@ -252,7 +237,7 @@ function canUsePerfectWeights(): { canUse: boolean, reason: string } {
 function updatePerfectWeightsButton(): void {
   const button = document.getElementById('perfect-weights-button') as HTMLButtonElement;
   const tooltipText = document.getElementById('perfect-weights-tooltip-text') as HTMLSpanElement;
-  const result = canUsePerfectWeights();
+  const result = canUsePerfectWeights(num_layers, neurons_per_layer);
 
   button.disabled = !result.canUse;
 
@@ -416,8 +401,8 @@ async function setPerfectWeights(): Promise<void> {
   const number2 = 3;
   const letter3 = 4;
 
-  const /*mut*/ layer1weights = tf.buffer([INPUT_SIZE, hidden_layer_sizes[0]])
-  const /*mut*/ layer1bias = tf.buffer([hidden_layer_sizes[0]]);
+  const /*mut*/ layer1weights = tf.buffer([INPUT_SIZE, neurons_per_layer])
+  const /*mut*/ layer1bias = tf.buffer([neurons_per_layer]);
   const sub1from3 = 0;
   const sub3from1 = 1;
   const sub2from3 = 2;
@@ -441,8 +426,8 @@ async function setPerfectWeights(): Promise<void> {
   // const number2layer1 = relu(1.0 * number2)
   layer1weights.set(1.0, number2, number2layer1);
 
-  const /*mut*/ layer2weights = tf.buffer([hidden_layer_sizes[0], hidden_layer_sizes[1]])
-  const /*mut*/ layer2bias = tf.buffer([hidden_layer_sizes[1]]);
+  const /*mut*/ layer2weights = tf.buffer([neurons_per_layer, neurons_per_layer])
+  const /*mut*/ layer2bias = tf.buffer([neurons_per_layer]);
   const contribution1 = 0;
   const contribution2 = 1;
   // const contribution1 = relu(1.0 * number1layer1 + -1000.0 * sub1from3 + -1000.0 * sub3from1)
@@ -454,8 +439,8 @@ async function setPerfectWeights(): Promise<void> {
   layer2weights.set(-1000.0, sub2from3, contribution2);
   layer2weights.set(-1000.0, sub3from2, contribution2);
 
-  const /*mut*/ layer3weights = tf.buffer([hidden_layer_sizes[1], hidden_layer_sizes[2]])
-  const /*mut*/ layer3bias = tf.buffer([hidden_layer_sizes[2]]);
+  const /*mut*/ layer3weights = tf.buffer([neurons_per_layer, neurons_per_layer])
+  const /*mut*/ layer3bias = tf.buffer([neurons_per_layer]);
   const sub1fromOut = 0;
   const sub2fromOut = 1;
   const sub3fromOut = 2;
@@ -487,8 +472,8 @@ async function setPerfectWeights(): Promise<void> {
   layer3weights.set(-1.0, contribution2, subOutFrom3);
   layer3bias.set(3.0, subOutFrom3);
 
-  const /*mut*/ layer4weights = tf.buffer([hidden_layer_sizes[2], hidden_layer_sizes[3]])
-  const /*mut*/ layer4bias = tf.buffer([hidden_layer_sizes[3]]);
+  const /*mut*/ layer4weights = tf.buffer([neurons_per_layer, neurons_per_layer])
+  const /*mut*/ layer4bias = tf.buffer([neurons_per_layer]);
   const probability1 = 0;
   const probability2 = 1;
   const probability3 = 2;
@@ -508,9 +493,9 @@ async function setPerfectWeights(): Promise<void> {
   // Layers 5 and beyond (if any) implement identity function on their first 3
   // inputs.
   const extraLayerWeights: any[] = [];
-  for (let layerIdx = 4; layerIdx < hidden_layer_sizes.length; layerIdx++) {
-    const prevLayerSize = hidden_layer_sizes[layerIdx - 1];
-    const currLayerSize = hidden_layer_sizes[layerIdx];
+  for (let layerIdx = 4; layerIdx < num_layers; layerIdx++) {
+    const prevLayerSize = neurons_per_layer;
+    const currLayerSize = neurons_per_layer;
 
     const weights = tf.buffer([prevLayerSize, currLayerSize]);
     const bias = tf.buffer([currLayerSize]);
@@ -536,8 +521,7 @@ async function setPerfectWeights(): Promise<void> {
   // way up and P(A="A=") way down.
 
   // Output layer connects to the last hidden layer
-  const lastHiddenLayerIdx = hidden_layer_sizes.length - 1;
-  const /*mut*/ outputWeights = tf.buffer([hidden_layer_sizes[lastHiddenLayerIdx], OUTPUT_SIZE])
+  const /*mut*/ outputWeights = tf.buffer([neurons_per_layer, OUTPUT_SIZE])
   const /*mut*/ outputBias = tf.buffer([OUTPUT_SIZE]);
   outputWeights.set(1000.0, probability1, probability1);
   outputWeights.set(1000.0, probability2, probability2);
@@ -844,13 +828,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   numLayersSlider.addEventListener('input', () => {
     num_layers = parseInt(numLayersSlider.value, 10);
     numLayersValue.textContent = num_layers.toString();
-    updateLayerConfiguration();
+    updateLayerConfiguration(num_layers, neurons_per_layer);
   });
 
   neuronsPerLayerSlider.addEventListener('input', () => {
     neurons_per_layer = parseInt(neuronsPerLayerSlider.value, 10);
     neuronsPerLayerValue.textContent = neurons_per_layer.toString();
-    updateLayerConfiguration();
+    updateLayerConfiguration(num_layers, neurons_per_layer);
   });
 
   // Add event listeners to the input textboxes
@@ -875,7 +859,7 @@ function initializeNewModel(): void {
   if (model) {
     model.dispose();
   }
-  model = createModel();
+  model = createModel(num_layers, neurons_per_layer);
 
   // Generate new data
   // No need to clean up old data tensors here, it's handled on backend change
@@ -904,7 +888,7 @@ function drawNetworkArchitecture(): void {
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const layers = [INPUT_SIZE, ...hidden_layer_sizes, OUTPUT_SIZE];
+  const layers = [INPUT_SIZE, ...Array(num_layers).fill(neurons_per_layer), OUTPUT_SIZE];
   const layerHeight = 20; // Height of the rectangle for each layer
   const maxLayerWidth = canvas.width * 0.4; // Max width for a layer
   const layerGapY = 40; // Vertical gap between layers
