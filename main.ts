@@ -93,15 +93,38 @@ function createEmbeddingMatrix(): number[][] {
 function createUnembeddingMatrix(): number[][] {
   const embedding = createEmbeddingMatrix();
   // Transpose: from [6, 2] to [2, 6]
-  const unembedding: number[][] = [
-    Array(OUTPUT_SIZE).fill(0),
-    Array(OUTPUT_SIZE).fill(0)
-  ];
+  const unembedding: number[][] = [];
+  for (let row = 0; row < EMBEDDING_DIM; row++) {
+    unembedding.push(Array(OUTPUT_SIZE).fill(0));
+  }
   for (let i = 0; i < OUTPUT_SIZE; i++) {
     unembedding[0][i] = embedding[i][0];
     unembedding[1][i] = embedding[i][1];
   }
   return unembedding;
+}
+
+// Convert token arrays to embedded input arrays
+function convertTokensToEmbeddings(inputArray: number[][]): number[][] {
+  const embeddingMatrix = createEmbeddingMatrix();
+  const embeddedInputArray: number[][] = [];
+  
+  for (let i = 0; i < inputArray.length; i++) {
+    const tokens = inputArray[i];
+    const embeddedInput: number[] = [];
+    for (let j = 0; j < tokens.length; j++) {
+      const tokenIndex = tokenNumberToIndex(tokens[j]);
+      // Validate token index to prevent out-of-bounds access
+      if (tokenIndex < 0 || tokenIndex >= OUTPUT_SIZE) {
+        throw new Error(`Invalid token number ${tokens[j]} at position ${j}`);
+      }
+      const embedding = embeddingMatrix[tokenIndex];
+      embeddedInput.push(embedding[0], embedding[1]);
+    }
+    embeddedInputArray.push(embeddedInput);
+  }
+  
+  return embeddedInputArray;
 }
 
 function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
@@ -147,16 +170,18 @@ function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
   const unembeddingWeights = tf.tensor2d(unembeddingMatrix);
   const unembeddingBias = tf.zeros([OUTPUT_SIZE]);
   
-  model.add(tf.layers.dense({
-    units: OUTPUT_SIZE,
-    activation: 'softmax',
-    weights: [unembeddingWeights, unembeddingBias],
-    trainable: true  // Allow fine-tuning of unembedding
-  }));
-
-  // Dispose the tensors used for initialization since they're copied into the layer
-  unembeddingWeights.dispose();
-  unembeddingBias.dispose();
+  try {
+    model.add(tf.layers.dense({
+      units: OUTPUT_SIZE,
+      activation: 'softmax',
+      weights: [unembeddingWeights, unembeddingBias],
+      trainable: true  // Allow fine-tuning of unembedding
+    }));
+  } finally {
+    // Dispose the tensors used for initialization since they're copied into the layer
+    unembeddingWeights.dispose();
+    unembeddingBias.dispose();
+  }
 
   // Compile the model with categorical cross-entropy loss
   model.compile({
@@ -228,20 +253,7 @@ function generateData(): TrainingData {
 
   // Convert to tensors with embeddings
   const numExamples = inputArray.length;
-  const embeddingMatrix = createEmbeddingMatrix();
-  
-  // Convert each input from token numbers to embedded vectors
-  const embeddedInputArray: number[][] = [];
-  for (let i = 0; i < numExamples; i++) {
-    const tokens = inputArray[i];
-    const embeddedInput: number[] = [];
-    for (let j = 0; j < tokens.length; j++) {
-      const tokenIndex = tokenNumberToIndex(tokens[j]);
-      const embedding = embeddingMatrix[tokenIndex];
-      embeddedInput.push(embedding[0], embedding[1]);
-    }
-    embeddedInputArray.push(embeddedInput);
-  }
+  const embeddedInputArray = convertTokensToEmbeddings(inputArray);
   
   const inputTensor = tf.tensor2d(embeddedInputArray, [numExamples, EMBEDDED_INPUT_SIZE]);
   const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
@@ -615,18 +627,7 @@ function pickRandomInputs(data: TrainingData): TrainingData {
   }
   
   // Convert token arrays to embedded inputs
-  const embeddingMatrix = createEmbeddingMatrix();
-  const embeddedInputArray: number[][] = [];
-  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
-    const tokens = inputArray[i];
-    const embeddedInput: number[] = [];
-    for (let j = 0; j < tokens.length; j++) {
-      const tokenIndex = tokenNumberToIndex(tokens[j]);
-      const embedding = embeddingMatrix[tokenIndex];
-      embeddedInput.push(embedding[0], embedding[1]);
-    }
-    embeddedInputArray.push(embeddedInput);
-  }
+  const embeddedInputArray = convertTokensToEmbeddings(inputArray);
   
   const inputTensor = tf.tensor2d(embeddedInputArray, [VIZ_EXAMPLES_COUNT, EMBEDDED_INPUT_SIZE]);
   const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
@@ -721,18 +722,7 @@ function updateVizDataFromTextboxes(): void {
   }
 
   // Create new vizData with embedded inputs
-  const embeddingMatrix = createEmbeddingMatrix();
-  const embeddedInputArray: number[][] = [];
-  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
-    const tokens = inputArray[i];
-    const embeddedInput: number[] = [];
-    for (let j = 0; j < tokens.length; j++) {
-      const tokenIndex = tokenNumberToIndex(tokens[j]);
-      const embedding = embeddingMatrix[tokenIndex];
-      embeddedInput.push(embedding[0], embedding[1]);
-    }
-    embeddedInputArray.push(embeddedInput);
-  }
+  const embeddedInputArray = convertTokensToEmbeddings(inputArray);
   
   const inputTensor = tf.tensor2d(embeddedInputArray, [VIZ_EXAMPLES_COUNT, EMBEDDED_INPUT_SIZE]);
   const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
