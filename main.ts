@@ -20,6 +20,8 @@ const TOKENS = [...NUMBERS, ...LETTERS];
 const EXAMPLES_GIVEN = 2;
 const INPUT_SIZE = EXAMPLES_GIVEN * 2 + 1;  // <letter>=<number> <letter>=<number> <letter>=____
 const OUTPUT_SIZE = TOKENS.length;
+const EMBEDDING_DIM = 2;  // Each token is embedded as a 2D vector
+const EMBEDDED_INPUT_SIZE = INPUT_SIZE * EMBEDDING_DIM;  // 5 tokens * 2 dimensions = 10
 
 const EPOCHS_PER_BATCH = 1;
 
@@ -72,20 +74,139 @@ function tokenNumberToTokenString(tokenNum: number): string {
   return TOKENS[tokenNum - 1];
 }
 
+// Custom Embedding Layer
+// Maps token numbers (1-6) to 2D embeddings:
+// 1 -> [0,1], 2 -> [0,2], 3 -> [0,3], 4 -> [1,0], 5 -> [2,0], 6 -> [3,0]
+class TokenEmbeddingLayer extends tf.layers.Layer {
+  constructor() {
+    super({});
+  }
+
+  computeOutputShape(inputShape: number[]): number[] {
+    // Input shape: [batchSize, INPUT_SIZE] (5 tokens)
+    // Output shape: [batchSize, INPUT_SIZE * EMBEDDING_DIM] (10 values)
+    return [inputShape[0], EMBEDDED_INPUT_SIZE];
+  }
+
+  call(inputs: Tensor | Tensor[]): Tensor | Tensor[] {
+    return tf.tidy(() => {
+      const input = inputs as Tensor;
+      // input shape: [batchSize, INPUT_SIZE] where each value is a token number (1-6)
+      
+      // Create embedding matrix: shape [6, 2] for 6 tokens, 2 dimensions each
+      const embeddingMatrix = tf.tensor2d([
+        [0, 1],  // token 1
+        [0, 2],  // token 2
+        [0, 3],  // token 3
+        [1, 0],  // token 4
+        [2, 0],  // token 5
+        [3, 0]   // token 6
+      ]);
+      
+      // Convert token numbers (1-6) to indices (0-5)
+      const indices = tf.sub(input, 1);
+      
+      // Gather embeddings for each token
+      // This will give us shape [batchSize, INPUT_SIZE, EMBEDDING_DIM]
+      const embeddings = tf.gather(embeddingMatrix, indices.asType('int32'), 0);
+      
+      // Flatten the last two dimensions to get [batchSize, INPUT_SIZE * EMBEDDING_DIM]
+      const batchSize = input.shape[0];
+      const flattened = tf.reshape(embeddings, [batchSize, EMBEDDED_INPUT_SIZE]);
+      
+      return flattened;
+    });
+  }
+
+  static get className() {
+    return 'TokenEmbeddingLayer';
+  }
+}
+
+// Register the custom layer
+tf.serialization.registerClass(TokenEmbeddingLayer);
+
+// Custom Unembedding Layer
+// Maps from hidden layer output to token probabilities using the inverse of the embedding
+// This is implemented as a linear layer followed by softmax
+class TokenUnembeddingLayer extends tf.layers.Layer {
+  private kernel?: import('@tensorflow/tfjs').LayerVariable;
+  private bias?: import('@tensorflow/tfjs').LayerVariable;
+
+  constructor(config?: any) {
+    super(config || {});
+  }
+
+  build(inputShape: number[] | number[][]): void {
+    const shape = Array.isArray(inputShape[0]) ? inputShape[0] : inputShape as number[];
+    const inputDim = shape[shape.length - 1];
+    
+    // Create a weight matrix that maps from the hidden dimension to embeddings
+    // Then from embeddings to tokens
+    // For simplicity, we'll create a direct mapping from hidden dim to OUTPUT_SIZE (6 tokens)
+    this.kernel = this.addWeight(
+      'kernel',
+      [inputDim, OUTPUT_SIZE],
+      'float32',
+      tf.initializers.glorotUniform({})
+    );
+    
+    this.bias = this.addWeight(
+      'bias',
+      [OUTPUT_SIZE],
+      'float32',
+      tf.initializers.zeros()
+    );
+    
+    this.built = true;
+  }
+
+  call(inputs: Tensor | Tensor[]): Tensor | Tensor[] {
+    return tf.tidy(() => {
+      const input = inputs as Tensor;
+      
+      // Linear transformation
+      let output = tf.add(
+        tf.matMul(input, this.kernel!.read()),
+        this.bias!.read()
+      );
+      
+      // Apply softmax
+      output = tf.softmax(output);
+      
+      return output;
+    });
+  }
+
+  computeOutputShape(inputShape: number[]): number[] {
+    const shape = Array.isArray(inputShape[0]) ? inputShape[0] : inputShape as number[];
+    return [shape[0], OUTPUT_SIZE];
+  }
+
+  static get className() {
+    return 'TokenUnembeddingLayer';
+  }
+}
+
+// Register the custom layer
+tf.serialization.registerClass(TokenUnembeddingLayer);
+
+
 function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
   const model = tf.sequential();
 
+  // Add embedding layer first
+  const embeddingLayer = new TokenEmbeddingLayer() as any;
+  embeddingLayer.inputShape = [INPUT_SIZE];
+  model.add(embeddingLayer);
+
   if (numLayers === 0) {
-    model.add(tf.layers.dense({
-      units: OUTPUT_SIZE,
-      inputShape: [INPUT_SIZE],
-      activation: 'relu'
-    }));
+    // If no hidden layers, go directly to unembedding
+    model.add(new TokenUnembeddingLayer());
   } else {
-    // Add the first hidden layer with inputShape
+    // Add the first hidden layer - now takes EMBEDDED_INPUT_SIZE instead of INPUT_SIZE
     model.add(tf.layers.dense({
       units: neuronsPerLayer,
-      inputShape: [INPUT_SIZE],
       activation: 'relu'
     }));
 
@@ -97,11 +218,8 @@ function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
       }));
     }
 
-    // Add the linear output layer
-    model.add(tf.layers.dense({
-      units: OUTPUT_SIZE,
-      activation: 'softmax'
-    }));
+    // Add the unembedding output layer (replaces the previous dense + softmax)
+    model.add(new TokenUnembeddingLayer());
   }
 
   // Compile the model with categorical cross-entropy loss
@@ -213,27 +331,13 @@ function updateLayerConfiguration(numLayers: number, neuronsPerLayer: number): v
 }
 
 function canUsePerfectWeights(numLayers: number, neuronsPerLayer: number): { canUse: boolean, reason: string } {
-  // The setPerfectWeights function requires at least 4 hidden layers with at least 6 neurons per layer
-  // Extra layers beyond the first 4 implement identity functions on their first 3 inputs
-  // Extra neurons beyond the minimum are set to implement identity functions
-  const minRequiredLayers = 4;
-  const minRequiredNeurons = 6;
-
-  if (numLayers < minRequiredLayers) {
-    return {
-      canUse: false,
-      reason: `Requires at least ${minRequiredLayers} hidden layers, but currently configured with ${numLayers}.`
-    };
-  }
-
-  if (neuronsPerLayer < minRequiredNeurons) {
-    return {
-      canUse: false,
-      reason: `Requires at least ${minRequiredNeurons} neurons per layer, but currently configured with ${neuronsPerLayer}.`
-    };
-  }
-
-  return { canUse: true, reason: '' };
+  // TODO: Update setPerfectWeights to work with embedding/unembedding layers
+  // The setPerfectWeights function needs to be updated to work with the new architecture
+  // that includes embedding and unembedding layers
+  return {
+    canUse: false,
+    reason: 'Perfect weights feature not yet updated for embedding/unembedding architecture.'
+  };
 }
 
 function updatePerfectWeightsButton(): void {
@@ -890,7 +994,7 @@ function drawNetworkArchitecture(): void {
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const layers = [INPUT_SIZE, ...Array(appState.num_layers).fill(appState.neurons_per_layer), OUTPUT_SIZE];
+  const layers = [INPUT_SIZE, EMBEDDED_INPUT_SIZE, ...Array(appState.num_layers).fill(appState.neurons_per_layer), OUTPUT_SIZE];
   const layerHeight = 20; // Height of the rectangle for each layer
   const maxLayerWidth = canvas.width * 0.4; // Max width for a layer
   const layerGapY = 40; // Vertical gap between layers
@@ -1083,8 +1187,10 @@ function drawNetworkArchitecture(): void {
     let label = '';
     if (i === 0) {
       label = `${numNeurons}-wide input`;
+    } else if (i === 1) {
+      label = `${numNeurons}-wide embedding layer`;
     } else if (i === layers.length - 1) {
-      label = `${numNeurons}-wide linear+softmax layer`;
+      label = `${numNeurons}-wide unembedding+softmax layer`;
     } else {
       label = `${numNeurons}-wide ReLU layer`;
     }
