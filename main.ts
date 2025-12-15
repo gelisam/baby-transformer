@@ -93,8 +93,11 @@ function createEmbeddingMatrix(): number[][] {
 function createUnembeddingMatrix(): number[][] {
   const embedding = createEmbeddingMatrix();
   // Transpose: from [6, 2] to [2, 6]
-  const unembedding: number[][] = [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]];
-  for (let i = 0; i < 6; i++) {
+  const unembedding: number[][] = [
+    Array(OUTPUT_SIZE).fill(0),
+    Array(OUTPUT_SIZE).fill(0)
+  ];
+  for (let i = 0; i < OUTPUT_SIZE; i++) {
     unembedding[0][i] = embedding[i][0];
     unembedding[1][i] = embedding[i][1];
   }
@@ -104,31 +107,9 @@ function createUnembeddingMatrix(): number[][] {
 function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
   const model = tf.sequential();
 
-  // Add embedding layer - this is a custom layer using a dense layer with fixed weights
-  // Input: [batchSize, INPUT_SIZE] with token numbers
-  // Output: [batchSize, EMBEDDED_INPUT_SIZE] flattened embeddings
-  const embeddingMatrix = createEmbeddingMatrix();
-  
-  // Create a custom embedding layer using tf.layers.dense with trainable=false
-  // We'll set the weights manually
-  const embeddingWeights = tf.buffer([OUTPUT_SIZE, EMBEDDING_DIM]);
-  for (let i = 0; i < OUTPUT_SIZE; i++) {
-    embeddingWeights.set(embeddingMatrix[i][0], i, 0);
-    embeddingWeights.set(embeddingMatrix[i][1], i, 1);
-  }
-  
-  // For each input token, we need to look up its embedding
-  // Instead of a single embedding layer, we'll reshape the input after embedding
-  // Actually, we need to embed each of the INPUT_SIZE tokens separately
-  
-  // The input is [batchSize, INPUT_SIZE] where each element is a token number (1-6)
-  // We need to convert this to [batchSize, INPUT_SIZE * EMBEDDING_DIM]
-  
-  // TensorFlow.js doesn't have a built-in embedding layer that works this way
-  // So we'll use a workaround: one-hot encode each token, then apply a dense layer
-  
-  // First, we need to handle the embedding differently
-  // Let's use a Lambda layer to perform the embedding lookup
+  // The embedding is handled in the data preprocessing step (generateData, pickRandomInputs, etc.)
+  // Each token is converted to a 2D embedding before being fed to the network
+  // Input shape is EMBEDDED_INPUT_SIZE = INPUT_SIZE * EMBEDDING_DIM (5 * 2 = 10)
   
   if (numLayers === 0) {
     // Special case: direct connection from embedded input to unembedded output
@@ -163,15 +144,19 @@ function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
   // Add the unembedding layer (linear layer followed by softmax)
   // This converts from EMBEDDING_DIM to OUTPUT_SIZE
   const unembeddingMatrix = createUnembeddingMatrix();
+  const unembeddingWeights = tf.tensor2d(unembeddingMatrix);
+  const unembeddingBias = tf.zeros([OUTPUT_SIZE]);
+  
   model.add(tf.layers.dense({
     units: OUTPUT_SIZE,
     activation: 'softmax',
-    weights: [
-      tf.tensor2d(unembeddingMatrix),
-      tf.zeros([OUTPUT_SIZE])
-    ],
+    weights: [unembeddingWeights, unembeddingBias],
     trainable: true  // Allow fine-tuning of unembedding
   }));
+
+  // Dispose the tensors used for initialization since they're copied into the layer
+  unembeddingWeights.dispose();
+  unembeddingBias.dispose();
 
   // Compile the model with categorical cross-entropy loss
   model.compile({
