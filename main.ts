@@ -30,6 +30,12 @@ const global = (() => {
     TOKEN_STRING_TO_INDEX[TOKENS[i]] = i;
   }
   
+  const VIZ_ROWS = 2;
+  const VIZ_COLUMNS = 3;
+  const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
+  const EXAMPLES_GIVEN = 2;
+  const INPUT_SIZE = EXAMPLES_GIVEN * 2 + 1;  // <letter>=<number> <letter>=<number> <letter>=____
+  
   return {
     // Model state
     model: undefined as unknown as Sequential,
@@ -40,17 +46,17 @@ const global = (() => {
     vizData: undefined as unknown as TrainingData,
     
     // Configuration constants
-    VIZ_ROWS: 2,
-    VIZ_COLUMNS: 3,
-    VIZ_EXAMPLES_COUNT: 2 * 3,
+    VIZ_ROWS,
+    VIZ_COLUMNS,
+    VIZ_EXAMPLES_COUNT,
     SHORT_NUMBERS,
     SHORT_LETTERS,
     SHORT_TOKENS,
     NUMBERS,
     LETTERS,
     TOKENS,
-    EXAMPLES_GIVEN: 2,
-    INPUT_SIZE: 2 * 2 + 1,  // <letter>=<number> <letter>=<number> <letter>=____
+    EXAMPLES_GIVEN,
+    INPUT_SIZE,
     OUTPUT_SIZE: TOKENS.length,
     EPOCHS_PER_BATCH: 1,
     TOKEN_STRING_TO_INDEX,
@@ -290,7 +296,7 @@ async function trainingStep() {
 
   // Get the loss from the last epoch in the batch
   const loss = history.history.loss[history.history.loss.length - 1] as number;
-  statusElement.innerHTML = `Traininglobal... Epoch ${global.currentEpoch} - Loss: ${loss.toFixed(4)}`;
+  statusElement.innerHTML = `Training... Epoch ${global.currentEpoch} - Loss: ${loss.toFixed(4)}`;
 
   global.lossHistory.push({ epoch: global.currentEpoch, loss });
   await drawViz(global.vizData);
