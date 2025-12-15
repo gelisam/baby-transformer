@@ -987,10 +987,29 @@ function drawNetworkArchitecture(): void {
   for (let i = 0; i < layers.length; i++) {
     const numNeurons = layers[i];
     const geom = layerGeometries[i];
+    const isHidden = i > 0 && i < layers.length - 1;
 
-    // Draw layer rectangle
+    // Draw main layer rectangle
     ctx.fillStyle = 'darkblue';
     ctx.fillRect(geom.x, geom.y, geom.width, geom.height);
+
+    // Color-code the bottom border for activation functions
+    ctx.lineWidth = 4;
+    if (isHidden) {
+      // Hidden layers use ReLU
+      ctx.strokeStyle = '#4682B4'; // SteelBlue for ReLU
+      ctx.beginPath();
+      ctx.moveTo(geom.x, geom.y + geom.height);
+      ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
+      ctx.stroke();
+    } else if (i === layers.length - 1) {
+      // Output layer is followed by Softmax
+      ctx.strokeStyle = 'rgba(255, 165, 0, 1)'; // Orange for Softmax
+      ctx.beginPath();
+      ctx.moveTo(geom.x, geom.y + geom.height);
+      ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
+      ctx.stroke();
+    }
 
     // Draw layer label
     ctx.fillStyle = 'black';
@@ -999,9 +1018,9 @@ function drawNetworkArchitecture(): void {
     if (i === 0) {
       label = 'Input';
     } else if (i === layers.length - 1) {
-      label = 'Linear Output';
+      label = 'Logits (Softmax)';
     } else {
-      label = `Hidden Layer ${i}`;
+      label = `Hidden Layer ${i} (ReLU)`;
     }
 
     const labelText = `${label} (${numNeurons} neurons)`;
