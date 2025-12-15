@@ -875,8 +875,30 @@ function drawNetworkArchitecture(): void {
   const layerGapY = 50; // Vertical gap between layers
   const startY = 30;
   const canvasWidth = canvas.width;
+  const arrowHeadSize = 8; // Size of arrow heads
 
   const maxNeurons = Math.max(...layers);
+
+  // Helper function to draw a downward arrow
+  function drawDownwardArrow(ctx: CanvasRenderingContext2D, x: number, startY: number, endY: number): void {
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = 'darkblue';
+    ctx.fillStyle = 'darkblue';
+
+    // Draw arrow shaft
+    ctx.beginPath();
+    ctx.moveTo(x, startY);
+    ctx.lineTo(x, endY - arrowHeadSize);
+    ctx.stroke();
+
+    // Draw arrow head
+    ctx.beginPath();
+    ctx.moveTo(x, endY);
+    ctx.lineTo(x - arrowHeadSize, endY - arrowHeadSize);
+    ctx.lineTo(x + arrowHeadSize, endY - arrowHeadSize);
+    ctx.closePath();
+    ctx.fill();
+  }
 
   // Store layer positions and sizes
   const layerGeometries: { x: number, y: number, width: number, height: number }[] = [];
@@ -1002,25 +1024,8 @@ function drawNetworkArchitecture(): void {
       const arrowX = geom.x + geom.width / 2;
       const arrowStartY = geom.y + geom.height / 3;
       const arrowEndY = geom.y + geom.height;
-      const arrowHeadSize = 8;
 
-      ctx.lineWidth = 6;
-      ctx.strokeStyle = 'darkblue';
-      ctx.fillStyle = 'darkblue';
-
-      // Draw arrow shaft
-      ctx.beginPath();
-      ctx.moveTo(arrowX, arrowStartY);
-      ctx.lineTo(arrowX, arrowEndY - arrowHeadSize);
-      ctx.stroke();
-
-      // Draw arrow head
-      ctx.beginPath();
-      ctx.moveTo(arrowX, arrowEndY);
-      ctx.lineTo(arrowX - arrowHeadSize, arrowEndY - arrowHeadSize);
-      ctx.lineTo(arrowX + arrowHeadSize, arrowEndY - arrowHeadSize);
-      ctx.closePath();
-      ctx.fill();
+      drawDownwardArrow(ctx, arrowX, arrowStartY, arrowEndY);
     } else {
       // Draw main layer rectangle for non-input layers
       ctx.fillStyle = 'darkblue';
@@ -1078,25 +1083,8 @@ function drawNetworkArchitecture(): void {
 
   // Draw thick downward arrow in the middle of the extra output rectangle
   const extraArrowX = extraOutputX + extraOutputWidth / 2;
-  const extraArrowStartY = extraOutputY;
+  const extraArrowStartY = extraOutputY + arrowHeadSize;
   const extraArrowEndY = extraOutputY + extraOutputHeight * 2 / 3;
-  const extraArrowHeadSize = 8;
 
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = 'darkblue';
-  ctx.fillStyle = 'darkblue';
-
-  // Draw arrow shaft
-  ctx.beginPath();
-  ctx.moveTo(extraArrowX, extraArrowStartY + extraArrowHeadSize);
-  ctx.lineTo(extraArrowX, extraArrowEndY - extraArrowHeadSize);
-  ctx.stroke();
-
-  // Draw arrow head
-  ctx.beginPath();
-  ctx.moveTo(extraArrowX, extraArrowEndY);
-  ctx.lineTo(extraArrowX - extraArrowHeadSize, extraArrowEndY - extraArrowHeadSize);
-  ctx.lineTo(extraArrowX + extraArrowHeadSize, extraArrowEndY - extraArrowHeadSize);
-  ctx.closePath();
-  ctx.fill();
+  drawDownwardArrow(ctx, extraArrowX, extraArrowStartY, extraArrowEndY);
 }
