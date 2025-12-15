@@ -870,9 +870,9 @@ function drawNetworkArchitecture(): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const layers = [INPUT_SIZE, ...HIDDEN_LAYER_SIZES, OUTPUT_SIZE];
-  const layerHeight = 30; // Height of the rectangle for each layer
+  const layerHeight = 20; // Height of the rectangle for each layer
   const maxLayerWidth = canvas.width * 0.4; // Max width for a layer
-  const layerGapY = 50; // Vertical gap between layers
+  const layerGapY = 40; // Vertical gap between layers
   const startY = 30;
   const canvasWidth = canvas.width;
   const arrowHeadSize = 8; // Size of arrow heads
@@ -931,7 +931,7 @@ function drawNetworkArchitecture(): void {
     const currentNeuronPositions: { x: number, y: number }[] = [];
     for (let n = 0; n < currentNeurons; n++) {
       const x = currentLayer.x + (currentLayer.width / currentNeurons) * (n + 0.5);
-      const y = currentLayer.y + currentLayer.height;
+      const y = currentLayer.y + currentLayer.height + 1;
       currentNeuronPositions.push({ x, y });
     }
 
@@ -1028,8 +1028,8 @@ function drawNetworkArchitecture(): void {
 
       // Draw thick downward arrow in the middle of the rectangle
       const arrowX = geom.x + geom.width / 2;
-      const arrowStartY = geom.y + geom.height / 3;
-      const arrowEndY = geom.y + geom.height;
+      const arrowStartY = geom.y;
+      const arrowEndY = geom.y + geom.height - 2;
 
       drawDownwardArrow(ctx, arrowX, arrowStartY, arrowEndY);
     } else {
@@ -1043,15 +1043,15 @@ function drawNetworkArchitecture(): void {
         // Hidden layers use ReLU
         ctx.strokeStyle = '#4682B4'; // SteelBlue for ReLU
         ctx.beginPath();
-        ctx.moveTo(geom.x, geom.y + geom.height);
-        ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
+        ctx.moveTo(geom.x, geom.y + geom.height - 1);
+        ctx.lineTo(geom.x + geom.width, geom.y + geom.height - 1);
         ctx.stroke();
       } else if (i === layers.length - 1) {
         // Output layer is followed by Softmax
         ctx.strokeStyle = 'rgba(255, 165, 0, 1)'; // Orange for Softmax
         ctx.beginPath();
-        ctx.moveTo(geom.x, geom.y + geom.height);
-        ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
+        ctx.moveTo(geom.x, geom.y + geom.height - 1);
+        ctx.lineTo(geom.x + geom.width, geom.y + geom.height - 1);
         ctx.stroke();
       }
     }
@@ -1061,36 +1061,21 @@ function drawNetworkArchitecture(): void {
     ctx.textAlign = 'right';
     let label = '';
     if (i === 0) {
-      label = 'Input';
+      label = `${numNeurons}-wide input`;
     } else if (i === layers.length - 1) {
-      label = 'Logits (Softmax)';
+      label = `${numNeurons}-wide linear+softmax layer`;
     } else {
-      label = `Hidden Layer ${i} (ReLU)`;
+      label = `${numNeurons}-wide ReLU layer`;
     }
 
-    const labelText = `${label} (${numNeurons} neurons)`;
-    ctx.fillText(labelText, canvasWidth - 20, geom.y + geom.height / 2);
+    ctx.fillText(label, canvasWidth - 20, geom.y + geom.height / 2 + 5);
   }
 
-  // Add extra output rectangle after the output layer
-  const lastLayerGeom = layerGeometries[layerGeometries.length - 1];
-  const extraOutputY = lastLayerGeom.y + lastLayerGeom.height + layerGapY;
-  const extraOutputWidth = lastLayerGeom.width;
-  const extraOutputX = lastLayerGeom.x;
-  const extraOutputHeight = layerHeight;
+  // Draw thick downward arrow after the output layer
+  const geom = layerGeometries[layerGeometries.length - 1];
+  const arrowX = geom.x + geom.width / 2;
+  const arrowStartY = geom.y + layerHeight + 3;
+  const arrowEndY = geom.y + layerHeight + 3 + geom.height - 2;
 
-  // Draw only the top edge of the extra output rectangle
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'darkblue';
-  ctx.beginPath();
-  ctx.moveTo(extraOutputX, extraOutputY);
-  ctx.lineTo(extraOutputX + extraOutputWidth, extraOutputY);
-  ctx.stroke();
-
-  // Draw thick downward arrow in the middle of the extra output rectangle
-  const extraArrowX = extraOutputX + extraOutputWidth / 2;
-  const extraArrowStartY = extraOutputY + arrowHeadSize;
-  const extraArrowEndY = extraOutputY + extraOutputHeight * 2 / 3;
-
-  drawDownwardArrow(ctx, extraArrowX, extraArrowStartY, extraArrowEndY);
+  drawDownwardArrow(ctx, arrowX, arrowStartY, arrowEndY);
 }
