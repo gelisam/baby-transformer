@@ -40,7 +40,7 @@ interface TrainingData {
   outputTensor: Tensor2D;
 }
 
-const global = {
+const appState = {
   model: undefined as unknown as Sequential,
   isTraining: false,
   currentEpoch: 0,
@@ -188,21 +188,21 @@ function generateData(): TrainingData {
 // --- Training Control ---
 function updateLayerConfiguration(numLayers: number, neuronsPerLayer: number): void {
   // Stop training and reinitialize model
-  if (global.isTraining) {
+  if (appState.isTraining) {
     toggleTrainingMode(); // Toggles isTraining to false
   }
-  if (global.data) {
+  if (appState.data) {
     try {
-      global.data.inputTensor.dispose();
-      global.data.outputTensor.dispose();
+      appState.data.inputTensor.dispose();
+      appState.data.outputTensor.dispose();
     } catch (e) {
       // Tensors may already be disposed
     }
   }
-  if (global.vizData) {
+  if (appState.vizData) {
     try {
-      global.vizData.inputTensor.dispose();
-      global.vizData.outputTensor.dispose();
+      appState.vizData.inputTensor.dispose();
+      appState.vizData.outputTensor.dispose();
     } catch (e) {
       // Tensors may already be disposed
     }
@@ -239,7 +239,7 @@ function canUsePerfectWeights(numLayers: number, neuronsPerLayer: number): { can
 function updatePerfectWeightsButton(): void {
   const button = document.getElementById('perfect-weights-button') as HTMLButtonElement;
   const tooltipText = document.getElementById('perfect-weights-tooltip-text') as HTMLSpanElement;
-  const result = canUsePerfectWeights(global.num_layers, global.neurons_per_layer);
+  const result = canUsePerfectWeights(appState.num_layers, appState.neurons_per_layer);
 
   button.disabled = !result.canUse;
 
@@ -251,10 +251,10 @@ function updatePerfectWeightsButton(): void {
 }
 
 async function toggleTrainingMode() {
-  global.isTraining = !global.isTraining;
+  appState.isTraining = !appState.isTraining;
   const trainButton = document.getElementById('train-button')!;
 
-  if (global.isTraining) {
+  if (appState.isTraining) {
     trainButton.innerText = 'Pause';
     requestAnimationFrame(trainingStep);
   } else {
@@ -263,7 +263,7 @@ async function toggleTrainingMode() {
 }
 
 async function trainingStep() {
-  if (!global.isTraining) {
+  if (!appState.isTraining) {
     // Training has been paused
     return;
   }
@@ -271,19 +271,19 @@ async function trainingStep() {
   const statusElement = document.getElementById('status')!;
 
   // Train for one epoch
-  const history = await global.model.fit(global.data.inputTensor, global.data.outputTensor, {
+  const history = await appState.model.fit(appState.data.inputTensor, appState.data.outputTensor, {
     epochs: EPOCHS_PER_BATCH,
     verbose: 0
   });
 
-  global.currentEpoch += EPOCHS_PER_BATCH;
+  appState.currentEpoch += EPOCHS_PER_BATCH;
 
   // Get the loss from the last epoch in the batch
   const loss = history.history.loss[history.history.loss.length - 1] as number;
-  statusElement.innerHTML = `Training... Epoch ${global.currentEpoch} - Loss: ${loss.toFixed(4)}`;
+  statusElement.innerHTML = `Training... Epoch ${appState.currentEpoch} - Loss: ${loss.toFixed(4)}`;
 
-  global.lossHistory.push({ epoch: global.currentEpoch, loss });
-  await drawViz(global.vizData);
+  appState.lossHistory.push({ epoch: appState.currentEpoch, loss });
+  await drawViz(appState.vizData);
   drawLossCurve();
 
   // Request the next frame
@@ -291,7 +291,7 @@ async function trainingStep() {
 }
 
 async function setPerfectWeights(): Promise<void> {
-  if (global.isTraining) {
+  if (appState.isTraining) {
     toggleTrainingMode(); // Toggles isTraining to false
   }
 
@@ -403,8 +403,8 @@ async function setPerfectWeights(): Promise<void> {
   const number2 = 3;
   const letter3 = 4;
 
-  const /*mut*/ layer1weights = tf.buffer([INPUT_SIZE, global.neurons_per_layer])
-  const /*mut*/ layer1bias = tf.buffer([global.neurons_per_layer]);
+  const /*mut*/ layer1weights = tf.buffer([INPUT_SIZE, appState.neurons_per_layer])
+  const /*mut*/ layer1bias = tf.buffer([appState.neurons_per_layer]);
   const sub1from3 = 0;
   const sub3from1 = 1;
   const sub2from3 = 2;
@@ -428,8 +428,8 @@ async function setPerfectWeights(): Promise<void> {
   // const number2layer1 = relu(1.0 * number2)
   layer1weights.set(1.0, number2, number2layer1);
 
-  const /*mut*/ layer2weights = tf.buffer([global.neurons_per_layer, global.neurons_per_layer])
-  const /*mut*/ layer2bias = tf.buffer([global.neurons_per_layer]);
+  const /*mut*/ layer2weights = tf.buffer([appState.neurons_per_layer, appState.neurons_per_layer])
+  const /*mut*/ layer2bias = tf.buffer([appState.neurons_per_layer]);
   const contribution1 = 0;
   const contribution2 = 1;
   // const contribution1 = relu(1.0 * number1layer1 + -1000.0 * sub1from3 + -1000.0 * sub3from1)
@@ -441,8 +441,8 @@ async function setPerfectWeights(): Promise<void> {
   layer2weights.set(-1000.0, sub2from3, contribution2);
   layer2weights.set(-1000.0, sub3from2, contribution2);
 
-  const /*mut*/ layer3weights = tf.buffer([global.neurons_per_layer, global.neurons_per_layer])
-  const /*mut*/ layer3bias = tf.buffer([global.neurons_per_layer]);
+  const /*mut*/ layer3weights = tf.buffer([appState.neurons_per_layer, appState.neurons_per_layer])
+  const /*mut*/ layer3bias = tf.buffer([appState.neurons_per_layer]);
   const sub1fromOut = 0;
   const sub2fromOut = 1;
   const sub3fromOut = 2;
@@ -474,8 +474,8 @@ async function setPerfectWeights(): Promise<void> {
   layer3weights.set(-1.0, contribution2, subOutFrom3);
   layer3bias.set(3.0, subOutFrom3);
 
-  const /*mut*/ layer4weights = tf.buffer([global.neurons_per_layer, global.neurons_per_layer])
-  const /*mut*/ layer4bias = tf.buffer([global.neurons_per_layer]);
+  const /*mut*/ layer4weights = tf.buffer([appState.neurons_per_layer, appState.neurons_per_layer])
+  const /*mut*/ layer4bias = tf.buffer([appState.neurons_per_layer]);
   const probability1 = 0;
   const probability2 = 1;
   const probability3 = 2;
@@ -495,9 +495,9 @@ async function setPerfectWeights(): Promise<void> {
   // Layers 5 and beyond (if any) implement identity function on their first 3
   // inputs.
   const extraLayerWeights: any[] = [];
-  for (let layerIdx = 4; layerIdx < global.num_layers; layerIdx++) {
-    const prevLayerSize = global.neurons_per_layer;
-    const currLayerSize = global.neurons_per_layer;
+  for (let layerIdx = 4; layerIdx < appState.num_layers; layerIdx++) {
+    const prevLayerSize = appState.neurons_per_layer;
+    const currLayerSize = appState.neurons_per_layer;
 
     const weights = tf.buffer([prevLayerSize, currLayerSize]);
     const bias = tf.buffer([currLayerSize]);
@@ -523,7 +523,7 @@ async function setPerfectWeights(): Promise<void> {
   // way up and P(A="A=") way down.
 
   // Output layer connects to the last hidden layer
-  const /*mut*/ outputWeights = tf.buffer([global.neurons_per_layer, OUTPUT_SIZE])
+  const /*mut*/ outputWeights = tf.buffer([appState.neurons_per_layer, OUTPUT_SIZE])
   const /*mut*/ outputBias = tf.buffer([OUTPUT_SIZE]);
   outputWeights.set(1000.0, probability1, probability1);
   outputWeights.set(1000.0, probability2, probability2);
@@ -543,9 +543,9 @@ async function setPerfectWeights(): Promise<void> {
     ...extraLayerWeights,
     outputWeights.toTensor(), outputBias.toTensor()
   ];
-  global.model.setWeights(perfectWeights);
+  appState.model.setWeights(perfectWeights);
 
-  await drawViz(global.vizData);
+  await drawViz(appState.vizData);
   perfectWeights.forEach(tensor => tensor.dispose());
 }
 
@@ -623,40 +623,40 @@ function updateVizDataFromTextboxes(): void {
       if (parsed) {
         inputArray.push(parsed);
         // Find the corresponding output from the original data
-        const matchingIndex = global.data.inputArray.findIndex(arr =>
+        const matchingIndex = appState.data.inputArray.findIndex(arr =>
           arr.every((val, idx) => val === parsed[idx])
         );
         if (matchingIndex >= 0) {
-          outputArray.push(global.data.outputArray[matchingIndex]);
+          outputArray.push(appState.data.outputArray[matchingIndex]);
         } else {
           // If not found in training data, use a default output
           outputArray.push(tokenStringToTokenNumber(NUMBERS[0]));
         }
       } else {
         // If invalid, keep the previous value or use a default
-        if (global.vizData && global.vizData.inputArray[i]) {
-          inputArray.push(global.vizData.inputArray[i]);
-          outputArray.push(global.vizData.outputArray[i]);
+        if (appState.vizData && appState.vizData.inputArray[i]) {
+          inputArray.push(appState.vizData.inputArray[i]);
+          outputArray.push(appState.vizData.outputArray[i]);
         } else {
           // Fallback: use the first valid input from training data
-          inputArray.push(global.data.inputArray[0]);
-          outputArray.push(global.data.outputArray[0]);
+          inputArray.push(appState.data.inputArray[0]);
+          outputArray.push(appState.data.outputArray[0]);
         }
       }
     }
   }
 
   // Dispose old tensors
-  if (global.vizData) {
-    global.vizData.inputTensor.dispose();
-    global.vizData.outputTensor.dispose();
+  if (appState.vizData) {
+    appState.vizData.inputTensor.dispose();
+    appState.vizData.outputTensor.dispose();
   }
 
   // Create new vizData
   const inputTensor = tf.tensor2d(inputArray, [VIZ_EXAMPLES_COUNT, INPUT_SIZE]);
   const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
-  global.vizData = {
+  appState.vizData = {
     inputArray,
     outputArray,
     inputTensor,
@@ -664,7 +664,7 @@ function updateVizDataFromTextboxes(): void {
   };
 
   // Redraw visualization
-  drawViz(global.vizData);
+  drawViz(appState.vizData);
 }
 
 async function drawViz(vizData: TrainingData): Promise<void> {
@@ -676,7 +676,7 @@ async function drawViz(vizData: TrainingData): Promise<void> {
   const inputTensor = vizData.inputTensor;
 
   // Get predictions
-  const predictionTensor = global.model.predict(inputTensor) as Tensor2D;
+  const predictionTensor = appState.model.predict(inputTensor) as Tensor2D;
   const predictionArray = await predictionTensor.array() as number[][];
 
   // Clear canvas only after predictions are ready to avoid flickering
@@ -734,7 +734,7 @@ async function drawViz(vizData: TrainingData): Promise<void> {
 }
 
 function drawLossCurve(): void {
-  if (global.lossHistory.length < 2) {
+  if (appState.lossHistory.length < 2) {
     return;
   }
 
@@ -743,10 +743,10 @@ function drawLossCurve(): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Find data range
-  const minLoss = Math.min(...global.lossHistory.map(d => d.loss));
-  const maxLoss = Math.max(...global.lossHistory.map(d => d.loss));
-  const minEpoch = global.lossHistory[0].epoch;
-  const maxEpoch = global.lossHistory[global.lossHistory.length - 1].epoch;
+  const minLoss = Math.min(...appState.lossHistory.map(d => d.loss));
+  const maxLoss = Math.max(...appState.lossHistory.map(d => d.loss));
+  const minEpoch = appState.lossHistory[0].epoch;
+  const maxEpoch = appState.lossHistory[appState.lossHistory.length - 1].epoch;
 
   // Helper functions to convert data coordinates to canvas coordinates
   function toCanvasX(epoch: number): number {
@@ -764,9 +764,9 @@ function drawLossCurve(): void {
   ctx.strokeStyle = 'lightgrey';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(toCanvasX(global.lossHistory[0].epoch), toCanvasY(global.lossHistory[0].loss));
-  for (let i = 1; i < global.lossHistory.length; i++) {
-    ctx.lineTo(toCanvasX(global.lossHistory[i].epoch), toCanvasY(global.lossHistory[i].loss));
+  ctx.moveTo(toCanvasX(appState.lossHistory[0].epoch), toCanvasY(appState.lossHistory[0].loss));
+  for (let i = 1; i < appState.lossHistory.length; i++) {
+    ctx.lineTo(toCanvasX(appState.lossHistory[i].epoch), toCanvasY(appState.lossHistory[i].loss));
   }
   ctx.stroke();
 }
@@ -805,16 +805,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const backendSelector = document.getElementById('backend-selector') as HTMLSelectElement;
   backendSelector.addEventListener('change', async () => {
     // Stop training and clean up old tensors before changing backend
-    if (global.isTraining) {
+    if (appState.isTraining) {
       toggleTrainingMode(); // Toggles isTraining to false
     }
-    if (global.data) {
-      global.data.inputTensor.dispose();
-      global.data.outputTensor.dispose();
+    if (appState.data) {
+      appState.data.inputTensor.dispose();
+      appState.data.outputTensor.dispose();
     }
-    if (global.vizData) {
-      global.vizData.inputTensor.dispose();
-      global.vizData.outputTensor.dispose();
+    if (appState.vizData) {
+      appState.vizData.inputTensor.dispose();
+      appState.vizData.outputTensor.dispose();
     }
 
     await setBackend();
@@ -828,15 +828,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const neuronsPerLayerValue = document.getElementById('neurons-per-layer-value') as HTMLSpanElement;
 
   numLayersSlider.addEventListener('input', () => {
-    global.num_layers = parseInt(numLayersSlider.value, 10);
-    numLayersValue.textContent = global.num_layers.toString();
-    updateLayerConfiguration(global.num_layers, global.neurons_per_layer);
+    appState.num_layers = parseInt(numLayersSlider.value, 10);
+    numLayersValue.textContent = appState.num_layers.toString();
+    updateLayerConfiguration(appState.num_layers, appState.neurons_per_layer);
   });
 
   neuronsPerLayerSlider.addEventListener('input', () => {
-    global.neurons_per_layer = parseInt(neuronsPerLayerSlider.value, 10);
-    neuronsPerLayerValue.textContent = global.neurons_per_layer.toString();
-    updateLayerConfiguration(global.num_layers, global.neurons_per_layer);
+    appState.neurons_per_layer = parseInt(neuronsPerLayerSlider.value, 10);
+    neuronsPerLayerValue.textContent = appState.neurons_per_layer.toString();
+    updateLayerConfiguration(appState.num_layers, appState.neurons_per_layer);
   });
 
   // Add event listeners to the input textboxes
@@ -858,27 +858,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function initializeNewModel(): void {
   // Create a new model
-  if (global.model) {
-    global.model.dispose();
+  if (appState.model) {
+    appState.model.dispose();
   }
-  global.model = createModel(global.num_layers, global.neurons_per_layer);
+  appState.model = createModel(appState.num_layers, appState.neurons_per_layer);
 
   // Generate new data
   // No need to clean up old data tensors here, it's handled on backend change
-  global.data = generateData();
+  appState.data = generateData();
 
   // Generate visualization inputs (only once, not on every frame)
-  global.vizData = pickRandomInputs(global.data);
+  appState.vizData = pickRandomInputs(appState.data);
 
   // Reset training state
-  global.currentEpoch = 0;
-  global.lossHistory.length = 0;
+  appState.currentEpoch = 0;
+  appState.lossHistory.length = 0;
 
   const statusElement = document.getElementById('status')!;
   statusElement.innerHTML = 'Ready to train!';
 
   // Visualize the initial (untrained) state
-  drawViz(global.vizData);
+  drawViz(appState.vizData);
 
   // Redraw the architecture in case it changed
   drawNetworkArchitecture();
@@ -890,7 +890,7 @@ function drawNetworkArchitecture(): void {
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const layers = [INPUT_SIZE, ...Array(global.num_layers).fill(global.neurons_per_layer), OUTPUT_SIZE];
+  const layers = [INPUT_SIZE, ...Array(appState.num_layers).fill(appState.neurons_per_layer), OUTPUT_SIZE];
   const layerHeight = 20; // Height of the rectangle for each layer
   const maxLayerWidth = canvas.width * 0.4; // Max width for a layer
   const layerGapY = 40; // Vertical gap between layers
