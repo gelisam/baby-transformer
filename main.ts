@@ -40,22 +40,13 @@ interface TrainingData {
   outputTensor: Tensor2D;
 }
 
-const global: {
-  model: Sequential;
-  isTraining: boolean;
-  currentEpoch: number;
-  lossHistory: { epoch: number, loss: number }[];
-  data: TrainingData;
-  vizData: TrainingData;
-  num_layers: number;
-  neurons_per_layer: number;
-} = {
-  model: undefined!,
+const global = {
+  model: undefined as unknown as Sequential,
   isTraining: false,
   currentEpoch: 0,
-  lossHistory: [],
-  data: undefined!,
-  vizData: undefined!,
+  lossHistory: [] as { epoch: number, loss: number }[],
+  data: undefined as unknown as TrainingData,
+  vizData: undefined as unknown as TrainingData,
   num_layers: 4,
   neurons_per_layer: 6
 };
