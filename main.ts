@@ -211,35 +211,24 @@ function updateLayerConfiguration(numLayers: number, neuronsPerLayer: number): v
 }
 
 function canUsePerfectWeights(numLayers: number, neuronsPerLayer: number): { canUse: boolean, reason: string } {
-  // The setPerfectWeights function requires at least 4 hidden layers with at least [6, 2, 6, 3] neurons
+  // The setPerfectWeights function requires at least 4 hidden layers with at least 6 neurons per layer
   // Extra layers beyond the first 4 implement identity functions on their first 3 inputs
   // Extra neurons beyond the minimum are set to implement identity functions
-  const minRequiredLayers = [6, 2, 6, 3];
+  const minRequiredLayers = 4;
+  const minRequiredNeurons = 6;
 
-  if (numLayers < minRequiredLayers.length) {
+  if (numLayers < minRequiredLayers) {
     return {
       canUse: false,
-      reason: `Requires at least ${minRequiredLayers.length} hidden layers, but currently configured with ${numLayers}.`
+      reason: `Requires at least ${minRequiredLayers} hidden layers, but currently configured with ${numLayers}.`
     };
   }
 
-  for (let i = 0; i < minRequiredLayers.length; i++) {
-    if (neuronsPerLayer < minRequiredLayers[i]) {
-      return {
-        canUse: false,
-        reason: `Layer ${i + 1} must have at least ${minRequiredLayers[i]} neurons, but has ${neuronsPerLayer}.`
-      };
-    }
-  }
-
-  // Extra layers (5 and beyond) must have at least 3 neurons to pass through layer 4's first 3 outputs
-  for (let i = minRequiredLayers.length; i < numLayers; i++) {
-    if (neuronsPerLayer < 3) {
-      return {
-        canUse: false,
-        reason: `Layer ${i + 1} must have at least 3 neurons to implement identity function, but has ${neuronsPerLayer}.`
-      };
-    }
+  if (neuronsPerLayer < minRequiredNeurons) {
+    return {
+      canUse: false,
+      reason: `Requires at least ${minRequiredNeurons} neurons per layer, but currently configured with ${neuronsPerLayer}.`
+    };
   }
 
   return { canUse: true, reason: '' };
