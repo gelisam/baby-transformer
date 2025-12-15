@@ -38,7 +38,9 @@ const TOKENS = [...NUMBERS, ...LETTERS];
 
 const EXAMPLES_GIVEN = 2;
 const INPUT_SIZE = EXAMPLES_GIVEN * 2 + 1;  // <letter>=<number> <letter>=<number> <letter>=____
-let hidden_layer_sizes: number[] = [6, 2, 6, 3];
+let num_layers: number = 4;
+let neurons_per_layer: number = 6;
+let hidden_layer_sizes: number[] = Array(num_layers).fill(neurons_per_layer);
 const OUTPUT_SIZE = TOKENS.length;
 
 const EPOCHS_PER_BATCH = 1;
@@ -183,27 +185,9 @@ function generateData(): TrainingData {
 }
 
 // --- Training Control ---
-function applyHiddenLayers(): void {
-  const input = document.getElementById('hidden-layers-input') as HTMLInputElement;
-  const value = input.value.trim();
-
-  if (value === '') {
-    hidden_layer_sizes = [];
-  } else {
-    const parts = value.split(',').map(s => s.trim());
-    const sizes: number[] = [];
-
-    for (const part of parts) {
-      const num = parseInt(part, 10);
-      if (isNaN(num) || num <= 0) {
-        showError(`Invalid layer size: "${part}". Please use positive integers.`);
-        return;
-      }
-      sizes.push(num);
-    }
-
-    hidden_layer_sizes = sizes;
-  }
+function updateLayerConfiguration(): void {
+  // Update hidden_layer_sizes based on slider values
+  hidden_layer_sizes = Array(num_layers).fill(neurons_per_layer);
 
   // Stop training and reinitialize model
   if (isTraining) {
@@ -849,6 +833,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await setBackend();
     initializeNewModel(); // Initialize a new model for the new backend
+  });
+
+  // Add event listeners for layer configuration sliders
+  const numLayersSlider = document.getElementById('num-layers-slider') as HTMLInputElement;
+  const numLayersValue = document.getElementById('num-layers-value') as HTMLSpanElement;
+  const neuronsPerLayerSlider = document.getElementById('neurons-per-layer-slider') as HTMLInputElement;
+  const neuronsPerLayerValue = document.getElementById('neurons-per-layer-value') as HTMLSpanElement;
+
+  numLayersSlider.addEventListener('input', () => {
+    num_layers = parseInt(numLayersSlider.value, 10);
+    numLayersValue.textContent = num_layers.toString();
+    updateLayerConfiguration();
+  });
+
+  neuronsPerLayerSlider.addEventListener('input', () => {
+    neurons_per_layer = parseInt(neuronsPerLayerSlider.value, 10);
+    neuronsPerLayerValue.textContent = neurons_per_layer.toString();
+    updateLayerConfiguration();
   });
 
   // Add event listeners to the input textboxes

@@ -109,9 +109,14 @@
     </div>
     <br/>
     <div>
-      <label for="hidden-layers-input">Hidden Layer Sizes (comma-separated): </label>
-      <input type="text" id="hidden-layers-input" value="6,2,6,3" style="font-family: monospace; padding: 5px; width: 200px;">
-      <button id="apply-layers-button" onclick="applyHiddenLayers()">Apply</button>
+      <div style="margin-bottom: 10px;">
+        <label for="num-layers-slider">Number of Layers: <span id="num-layers-value">4</span></label>
+        <input type="range" id="num-layers-slider" min="1" max="8" value="4" style="width: 200px; margin-left: 10px;">
+      </div>
+      <div>
+        <label for="neurons-per-layer-slider">Neurons per Layer: <span id="neurons-per-layer-value">6</span></label>
+        <input type="range" id="neurons-per-layer-slider" min="1" max="12" value="6" style="width: 200px; margin-left: 10px;">
+      </div>
     </div>
     <br/>
     <button id="train-button" onclick="toggleTrainingMode()">Train Model</button>
