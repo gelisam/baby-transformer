@@ -872,11 +872,9 @@ function drawNetworkArchitecture(): void {
   const layers = [INPUT_SIZE, ...HIDDEN_LAYER_SIZES, OUTPUT_SIZE];
   const layerHeight = 30; // Height of the rectangle for each layer
   const maxLayerWidth = canvas.width * 0.4; // Max width for a layer
-  const layerGapY = 45; // Vertical gap between layers
+  const layerGapY = 50; // Vertical gap between layers
   const startY = 30;
   const canvasWidth = canvas.width;
-  const softmaxHeight = 30;
-  const softmaxVGap = 15;
 
   const maxNeurons = Math.max(...layers);
 
@@ -989,10 +987,29 @@ function drawNetworkArchitecture(): void {
   for (let i = 0; i < layers.length; i++) {
     const numNeurons = layers[i];
     const geom = layerGeometries[i];
+    const isHidden = i > 0 && i < layers.length - 1;
 
-    // Draw layer rectangle
+    // Draw main layer rectangle
     ctx.fillStyle = 'darkblue';
     ctx.fillRect(geom.x, geom.y, geom.width, geom.height);
+
+    // Color-code the bottom border for activation functions
+    ctx.lineWidth = 4;
+    if (isHidden) {
+      // Hidden layers use ReLU
+      ctx.strokeStyle = '#4682B4'; // SteelBlue for ReLU
+      ctx.beginPath();
+      ctx.moveTo(geom.x, geom.y + geom.height);
+      ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
+      ctx.stroke();
+    } else if (i === layers.length - 1) {
+      // Output layer is followed by Softmax
+      ctx.strokeStyle = 'rgba(255, 165, 0, 1)'; // Orange for Softmax
+      ctx.beginPath();
+      ctx.moveTo(geom.x, geom.y + geom.height);
+      ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
+      ctx.stroke();
+    }
 
     // Draw layer label
     ctx.fillStyle = 'black';
@@ -1001,49 +1018,12 @@ function drawNetworkArchitecture(): void {
     if (i === 0) {
       label = 'Input';
     } else if (i === layers.length - 1) {
-      label = 'Logits';
+      label = 'Logits (Softmax)';
     } else {
-      label = `Hidden Layer ${i}`;
+      label = `Hidden Layer ${i} (ReLU)`;
     }
 
     const labelText = `${label} (${numNeurons} neurons)`;
     ctx.fillText(labelText, canvasWidth - 20, geom.y + geom.height / 2);
   }
-
-  // Draw Softmax activation
-  const outputLayer = layerGeometries[layerGeometries.length - 1];
-  const softmaxY = outputLayer.y + outputLayer.height + softmaxVGap;
-
-  // Funnel shape for softmax
-  ctx.fillStyle = 'rgba(255, 165, 0, 0.5)'; // Orange with transparency
-  ctx.strokeStyle = 'rgba(255, 165, 0, 1)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(outputLayer.x, outputLayer.y + outputLayer.height); // Top-left
-  ctx.lineTo(outputLayer.x + outputLayer.width, outputLayer.y + outputLayer.height); // Top-right
-  ctx.lineTo(outputLayer.x + outputLayer.width * 0.75, softmaxY + softmaxHeight); // Bottom-right
-  ctx.lineTo(outputLayer.x + outputLayer.width * 0.25, softmaxY + softmaxHeight); // Bottom-left
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-
-  // Connect logits to softmax
-  ctx.strokeStyle = 'gray';
-  ctx.lineWidth = 2;
-  const numOutputNeurons = layers[layers.length - 1];
-  for (let n = 0; n < numOutputNeurons; n++) {
-    const neuronX = outputLayer.x + (outputLayer.width / numOutputNeurons) * (n + 0.5);
-    ctx.beginPath();
-    ctx.moveTo(neuronX, outputLayer.y + outputLayer.height);
-    // Aim for the center of the base of the softmax funnel
-    const targetX = outputLayer.x + outputLayer.width * 0.5;
-    const targetY = softmaxY + softmaxHeight / 2;
-    ctx.lineTo(targetX, targetY);
-    ctx.stroke();
-  }
-
-  // Softmax label
-  ctx.fillStyle = 'black';
-  ctx.textAlign = 'right';
-  ctx.fillText('Softmax Activation', canvasWidth - 20, softmaxY + softmaxHeight / 2);
 }
