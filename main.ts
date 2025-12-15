@@ -879,7 +879,13 @@ function drawNetworkArchitecture(): void {
 
   const maxNeurons = Math.max(...layers);
 
-  // Helper function to draw a downward arrow
+  /**
+   * Helper function to draw a thick downward arrow
+   * @param ctx - The canvas rendering context
+   * @param x - The horizontal center position of the arrow
+   * @param startY - The Y coordinate where the arrow shaft starts
+   * @param endY - The Y coordinate where the arrow head points to
+   */
   function drawDownwardArrow(ctx: CanvasRenderingContext2D, x: number, startY: number, endY: number): void {
     ctx.lineWidth = 6;
     ctx.strokeStyle = 'darkblue';
