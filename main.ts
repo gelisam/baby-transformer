@@ -231,21 +231,21 @@ function applyHiddenLayers(): void {
 }
 
 function canUsePerfectWeights(): { canUse: boolean, reason: string } {
-  // The setPerfectWeights function requires exactly 4 hidden layers with sizes [6, 2, 6, 3]
-  const requiredLayers = [6, 2, 6, 3];
+  // The setPerfectWeights function requires exactly 4 hidden layers with at least [6, 2, 6, 3] neurons
+  const minRequiredLayers = [6, 2, 6, 3];
   
-  if (HIDDEN_LAYER_SIZES.length !== requiredLayers.length) {
+  if (HIDDEN_LAYER_SIZES.length !== minRequiredLayers.length) {
     return {
       canUse: false,
-      reason: `Requires exactly ${requiredLayers.length} hidden layers, but currently configured with ${HIDDEN_LAYER_SIZES.length}.`
+      reason: `Requires exactly ${minRequiredLayers.length} hidden layers, but currently configured with ${HIDDEN_LAYER_SIZES.length}.`
     };
   }
   
-  for (let i = 0; i < requiredLayers.length; i++) {
-    if (HIDDEN_LAYER_SIZES[i] !== requiredLayers[i]) {
+  for (let i = 0; i < minRequiredLayers.length; i++) {
+    if (HIDDEN_LAYER_SIZES[i] < minRequiredLayers[i]) {
       return {
         canUse: false,
-        reason: `Layer ${i + 1} must have ${requiredLayers[i]} neurons, but has ${HIDDEN_LAYER_SIZES[i]}.`
+        reason: `Layer ${i + 1} must have at least ${minRequiredLayers[i]} neurons, but has ${HIDDEN_LAYER_SIZES[i]}.`
       };
     }
   }
@@ -420,8 +420,8 @@ async function setPerfectWeights(): Promise<void> {
   const number2 = 3;
   const letter3 = 4;
 
-  const /*mut*/ layer1weights = tf.buffer([INPUT_SIZE, 6])
-  const /*mut*/ layer1bias = tf.buffer([6]);
+  const /*mut*/ layer1weights = tf.buffer([INPUT_SIZE, HIDDEN_LAYER_SIZES[0]])
+  const /*mut*/ layer1bias = tf.buffer([HIDDEN_LAYER_SIZES[0]]);
   const sub1from3 = 0;
   const sub3from1 = 1;
   const sub2from3 = 2;
@@ -445,8 +445,8 @@ async function setPerfectWeights(): Promise<void> {
   // const number2layer1 = relu(1.0 * number2)
   layer1weights.set(1.0, number2, number2layer1);
 
-  const /*mut*/ layer2weights = tf.buffer([6, 2])
-  const /*mut*/ layer2bias = tf.buffer([2]);
+  const /*mut*/ layer2weights = tf.buffer([HIDDEN_LAYER_SIZES[0], HIDDEN_LAYER_SIZES[1]])
+  const /*mut*/ layer2bias = tf.buffer([HIDDEN_LAYER_SIZES[1]]);
   const contribution1 = 0;
   const contribution2 = 1;
   // const contribution1 = relu(1.0 * number1layer1 + -1000.0 * sub1from3 + -1000.0 * sub3from1)
@@ -458,8 +458,8 @@ async function setPerfectWeights(): Promise<void> {
   layer2weights.set(-1000.0, sub2from3, contribution2);
   layer2weights.set(-1000.0, sub3from2, contribution2);
 
-  const /*mut*/ layer3weights = tf.buffer([2, 6])
-  const /*mut*/ layer3bias = tf.buffer([6]);
+  const /*mut*/ layer3weights = tf.buffer([HIDDEN_LAYER_SIZES[1], HIDDEN_LAYER_SIZES[2]])
+  const /*mut*/ layer3bias = tf.buffer([HIDDEN_LAYER_SIZES[2]]);
   const sub1fromOut = 0;
   const sub2fromOut = 1;
   const sub3fromOut = 2;
@@ -491,8 +491,8 @@ async function setPerfectWeights(): Promise<void> {
   layer3weights.set(-1.0, contribution2, subOutFrom3);
   layer3bias.set(3.0, subOutFrom3);
 
-  const /*mut*/ layer4weights = tf.buffer([6, 3])
-  const /*mut*/ layer4bias = tf.buffer([3]);
+  const /*mut*/ layer4weights = tf.buffer([HIDDEN_LAYER_SIZES[2], HIDDEN_LAYER_SIZES[3]])
+  const /*mut*/ layer4bias = tf.buffer([HIDDEN_LAYER_SIZES[3]]);
   const probability1 = 0;
   const probability2 = 1;
   const probability3 = 2;
@@ -521,7 +521,7 @@ async function setPerfectWeights(): Promise<void> {
   // but looks great but softmax will mess this up so we need to push P(A=1) way
   // up and P(A="A=") way down.
 
-  const /*mut*/ outputWeights = tf.buffer([3, OUTPUT_SIZE])
+  const /*mut*/ outputWeights = tf.buffer([HIDDEN_LAYER_SIZES[3], OUTPUT_SIZE])
   const /*mut*/ outputBias = tf.buffer([OUTPUT_SIZE]);
   outputWeights.set(1000.0, probability1, probability1);
   outputWeights.set(1000.0, probability2, probability2);
