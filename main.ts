@@ -76,37 +76,34 @@ function tokenNumberToTokenString(tokenNum: number): string {
 
 // Create the embedding matrix based on the problem statement:
 // 1 <==> [0,1], 2 <==> [0,2], 3 <==> [0,3], 4 <==> [1,0], 5 <==> [2,0], 6 <==> [3,0]
-function createEmbeddingMatrix(): number[][] {
-  const embeddings = [
-    [0, 1],  // token 1
-    [0, 2],  // token 2
-    [0, 3],  // token 3
-    [1, 0],  // token 4
-    [2, 0],  // token 5
-    [3, 0]   // token 6
-  ];
-  return embeddings;
-}
+// Cached to avoid repeated computation
+const EMBEDDING_MATRIX: number[][] = [
+  [0, 1],  // token 1
+  [0, 2],  // token 2
+  [0, 3],  // token 3
+  [1, 0],  // token 4
+  [2, 0],  // token 5
+  [3, 0]   // token 6
+];
 
 // Create the unembedding matrix (transpose of embedding for linear projection)
 // This converts from 2D embedding space back to 6 token logits
-function createUnembeddingMatrix(): number[][] {
-  const embedding = createEmbeddingMatrix();
+// Cached to avoid repeated computation
+const UNEMBEDDING_MATRIX: number[][] = (() => {
   // Transpose: from [6, 2] to [2, 6]
   const unembedding: number[][] = [];
   for (let row = 0; row < EMBEDDING_DIM; row++) {
     unembedding.push(Array(OUTPUT_SIZE).fill(0));
   }
   for (let i = 0; i < OUTPUT_SIZE; i++) {
-    unembedding[0][i] = embedding[i][0];
-    unembedding[1][i] = embedding[i][1];
+    unembedding[0][i] = EMBEDDING_MATRIX[i][0];
+    unembedding[1][i] = EMBEDDING_MATRIX[i][1];
   }
   return unembedding;
-}
+})();
 
 // Convert token arrays to embedded input arrays
 function convertTokensToEmbeddings(inputArray: number[][]): number[][] {
-  const embeddingMatrix = createEmbeddingMatrix();
   const embeddedInputArray: number[][] = [];
   
   for (let i = 0; i < inputArray.length; i++) {
@@ -118,7 +115,7 @@ function convertTokensToEmbeddings(inputArray: number[][]): number[][] {
       if (tokenIndex < 0 || tokenIndex >= OUTPUT_SIZE) {
         throw new Error(`Invalid token number ${tokens[j]} at position ${j}`);
       }
-      const embedding = embeddingMatrix[tokenIndex];
+      const embedding = EMBEDDING_MATRIX[tokenIndex];
       embeddedInput.push(embedding[0], embedding[1]);
     }
     embeddedInputArray.push(embeddedInput);
@@ -166,22 +163,19 @@ function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
   
   // Add the unembedding layer (linear layer followed by softmax)
   // This converts from EMBEDDING_DIM to OUTPUT_SIZE
-  const unembeddingMatrix = createUnembeddingMatrix();
-  const unembeddingWeights = tf.tensor2d(unembeddingMatrix);
+  const unembeddingWeights = tf.tensor2d(UNEMBEDDING_MATRIX);
   const unembeddingBias = tf.zeros([OUTPUT_SIZE]);
   
-  try {
-    model.add(tf.layers.dense({
-      units: OUTPUT_SIZE,
-      activation: 'softmax',
-      weights: [unembeddingWeights, unembeddingBias],
-      trainable: true  // Allow fine-tuning of unembedding
-    }));
-  } finally {
-    // Dispose the tensors used for initialization since they're copied into the layer
-    unembeddingWeights.dispose();
-    unembeddingBias.dispose();
-  }
+  model.add(tf.layers.dense({
+    units: OUTPUT_SIZE,
+    activation: 'softmax',
+    weights: [unembeddingWeights, unembeddingBias],
+    trainable: true  // Allow fine-tuning of unembedding
+  }));
+  
+  // Dispose the tensors used for initialization since they're copied into the layer
+  unembeddingWeights.dispose();
+  unembeddingBias.dispose();
 
   // Compile the model with categorical cross-entropy loss
   model.compile({
@@ -962,7 +956,14 @@ function drawNetworkArchitecture(): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // New architecture: INPUT_SIZE -> Embedding -> EMBEDDED_INPUT_SIZE -> Hidden Layers -> EMBEDDING_DIM -> Unembedding -> OUTPUT_SIZE
-  const layers = [INPUT_SIZE, EMBEDDED_INPUT_SIZE, ...Array(appState.num_layers).fill(appState.neurons_per_layer), EMBEDDING_DIM, OUTPUT_SIZE];
+  // Build layers array step by step for clarity
+  const inputLayer = INPUT_SIZE;
+  const embeddingLayer = EMBEDDED_INPUT_SIZE;
+  const hiddenLayers = Array(appState.num_layers).fill(appState.neurons_per_layer);
+  const linearLayer = EMBEDDING_DIM;
+  const outputLayer = OUTPUT_SIZE;
+  const layers = [inputLayer, embeddingLayer, ...hiddenLayers, linearLayer, outputLayer];
+  
   const layerHeight = 20; // Height of the rectangle for each layer
   const maxLayerWidth = canvas.width * 0.4; // Max width for a layer
   const layerGapY = 40; // Vertical gap between layers
