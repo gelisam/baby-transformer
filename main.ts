@@ -870,13 +870,41 @@ function drawNetworkArchitecture(): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const layers = [INPUT_SIZE, ...HIDDEN_LAYER_SIZES, OUTPUT_SIZE];
-  const layerHeight = 30; // Height of the rectangle for each layer
+  const layerHeight = 20; // Height of the rectangle for each layer
   const maxLayerWidth = canvas.width * 0.4; // Max width for a layer
-  const layerGapY = 50; // Vertical gap between layers
+  const layerGapY = 40; // Vertical gap between layers
   const startY = 30;
   const canvasWidth = canvas.width;
+  const arrowHeadSize = 8; // Size of arrow heads
 
   const maxNeurons = Math.max(...layers);
+
+  /**
+   * Helper function to draw a thick downward arrow
+   * @param ctx - The canvas rendering context
+   * @param x - The horizontal center position of the arrow
+   * @param startY - The Y coordinate where the arrow shaft starts
+   * @param endY - The Y coordinate where the arrow head points to
+   */
+  function drawDownwardArrow(ctx: CanvasRenderingContext2D, x: number, startY: number, endY: number): void {
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = 'darkblue';
+    ctx.fillStyle = 'darkblue';
+
+    // Draw arrow shaft
+    ctx.beginPath();
+    ctx.moveTo(x, startY);
+    ctx.lineTo(x, endY - arrowHeadSize);
+    ctx.stroke();
+
+    // Draw arrow head
+    ctx.beginPath();
+    ctx.moveTo(x, endY);
+    ctx.lineTo(x - arrowHeadSize, endY - arrowHeadSize);
+    ctx.lineTo(x + arrowHeadSize, endY - arrowHeadSize);
+    ctx.closePath();
+    ctx.fill();
+  }
 
   // Store layer positions and sizes
   const layerGeometries: { x: number, y: number, width: number, height: number }[] = [];
@@ -903,7 +931,7 @@ function drawNetworkArchitecture(): void {
     const currentNeuronPositions: { x: number, y: number }[] = [];
     for (let n = 0; n < currentNeurons; n++) {
       const x = currentLayer.x + (currentLayer.width / currentNeurons) * (n + 0.5);
-      const y = currentLayer.y + currentLayer.height;
+      const y = currentLayer.y + currentLayer.height + 1;
       currentNeuronPositions.push({ x, y });
     }
 
@@ -989,26 +1017,43 @@ function drawNetworkArchitecture(): void {
     const geom = layerGeometries[i];
     const isHidden = i > 0 && i < layers.length - 1;
 
-    // Draw main layer rectangle
-    ctx.fillStyle = 'darkblue';
-    ctx.fillRect(geom.x, geom.y, geom.width, geom.height);
+    if (i === 0) {
+      // Input layer: draw only the bottom edge of an unfilled rectangle
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'darkblue';
+      ctx.beginPath();
+      ctx.moveTo(geom.x, geom.y + geom.height);
+      ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
+      ctx.stroke();
 
-    // Color-code the bottom border for activation functions
-    ctx.lineWidth = 4;
-    if (isHidden) {
-      // Hidden layers use ReLU
-      ctx.strokeStyle = '#4682B4'; // SteelBlue for ReLU
-      ctx.beginPath();
-      ctx.moveTo(geom.x, geom.y + geom.height);
-      ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
-      ctx.stroke();
-    } else if (i === layers.length - 1) {
-      // Output layer is followed by Softmax
-      ctx.strokeStyle = 'rgba(255, 165, 0, 1)'; // Orange for Softmax
-      ctx.beginPath();
-      ctx.moveTo(geom.x, geom.y + geom.height);
-      ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
-      ctx.stroke();
+      // Draw thick downward arrow in the middle of the rectangle
+      const arrowX = geom.x + geom.width / 2;
+      const arrowStartY = geom.y;
+      const arrowEndY = geom.y + geom.height - 2;
+
+      drawDownwardArrow(ctx, arrowX, arrowStartY, arrowEndY);
+    } else {
+      // Draw main layer rectangle for non-input layers
+      ctx.fillStyle = 'darkblue';
+      ctx.fillRect(geom.x, geom.y, geom.width, geom.height);
+
+      // Color-code the bottom border for activation functions
+      ctx.lineWidth = 4;
+      if (isHidden) {
+        // Hidden layers use ReLU
+        ctx.strokeStyle = '#4682B4'; // SteelBlue for ReLU
+        ctx.beginPath();
+        ctx.moveTo(geom.x, geom.y + geom.height - 1);
+        ctx.lineTo(geom.x + geom.width, geom.y + geom.height - 1);
+        ctx.stroke();
+      } else if (i === layers.length - 1) {
+        // Output layer is followed by Softmax
+        ctx.strokeStyle = 'rgba(255, 165, 0, 1)'; // Orange for Softmax
+        ctx.beginPath();
+        ctx.moveTo(geom.x, geom.y + geom.height - 1);
+        ctx.lineTo(geom.x + geom.width, geom.y + geom.height - 1);
+        ctx.stroke();
+      }
     }
 
     // Draw layer label
@@ -1016,14 +1061,21 @@ function drawNetworkArchitecture(): void {
     ctx.textAlign = 'right';
     let label = '';
     if (i === 0) {
-      label = 'Input';
+      label = `${numNeurons}-wide input`;
     } else if (i === layers.length - 1) {
-      label = 'Logits (Softmax)';
+      label = `${numNeurons}-wide linear+softmax layer`;
     } else {
-      label = `Hidden Layer ${i} (ReLU)`;
+      label = `${numNeurons}-wide ReLU layer`;
     }
 
-    const labelText = `${label} (${numNeurons} neurons)`;
-    ctx.fillText(labelText, canvasWidth - 20, geom.y + geom.height / 2);
+    ctx.fillText(label, canvasWidth - 20, geom.y + geom.height / 2 + 5);
   }
+
+  // Draw thick downward arrow after the output layer
+  const geom = layerGeometries[layerGeometries.length - 1];
+  const arrowX = geom.x + geom.width / 2;
+  const arrowStartY = geom.y + layerHeight + 3;
+  const arrowEndY = geom.y + layerHeight + 3 + geom.height - 2;
+
+  drawDownwardArrow(ctx, arrowX, arrowStartY, arrowEndY);
 }
