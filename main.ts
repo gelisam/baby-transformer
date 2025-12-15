@@ -1007,7 +1007,7 @@ function drawNetworkArchitecture(): void {
       ctx.lineWidth = 6;
       ctx.strokeStyle = 'darkblue';
       ctx.fillStyle = 'darkblue';
-      
+
       // Draw arrow shaft
       ctx.beginPath();
       ctx.moveTo(arrowX, arrowStartY);
@@ -1085,7 +1085,7 @@ function drawNetworkArchitecture(): void {
   ctx.lineWidth = 6;
   ctx.strokeStyle = 'darkblue';
   ctx.fillStyle = 'darkblue';
-  
+
   // Draw arrow shaft
   ctx.beginPath();
   ctx.moveTo(extraArrowX, extraArrowStartY + extraArrowHeadSize);
