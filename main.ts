@@ -9,6 +9,29 @@ type Sequential = import('@tensorflow/tfjs').Sequential;
 type Logs = import('@tensorflow/tfjs').Logs;
 type Tensor = import('@tensorflow/tfjs').Tensor;
 
+// --- Configuration Constants ---
+const SHORT_NUMBERS = ["1", "2", "3"];
+const SHORT_LETTERS = ["A", "B", "C"];
+const SHORT_TOKENS = [...SHORT_NUMBERS, ...SHORT_LETTERS];
+const NUMBERS = SHORT_NUMBERS.map(n => n + " ");
+const LETTERS = SHORT_LETTERS.map(l => l + "=");
+const TOKENS = [...NUMBERS, ...LETTERS];
+
+const EXAMPLES_GIVEN = 2;
+const INPUT_SIZE = EXAMPLES_GIVEN * 2 + 1;  // <letter>=<number> <letter>=<number> <letter>=____
+const OUTPUT_SIZE = TOKENS.length;
+
+const EPOCHS_PER_BATCH = 1;
+
+const TOKEN_STRING_TO_INDEX: { [key: string]: number } = {};
+for (let i = 0; i < TOKENS.length; i++) {
+  TOKEN_STRING_TO_INDEX[TOKENS[i]] = i;
+}
+
+const VIZ_ROWS = 2;
+const VIZ_COLUMNS = 3;
+const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
+
 // --- Global State ---
 interface TrainingData {
   inputArray: number[][];
@@ -17,75 +40,36 @@ interface TrainingData {
   outputTensor: Tensor2D;
 }
 
-const global = (() => {
-  const SHORT_NUMBERS = ["1", "2", "3"];
-  const SHORT_LETTERS = ["A", "B", "C"];
-  const SHORT_TOKENS = [...SHORT_NUMBERS, ...SHORT_LETTERS];
-  const NUMBERS = SHORT_NUMBERS.map(n => n + " ");
-  const LETTERS = SHORT_LETTERS.map(l => l + "=");
-  const TOKENS = [...NUMBERS, ...LETTERS];
-  
-  const TOKEN_STRING_TO_INDEX: { [key: string]: number } = {};
-  for (let i = 0; i < TOKENS.length; i++) {
-    TOKEN_STRING_TO_INDEX[TOKENS[i]] = i;
-  }
-  
-  const VIZ_ROWS = 2;
-  const VIZ_COLUMNS = 3;
-  const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
-  const EXAMPLES_GIVEN = 2;
-  const INPUT_SIZE = EXAMPLES_GIVEN * 2 + 1;  // <letter>=<number> <letter>=<number> <letter>=____
-  
-  return {
-    // Model state
-    model: undefined as unknown as Sequential,
-    isTraining: false,
-    currentEpoch: 0,
-    lossHistory: [] as { epoch: number, loss: number }[],
-    data: undefined as unknown as TrainingData,
-    vizData: undefined as unknown as TrainingData,
-    
-    // Configuration constants
-    VIZ_ROWS,
-    VIZ_COLUMNS,
-    VIZ_EXAMPLES_COUNT,
-    SHORT_NUMBERS,
-    SHORT_LETTERS,
-    SHORT_TOKENS,
-    NUMBERS,
-    LETTERS,
-    TOKENS,
-    EXAMPLES_GIVEN,
-    INPUT_SIZE,
-    OUTPUT_SIZE: TOKENS.length,
-    EPOCHS_PER_BATCH: 1,
-    TOKEN_STRING_TO_INDEX,
-    
-    // Mutable configuration
-    num_layers: 4,
-    neurons_per_layer: 6
-  };
-})();
+const global = {
+  model: undefined as unknown as Sequential,
+  isTraining: false,
+  currentEpoch: 0,
+  lossHistory: [] as { epoch: number, loss: number }[],
+  data: undefined as unknown as TrainingData,
+  vizData: undefined as unknown as TrainingData,
+  num_layers: 4,
+  neurons_per_layer: 6
+};
 function indexToTokenNumber(index: number): number {
   return index + 1;
 }
 function indexToShortTokenString(index: number): string {
-  return global.SHORT_TOKENS[index];
+  return SHORT_TOKENS[index];
 }
 function indexToTokenString(index: number): string {
-  return global.TOKENS[index];
+  return TOKENS[index];
 }
 function tokenNumberToIndex(tokenNum: number): number {
   return tokenNum - 1;
 }
 function tokenStringToIndex(token: string): number {
-  return global.TOKEN_STRING_TO_INDEX[token];
+  return TOKEN_STRING_TO_INDEX[token];
 }
 function tokenStringToTokenNumber(token: string): number {
-  return global.TOKEN_STRING_TO_INDEX[token] + 1;
+  return TOKEN_STRING_TO_INDEX[token] + 1;
 }
 function tokenNumberToTokenString(tokenNum: number): string {
-  return global.TOKENS[tokenNum - 1];
+  return TOKENS[tokenNum - 1];
 }
 
 function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
@@ -93,15 +77,15 @@ function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
 
   if (numLayers === 0) {
     model.add(tf.layers.dense({
-      units: global.OUTPUT_SIZE,
-      inputShape: [global.INPUT_SIZE],
+      units: OUTPUT_SIZE,
+      inputShape: [INPUT_SIZE],
       activation: 'relu'
     }));
   } else {
     // Add the first hidden layer with inputShape
     model.add(tf.layers.dense({
       units: neuronsPerLayer,
-      inputShape: [global.INPUT_SIZE],
+      inputShape: [INPUT_SIZE],
       activation: 'relu'
     }));
 
@@ -115,7 +99,7 @@ function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
 
     // Add the linear output layer
     model.add(tf.layers.dense({
-      units: global.OUTPUT_SIZE,
+      units: OUTPUT_SIZE,
       activation: 'softmax'
     }));
   }
@@ -135,8 +119,8 @@ function generateData(): TrainingData {
   const outputArray: number[] = [];
   function addExample(sequence: number[]) {
     //console.log(sequence.map(tokenNumberToTokenString).join(''));
-    const input = sequence.slice(0, global.INPUT_SIZE);
-    const output = sequence[global.INPUT_SIZE];
+    const input = sequence.slice(0, INPUT_SIZE);
+    const output = sequence[INPUT_SIZE];
     inputArray.push(input);
     outputArray.push(output);
   }
@@ -153,8 +137,8 @@ function generateData(): TrainingData {
     return newMapping;
   }
 
-  const allLetters = global.LETTERS.map(tokenStringToTokenNumber);
-  const allNumbers = global.NUMBERS.map(tokenStringToTokenNumber);
+  const allLetters = LETTERS.map(tokenStringToTokenNumber);
+  const allNumbers = NUMBERS.map(tokenStringToTokenNumber);
   function generate(
       n: number, // number of examples to generate before the final pair
       sequence: number[],
@@ -190,8 +174,8 @@ function generateData(): TrainingData {
 
   // Convert to tensors
   const numExamples = inputArray.length;
-  const inputTensor = tf.tensor2d(inputArray, [numExamples, global.INPUT_SIZE]);
-  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), global.OUTPUT_SIZE) as Tensor2D;
+  const inputTensor = tf.tensor2d(inputArray, [numExamples, INPUT_SIZE]);
+  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
   return {
     inputArray,
@@ -288,11 +272,11 @@ async function trainingStep() {
 
   // Train for one epoch
   const history = await global.model.fit(global.data.inputTensor, global.data.outputTensor, {
-    epochs: global.EPOCHS_PER_BATCH,
+    epochs: EPOCHS_PER_BATCH,
     verbose: 0
   });
 
-  global.currentEpoch += global.EPOCHS_PER_BATCH;
+  global.currentEpoch += EPOCHS_PER_BATCH;
 
   // Get the loss from the last epoch in the batch
   const loss = history.history.loss[history.history.loss.length - 1] as number;
@@ -419,7 +403,7 @@ async function setPerfectWeights(): Promise<void> {
   const number2 = 3;
   const letter3 = 4;
 
-  const /*mut*/ layer1weights = tf.buffer([global.INPUT_SIZE, global.neurons_per_layer])
+  const /*mut*/ layer1weights = tf.buffer([INPUT_SIZE, global.neurons_per_layer])
   const /*mut*/ layer1bias = tf.buffer([global.neurons_per_layer]);
   const sub1from3 = 0;
   const sub3from1 = 1;
@@ -539,8 +523,8 @@ async function setPerfectWeights(): Promise<void> {
   // way up and P(A="A=") way down.
 
   // Output layer connects to the last hidden layer
-  const /*mut*/ outputWeights = tf.buffer([global.neurons_per_layer, global.OUTPUT_SIZE])
-  const /*mut*/ outputBias = tf.buffer([global.OUTPUT_SIZE]);
+  const /*mut*/ outputWeights = tf.buffer([global.neurons_per_layer, OUTPUT_SIZE])
+  const /*mut*/ outputBias = tf.buffer([OUTPUT_SIZE]);
   outputWeights.set(1000.0, probability1, probability1);
   outputWeights.set(1000.0, probability2, probability2);
   outputWeights.set(1000.0, probability3, probability3);
@@ -571,13 +555,13 @@ async function setPerfectWeights(): Promise<void> {
 function pickRandomInputs(data: TrainingData): TrainingData {
   let inputArray: number[][] = [];
   let outputArray: number[] = [];
-  for (let i = 0; i < global.VIZ_EXAMPLES_COUNT; i++) {
+  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
     const randomIndex = Math.floor(Math.random() * data.inputArray.length);
     inputArray.push(data.inputArray[randomIndex]);
     outputArray.push(data.outputArray[randomIndex]);
   }
-  const inputTensor = tf.tensor2d(inputArray, [global.VIZ_EXAMPLES_COUNT, global.INPUT_SIZE]);
-  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), global.OUTPUT_SIZE) as Tensor2D;
+  const inputTensor = tf.tensor2d(inputArray, [VIZ_EXAMPLES_COUNT, INPUT_SIZE]);
+  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
   // Populate the textboxes with these random inputs
   updateTextboxesFromInputs(inputArray, outputArray);
@@ -592,7 +576,7 @@ function pickRandomInputs(data: TrainingData): TrainingData {
 
 // Update textboxes with the current inputs
 function updateTextboxesFromInputs(inputArray: number[][], outputArray: number[]): void {
-  for (let i = 0; i < global.VIZ_EXAMPLES_COUNT; i++) {
+  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
     const inputElement = document.getElementById(`input-${i}`) as HTMLInputElement;
     if (inputElement) {
       const inputTokenStrings = inputArray[i].map(tokenNumberToTokenString).join('');
@@ -610,7 +594,7 @@ function parseInputString(inputStr: string): number[] | null {
     let matched = false;
 
     // Try to match each token
-    for (const token of global.TOKENS) {
+    for (const token of TOKENS) {
       if (inputStr.substring(i, i + token.length) === token) {
         tokens.push(tokenStringToTokenNumber(token));
         i += token.length;
@@ -624,7 +608,7 @@ function parseInputString(inputStr: string): number[] | null {
     }
   }
 
-  return tokens.length === global.INPUT_SIZE ? tokens : null;
+  return tokens.length === INPUT_SIZE ? tokens : null;
 }
 
 // Update visualization data from textboxes
@@ -632,7 +616,7 @@ function updateVizDataFromTextboxes(): void {
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
 
-  for (let i = 0; i < global.VIZ_EXAMPLES_COUNT; i++) {
+  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
     const inputElement = document.getElementById(`input-${i}`) as HTMLInputElement;
     if (inputElement) {
       const parsed = parseInputString(inputElement.value);
@@ -646,7 +630,7 @@ function updateVizDataFromTextboxes(): void {
           outputArray.push(global.data.outputArray[matchingIndex]);
         } else {
           // If not found in training data, use a default output
-          outputArray.push(tokenStringToTokenNumber(global.NUMBERS[0]));
+          outputArray.push(tokenStringToTokenNumber(NUMBERS[0]));
         }
       } else {
         // If invalid, keep the previous value or use a default
@@ -669,8 +653,8 @@ function updateVizDataFromTextboxes(): void {
   }
 
   // Create new vizData
-  const inputTensor = tf.tensor2d(inputArray, [global.VIZ_EXAMPLES_COUNT, global.INPUT_SIZE]);
-  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), global.OUTPUT_SIZE) as Tensor2D;
+  const inputTensor = tf.tensor2d(inputArray, [VIZ_EXAMPLES_COUNT, INPUT_SIZE]);
+  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
   global.vizData = {
     inputArray,
@@ -701,18 +685,18 @@ async function drawViz(vizData: TrainingData): Promise<void> {
   const sectionSpacing = 10;
   const barSpacing = 3;
 
-  const availableWidth = canvas.width - (sectionSpacing * (global.VIZ_COLUMNS + 1));
-  const sectionWidth = availableWidth / global.VIZ_COLUMNS;
-  const availableHeight = canvas.height - (sectionSpacing * (global.VIZ_ROWS + 1));
-  const sectionHeight = availableHeight / global.VIZ_ROWS;
+  const availableWidth = canvas.width - (sectionSpacing * (VIZ_COLUMNS + 1));
+  const sectionWidth = availableWidth / VIZ_COLUMNS;
+  const availableHeight = canvas.height - (sectionSpacing * (VIZ_ROWS + 1));
+  const sectionHeight = availableHeight / VIZ_ROWS;
 
   // Set style for section borders
   ctx.strokeStyle = 'black';
   ctx.lineWidth = 1;
 
   for (let i = 0; i < inputArray.length; i++) {
-    const col = i % global.VIZ_COLUMNS;
-    const row = Math.floor(i / global.VIZ_COLUMNS);
+    const col = i % VIZ_COLUMNS;
+    const row = Math.floor(i / VIZ_COLUMNS);
 
     const sectionX = sectionSpacing + col * (sectionWidth + sectionSpacing);
     const sectionY = sectionSpacing + row * (sectionHeight + sectionSpacing);
@@ -856,7 +840,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Add event listeners to the input textboxes
-  for (let i = 0; i < global.VIZ_EXAMPLES_COUNT; i++) {
+  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
     const inputElement = document.getElementById(`input-${i}`) as HTMLInputElement;
     if (inputElement) {
       inputElement.addEventListener('input', () => {
@@ -906,7 +890,7 @@ function drawNetworkArchitecture(): void {
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const layers = [global.INPUT_SIZE, ...Array(global.num_layers).fill(global.neurons_per_layer), global.OUTPUT_SIZE];
+  const layers = [INPUT_SIZE, ...Array(global.num_layers).fill(global.neurons_per_layer), OUTPUT_SIZE];
   const layerHeight = 20; // Height of the rectangle for each layer
   const maxLayerWidth = canvas.width * 0.4; // Max width for a layer
   const layerGapY = 40; // Vertical gap between layers
