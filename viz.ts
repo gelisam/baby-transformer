@@ -8,6 +8,7 @@ import {
   VIZ_ROWS
 } from "./constants.js";
 import {
+  NUMBERS,
   TOKENS,
   indexToShortTokenString,
   tokenNumberToIndex,
@@ -92,7 +93,7 @@ function updateVizDataFromTextboxes(appState: AppState): void {
         if (matchingIndex >= 0) {
           outputArray.push(appState.data.outputArray[matchingIndex]);
         } else {
-          outputArray.push(tokenStringToTokenNumber("1 "));
+          outputArray.push(tokenStringToTokenNumber(NUMBERS[0]));
         }
       } else {
         if (appState.vizData && appState.vizData.inputArray[i]) {
