@@ -1,66 +1,27 @@
-/// <reference types="@tensorflow/tfjs" />
+import {
+  NUMBERS,
+  LETTERS,
+  TOKENS,
+  indexToShortTokenString,
+  tokenNumberToIndex,
+  tokenStringToTokenNumber,
+  tokenNumberToTokenString
+} from "./tokens.js";
+import {
+  EXAMPLES_GIVEN,
+  INPUT_SIZE,
+  OUTPUT_SIZE,
+  EPOCHS_PER_BATCH,
+  VIZ_ROWS,
+  VIZ_COLUMNS,
+  VIZ_EXAMPLES_COUNT,
+  EMBEDDING_DIM,
+  EMBEDDED_INPUT_SIZE
+} from "./constants.js";
+import { embedInput } from "./embeddings.js";
+import { createModel } from "./model.js";
+import { tf, Tensor2D, Sequential } from "./tf.js";
 
-// TensorFlow.js is loaded via CDN in index.html
-declare const tf: typeof import('@tensorflow/tfjs');
-
-// Import types only (no runtime import)
-type Tensor2D = import('@tensorflow/tfjs').Tensor2D;
-type Sequential = import('@tensorflow/tfjs').Sequential;
-type Logs = import('@tensorflow/tfjs').Logs;
-type Tensor = import('@tensorflow/tfjs').Tensor;
-
-
-////////////
-// TOKENS //
-////////////
-
-const SHORT_NUMBERS = ["1", "2", "3"];
-const SHORT_LETTERS = ["A", "B", "C"];
-const SHORT_TOKENS = [...SHORT_NUMBERS, ...SHORT_LETTERS];
-const NUMBERS = SHORT_NUMBERS.map(n => n + " ");
-const LETTERS = SHORT_LETTERS.map(l => l + "=");
-const TOKENS = [...NUMBERS, ...LETTERS];
-
-const TOKEN_STRING_TO_INDEX: { [key: string]: number } = {};
-for (let i = 0; i < TOKENS.length; i++) {
-  TOKEN_STRING_TO_INDEX[TOKENS[i]] = i;
-}
-
-function indexToTokenNumber(index: number): number {
-  return index + 1;
-}
-function indexToShortTokenString(index: number): string {
-  return SHORT_TOKENS[index];
-}
-function indexToTokenString(index: number): string {
-  return TOKENS[index];
-}
-function tokenNumberToIndex(tokenNum: number): number {
-  return tokenNum - 1;
-}
-function tokenStringToIndex(token: string): number {
-  return TOKEN_STRING_TO_INDEX[token];
-}
-function tokenStringToTokenNumber(token: string): number {
-  return TOKEN_STRING_TO_INDEX[token] + 1;
-}
-function tokenNumberToTokenString(tokenNum: number): string {
-  return TOKENS[tokenNum - 1];
-}
-
-///////////////
-// CONSTANTS //
-///////////////
-
-const EXAMPLES_GIVEN = 2;
-const INPUT_SIZE = EXAMPLES_GIVEN * 2 + 1;  // <letter>=<number> <letter>=<number> <letter>=____
-const OUTPUT_SIZE = TOKENS.length; // a probability for each possible output token
-
-const EPOCHS_PER_BATCH = 1;
-
-const VIZ_ROWS = 2;
-const VIZ_COLUMNS = 3;
-const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
 
 
 //////////////////
@@ -86,113 +47,6 @@ const appState = {
 };
 
 
-//////////////////////
-// Token embeddings //
-//////////////////////
-
-const EMBEDDING_DIM = 2;
-const EMBEDDED_INPUT_SIZE = INPUT_SIZE * EMBEDDING_DIM;
-
-const EMBEDDING_MATRIX: number[][] = [
-  [0, 1],  // "1 "
-  [0, 2],  // "2 "
-  [0, 3],  // "3 "
-  [1, 0],  // "A="
-  [2, 0],  // "B="
-  [3, 0]   // "C="
-];
-function transposeArray(matrix: number[][]): number[][] {
-  const transposed: number[][] = [];
-  for (let i = 0; i < matrix[0].length; i++) {
-    transposed.push([]);
-    for (let j = 0; j < matrix.length; j++) {
-      transposed[i].push(matrix[j][i]);
-    }
-  }
-  return transposed;
-}
-const UNEMBEDDING_MATRIX = transposeArray(EMBEDDING_MATRIX);
-
-function embedTokenNumber(tokenNum: number): number[] {
-  const tokenIndex = tokenNumberToIndex(tokenNum);
-  return EMBEDDING_MATRIX[tokenIndex];
-}
-function embedInput(input: number[]): number[] {
-  const embeddedInput: number[] = [];
-  for (let i = 0; i < input.length; i++) {
-    const embedding = embedTokenNumber(input[i]);
-    embeddedInput.push(embedding[0], embedding[1]);
-  }
-  return embeddedInput;
-}
-
-
-////////////////////////
-// Model architecture //
-////////////////////////
-
-function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
-  const model = tf.sequential();
-
-  // The embedding is handled in the data preprocessing step (generateData, pickRandomInputs, etc.)
-  // Each token is converted to a 2D embedding before being fed to the network
-  // Input shape is EMBEDDED_INPUT_SIZE = INPUT_SIZE * EMBEDDING_DIM (5 * 2 = 10)
-  
-  if (numLayers === 0) {
-    // Special case: direct connection from embedded input to embedded output
-    model.add(tf.layers.dense({
-      units: EMBEDDING_DIM,
-      inputShape: [EMBEDDED_INPUT_SIZE],
-      activation: 'linear'
-    }));
-  } else {
-    // Add the first hidden layer with inputShape for embedded inputs
-    model.add(tf.layers.dense({
-      units: neuronsPerLayer,
-      inputShape: [EMBEDDED_INPUT_SIZE],
-      activation: 'relu'
-    }));
-
-    // Add the remaining hidden layers
-    for (let i = 1; i < numLayers; i++) {
-      model.add(tf.layers.dense({
-        units: neuronsPerLayer,
-        inputShape: [EMBEDDED_INPUT_SIZE],
-        activation: 'relu'
-      }));
-    }
-
-    // Add a layer to reduce to EMBEDDING_DIM before unembedding
-    model.add(tf.layers.dense({
-      units: EMBEDDING_DIM,
-      activation: 'linear'
-    }));
-  }
-  
-  // Add the unembedding layer (linear layer followed by softmax)
-  // This converts from EMBEDDING_DIM to OUTPUT_SIZE
-  const unembeddingWeights = tf.tensor2d(UNEMBEDDING_MATRIX);
-  const unembeddingBias = tf.zeros([OUTPUT_SIZE]);
-  
-  model.add(tf.layers.dense({
-    units: OUTPUT_SIZE,
-    activation: 'softmax',
-    weights: [unembeddingWeights, unembeddingBias],
-    trainable: true  // Allow fine-tuning of unembedding
-  }));
-  
-  // Dispose the tensors used for initialization since they're copied into the layer
-  unembeddingWeights.dispose();
-  unembeddingBias.dispose();
-
-  // Compile the model with categorical cross-entropy loss
-  model.compile({
-    loss: 'categoricalCrossentropy',
-    optimizer: 'adam'
-  });
-
-  return model;
-}
 
 // Generate training data for the classification task
 function generateData(): TrainingData {
@@ -871,6 +725,8 @@ async function setBackend() {
     console.error(`Failed to set backend to ${requestedBackend}:`, error);
   }
 }
+
+Object.assign(window as any, { toggleTrainingMode, setPerfectWeights });
 
 // Set up backend selection when the DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
