@@ -13,20 +13,11 @@ for (let i = 0; i < TOKENS.length; i++) {
   TOKEN_STRING_TO_INDEX[TOKENS[i]] = i;
 }
 
-function indexToTokenNumber(index: number): number {
-  return index + 1;
-}
 function indexToShortTokenString(index: number): string {
   return SHORT_TOKENS[index];
 }
-function indexToTokenString(index: number): string {
-  return TOKENS[index];
-}
 function tokenNumberToIndex(tokenNum: number): number {
   return tokenNum - 1;
-}
-function tokenStringToIndex(token: string): number {
-  return TOKEN_STRING_TO_INDEX[token];
 }
 function tokenStringToTokenNumber(token: string): number {
   return TOKEN_STRING_TO_INDEX[token] + 1;
@@ -36,17 +27,11 @@ function tokenNumberToTokenString(tokenNum: number): string {
 }
 
 export {
-  SHORT_NUMBERS,
-  SHORT_LETTERS,
-  SHORT_TOKENS,
   NUMBERS,
   LETTERS,
   TOKENS,
-  indexToTokenNumber,
   indexToShortTokenString,
-  indexToTokenString,
   tokenNumberToIndex,
-  tokenStringToIndex,
   tokenStringToTokenNumber,
   tokenNumberToTokenString
 };

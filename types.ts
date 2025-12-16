@@ -1,4 +1,4 @@
-import { Tensor2D } from "./tf.js";
+import { Tensor2D, Sequential } from "./tf.js";
 
 interface TrainingData {
   inputArray: number[][];
@@ -7,4 +7,15 @@ interface TrainingData {
   outputTensor: Tensor2D;
 }
 
-export { TrainingData };
+interface AppState {
+  model: Sequential;
+  isTraining: boolean;
+  currentEpoch: number;
+  lossHistory: { epoch: number; loss: number }[];
+  data: TrainingData;
+  vizData: TrainingData;
+  num_layers: number;
+  neurons_per_layer: number;
+}
+
+export { TrainingData, AppState };
