@@ -2,10 +2,7 @@ import {
   EMBEDDED_INPUT_SIZE,
   EMBEDDING_DIM,
   INPUT_SIZE,
-  OUTPUT_SIZE,
-  VIZ_COLUMNS,
-  VIZ_EXAMPLES_COUNT,
-  VIZ_ROWS
+  OUTPUT_SIZE
 } from "./constants.js";
 import {
   NUMBERS,
@@ -18,6 +15,10 @@ import {
 import { embedInput } from "./embeddings.js";
 import { tf, Tensor2D } from "./tf.js";
 import { TrainingData, AppState } from "./types.js";
+
+const VIZ_ROWS = 2;
+const VIZ_COLUMNS = 3;
+const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
 
 function updateTextboxesFromInputs(inputArray: number[][], outputArray: number[]): void {
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
@@ -418,5 +419,8 @@ export {
   updateVizDataFromTextboxes,
   drawViz,
   drawLossCurve,
-  drawNetworkArchitecture
+  drawNetworkArchitecture,
+  VIZ_ROWS,
+  VIZ_COLUMNS,
+  VIZ_EXAMPLES_COUNT
 };

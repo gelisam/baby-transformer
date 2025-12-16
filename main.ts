@@ -10,16 +10,13 @@ import {
   INPUT_SIZE,
   OUTPUT_SIZE,
   EPOCHS_PER_BATCH,
-  VIZ_ROWS,
-  VIZ_COLUMNS,
-  VIZ_EXAMPLES_COUNT,
   EMBEDDING_DIM,
   EMBEDDED_INPUT_SIZE
 } from "./constants.js";
 import { embedInput } from "./embeddings.js";
 import { createModel } from "./model.js";
 import { tf, Tensor2D, Sequential } from "./tf.js";
-import { pickRandomInputs, updateVizDataFromTextboxes, drawViz, drawLossCurve, drawNetworkArchitecture } from "./viz.js";
+import { pickRandomInputs, updateVizDataFromTextboxes, drawViz, drawLossCurve, drawNetworkArchitecture, VIZ_EXAMPLES_COUNT, VIZ_COLUMNS, VIZ_ROWS } from "./viz.js";
 import { TrainingData, AppState } from "./types.js";
 
 
