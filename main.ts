@@ -132,11 +132,11 @@ function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
   // Input shape is EMBEDDED_INPUT_SIZE = INPUT_SIZE * EMBEDDING_DIM (5 * 2 = 10)
   
   if (numLayers === 0) {
-    // Special case: direct connection from embedded input to unembedded output
+    // Special case: direct connection from embedded input to embedded output
     model.add(tf.layers.dense({
       units: EMBEDDING_DIM,
       inputShape: [EMBEDDED_INPUT_SIZE],
-      activation: 'relu'
+      activation: 'linear'
     }));
   } else {
     // Add the first hidden layer with inputShape for embedded inputs
