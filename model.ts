@@ -18,10 +18,10 @@ function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
       activation: 'relu'
     }));
 
+    // Remaining hidden layers rely on TensorFlow.js to infer their input shape from the previous layer.
     for (let i = 1; i < numLayers; i++) {
       model.add(tf.layers.dense({
         units: neuronsPerLayer,
-        inputShape: [EMBEDDED_INPUT_SIZE],
         activation: 'relu'
       }));
     }

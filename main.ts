@@ -726,7 +726,12 @@ async function setBackend() {
   }
 }
 
-Object.assign(window as any, { toggleTrainingMode, setPerfectWeights });
+const globalWindow = window as typeof window & {
+  toggleTrainingMode: typeof toggleTrainingMode;
+  setPerfectWeights: typeof setPerfectWeights;
+};
+globalWindow.toggleTrainingMode = toggleTrainingMode;
+globalWindow.setPerfectWeights = setPerfectWeights;
 
 // Set up backend selection when the DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
