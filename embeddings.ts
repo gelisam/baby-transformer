@@ -1,4 +1,5 @@
 import { EMBEDDING_DIM } from "./constants.js";
+import { transposeArray } from "./array.js";
 import { tokenNumberToIndex } from "./tokens.js";
 
 const EMBEDDING_MATRIX: number[][] = [
@@ -9,16 +10,6 @@ const EMBEDDING_MATRIX: number[][] = [
   [2, 0],  // "B="
   [3, 0]   // "C="
 ];
-function transposeArray(matrix: number[][]): number[][] {
-  const transposed: number[][] = [];
-  for (let i = 0; i < matrix[0].length; i++) {
-    transposed.push([]);
-    for (let j = 0; j < matrix.length; j++) {
-      transposed[i].push(matrix[j][i]);
-    }
-  }
-  return transposed;
-}
 const UNEMBEDDING_MATRIX = transposeArray(EMBEDDING_MATRIX);
 
 function embedTokenNumber(tokenNum: number): number[] {
