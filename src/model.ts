@@ -1,6 +1,8 @@
-import { OUTPUT_SIZE } from "./constants.js";
+import { OUTPUT_SIZE, EPOCHS_PER_BATCH } from "./constants.js";
 import { EMBEDDING_DIM, EMBEDDED_INPUT_SIZE, UNEMBEDDING_MATRIX } from "./embeddings.js";
 import { tf, Sequential } from "./tf.js";
+import { AppState } from "./types.js";
+import { drawViz, drawLossCurve } from "./viz.js";
 
 function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
   const model = tf.sequential();
@@ -53,4 +55,32 @@ function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
   return model;
 }
 
-export { createModel };
+async function trainingStep(appState: AppState) {
+  if (!appState.isTraining) {
+    // Training has been paused
+    return;
+  }
+
+  const statusElement = document.getElementById('status')!;
+
+  // Train for one epoch
+  const history = await appState.model.fit(appState.data.inputTensor, appState.data.outputTensor, {
+    epochs: EPOCHS_PER_BATCH,
+    verbose: 0
+  });
+
+  appState.currentEpoch += EPOCHS_PER_BATCH;
+
+  // Get the loss from the last epoch in the batch
+  const loss = history.history.loss[history.history.loss.length - 1] as number;
+  statusElement.innerHTML = `Training... Epoch ${appState.currentEpoch} - Loss: ${loss.toFixed(4)}`;
+
+  appState.lossHistory.push({ epoch: appState.currentEpoch, loss });
+  await drawViz(appState, appState.vizData);
+  drawLossCurve(appState);
+
+  // Request the next frame
+  requestAnimationFrame(() => trainingStep(appState));
+}
+
+export { createModel, trainingStep };
