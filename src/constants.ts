@@ -6,13 +6,8 @@ const OUTPUT_SIZE = TOKENS.length; // a probability for each possible output tok
 
 const EPOCHS_PER_BATCH = 1;
 
-const EMBEDDING_DIM = 2;
-const EMBEDDED_INPUT_SIZE = INPUT_SIZE * EMBEDDING_DIM;
-
 export {
   INPUT_SIZE,
   OUTPUT_SIZE,
   EPOCHS_PER_BATCH,
-  EMBEDDING_DIM,
-  EMBEDDED_INPUT_SIZE
 };

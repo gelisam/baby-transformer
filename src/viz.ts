@@ -1,6 +1,4 @@
 import {
-  EMBEDDED_INPUT_SIZE,
-  EMBEDDING_DIM,
   INPUT_SIZE,
   OUTPUT_SIZE
 } from "./constants.js";
@@ -12,7 +10,11 @@ import {
   tokenNumberToTokenString,
   tokenStringToTokenNumber
 } from "./tokens.js";
-import { embedInput } from "./embeddings.js";
+import {
+  EMBEDDED_INPUT_SIZE,
+  EMBEDDING_DIM,
+  embedInput
+} from "./embeddings.js";
 import { tf, Tensor2D } from "./tf.js";
 import { TrainingData, AppState } from "./types.js";
 
