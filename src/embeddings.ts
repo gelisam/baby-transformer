@@ -16,6 +16,7 @@ function embedTokenNumber(tokenNum: number): number[] {
   const tokenIndex = tokenNumberToIndex(tokenNum);
   return EMBEDDING_MATRIX[tokenIndex];
 }
+
 function embedInput(input: number[]): number[] {
   const embeddedInput: number[] = [];
   for (let i = 0; i < input.length; i++) {
