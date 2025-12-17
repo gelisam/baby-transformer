@@ -1,6 +1,5 @@
 // Function to display toaster-style error messages
-function showError(message: string): void {
-  const toaster = document.getElementById('toaster')!;
+function showError(message: string, toaster: HTMLElement): void {
   toaster.textContent = message;
   toaster.style.display = 'block';
 

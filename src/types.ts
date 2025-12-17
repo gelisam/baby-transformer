@@ -18,4 +18,21 @@ interface AppState {
   neurons_per_layer: number;
 }
 
-export { TrainingData, AppState };
+interface DomElements {
+  trainButton: HTMLButtonElement;
+  perfectWeightsButton: HTMLButtonElement;
+  perfectWeightsTooltipText: HTMLSpanElement;
+  backendSelector: HTMLSelectElement;
+  numLayersSlider: HTMLInputElement;
+  numLayersValue: HTMLSpanElement;
+  neuronsPerLayerSlider: HTMLInputElement;
+  neuronsPerLayerValue: HTMLSpanElement;
+  inputElements: HTMLInputElement[];
+  statusElement: HTMLElement;
+  outputCanvas: HTMLCanvasElement;
+  lossCanvas: HTMLCanvasElement;
+  networkCanvas: HTMLCanvasElement;
+  toaster: HTMLElement | null;
+}
+
+export { TrainingData, AppState, DomElements };

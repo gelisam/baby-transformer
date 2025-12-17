@@ -1,23 +1,23 @@
-import { AppState } from "./types.js";
+import { AppState, DomElements } from "./types.js";
 import { trainingStep } from "./model.js";
 import { updatePerfectWeightsButton } from "./perfect-weights.js";
 
-async function toggleTrainingMode(appState: AppState) {
+async function toggleTrainingMode(appState: AppState, dom: DomElements) {
   appState.isTraining = !appState.isTraining;
-  const trainButton = document.getElementById('train-button')!;
+  const trainButton = dom.trainButton;
 
   if (appState.isTraining) {
     trainButton.innerText = 'Pause';
-    requestAnimationFrame(() => trainingStep(appState));
+    requestAnimationFrame(() => trainingStep(appState, dom));
   } else {
     trainButton.innerText = 'Train Model';
   }
 }
 
-function updateLayerConfiguration(appState: AppState, initializeNewModel: () => void, numLayers: number, neuronsPerLayer: number): void {
+function updateLayerConfiguration(appState: AppState, dom: DomElements, initializeNewModel: (dom: DomElements) => void, numLayers: number, neuronsPerLayer: number): void {
   // Stop training and reinitialize model
   if (appState.isTraining) {
-    toggleTrainingMode(appState); // Toggles isTraining to false
+    toggleTrainingMode(appState, dom); // Toggles isTraining to false
   }
   if (appState.data) {
     try {
@@ -36,8 +36,8 @@ function updateLayerConfiguration(appState: AppState, initializeNewModel: () => 
     }
   }
 
-  initializeNewModel();
-  updatePerfectWeightsButton(appState);
+  initializeNewModel(dom);
+  updatePerfectWeightsButton(appState, dom);
 }
 
 export { toggleTrainingMode, updateLayerConfiguration };
