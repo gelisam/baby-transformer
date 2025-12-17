@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     outputCanvas: document.getElementById('output-canvas') as HTMLCanvasElement,
     lossCanvas: document.getElementById('loss-canvas') as HTMLCanvasElement,
     networkCanvas: document.getElementById('network-canvas') as HTMLCanvasElement,
-    toaster: document.getElementById('toaster')
+    toaster: document.getElementById('toaster') as HTMLElement
   };
 
   dom.trainButton.addEventListener('click', () => toggleTrainingMode(appState, dom));

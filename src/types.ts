@@ -32,7 +32,7 @@ interface DomElements {
   outputCanvas: HTMLCanvasElement;
   lossCanvas: HTMLCanvasElement;
   networkCanvas: HTMLCanvasElement;
-  toaster: HTMLElement | null;
+  toaster: HTMLElement;
 }
 
 export { TrainingData, AppState, DomElements };
