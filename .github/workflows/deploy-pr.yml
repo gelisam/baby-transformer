@@ -29,9 +29,8 @@ jobs:
       
     - name: Build project
       run: |
-        mkdir -p dist
         npm run build
-        cp -f index.html main.js dist
+        cp -f index.html dist
       
     - name: Setup SSH key
       run: |

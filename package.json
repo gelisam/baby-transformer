@@ -4,9 +4,9 @@
   "description": "TensorFlow.js Linear Regression Demo",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp -f index.html dist",
     "watch": "tsc --watch",
-    "serve": "python3 -m http.server 8000"
+    "serve": "cd dist && python3 -m http.server 8000"
   },
   "devDependencies": {
     "@tensorflow/tfjs": "^4.22.0",
