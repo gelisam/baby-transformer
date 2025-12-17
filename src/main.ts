@@ -17,7 +17,7 @@ import {
 } from "./embeddings.js";
 import { createModel } from "./model.js";
 import { tf, Tensor2D, Sequential } from "./tf.js";
-import { pickRandomInputs, updateVizDataFromTextboxes, drawViz, drawLossCurve, drawNetworkArchitecture, VIZ_EXAMPLES_COUNT, VIZ_COLUMNS, VIZ_ROWS } from "./viz.js";
+import { pickRandomInputs, updateVizDataFromTextboxes, drawViz, drawLossCurve, drawNetworkArchitecture, VIZ_EXAMPLES_COUNT } from "./viz.js";
 import { TrainingData, AppState } from "./types.js";
 
 

@@ -422,7 +422,5 @@ export {
   drawViz,
   drawLossCurve,
   drawNetworkArchitecture,
-  VIZ_ROWS,
-  VIZ_COLUMNS,
   VIZ_EXAMPLES_COUNT
 };
