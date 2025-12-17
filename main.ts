@@ -6,7 +6,6 @@ import {
   tokenNumberToTokenString
 } from "./tokens.js";
 import {
-  EXAMPLES_GIVEN,
   INPUT_SIZE,
   OUTPUT_SIZE,
   EPOCHS_PER_BATCH,
