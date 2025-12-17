@@ -29,6 +29,5 @@ export {
   EMBEDDING_MATRIX,
   UNEMBEDDING_MATRIX,
   embedTokenNumber,
-  embedInput,
-  transposeArray
+  embedInput
 };
