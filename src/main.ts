@@ -8,11 +8,21 @@ import { createModel } from "./model.js";
 import { setBackend } from "./tf.js";
 import { VIZ_EXAMPLES_COUNT, pickRandomInputs, updateVizDataFromTextboxes, drawViz, drawLossCurve, drawNetworkArchitecture } from "./viz.js";
 import { TrainingData, AppState } from "./types.js";
-import { appState } from "./app-state.js";
-import { toggleTrainingMode } from "./ui-controls.js";
-import { updateLayerConfiguration } from "./ui-settings.js";
+import { Sequential } from "./tf.js";
+import { toggleTrainingMode, updateLayerConfiguration } from "./ui-controls.js";
 import { setPerfectWeights, updatePerfectWeightsButton } from "./perfect-weights.js";
 
+
+const appState: AppState = {
+  model: undefined as unknown as Sequential,
+  isTraining: false,
+  currentEpoch: 0,
+  lossHistory: [] as { epoch: number, loss: number }[],
+  data: undefined as unknown as TrainingData,
+  vizData: undefined as unknown as TrainingData,
+  num_layers: 4,
+  neurons_per_layer: 6
+};
 
 // Set up backend selection when the DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
