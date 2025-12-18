@@ -22,7 +22,7 @@ const VIZ_ROWS = 2;
 const VIZ_COLUMNS = 3;
 const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
 
-function updateTextboxesFromInputs(inputArray: number[][], outputArray: number[], dom: DomElements): void {
+function updateTextboxesFromInputs(inputArray: number[][], dom: DomElements): void {
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
     const inputElement = dom.inputElements[i];
     if (inputElement) {
@@ -46,7 +46,7 @@ function pickRandomInputs(data: TrainingData, dom: DomElements): TrainingData {
   const inputTensor = tf.tensor2d(embeddedInputArray, [VIZ_EXAMPLES_COUNT, EMBEDDED_INPUT_SIZE]);
   const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
-  updateTextboxesFromInputs(inputArray, outputArray, dom);
+  updateTextboxesFromInputs(inputArray, dom);
 
   return {
     inputArray,
