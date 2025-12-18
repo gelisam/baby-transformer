@@ -1,6 +1,3 @@
-/// <reference types="@tensorflow/tfjs" />
-
-// Token definitions and helpers
 const SHORT_NUMBERS = ["1", "2", "3"];
 const SHORT_LETTERS = ["A", "B", "C"];
 const SHORT_TOKENS = [...SHORT_NUMBERS, ...SHORT_LETTERS];

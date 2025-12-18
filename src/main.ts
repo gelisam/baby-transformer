@@ -7,7 +7,6 @@ import { Sequential } from "./tf.js";
 import { toggleTrainingMode, updateLayerConfiguration } from "./ui-controls.js";
 import { setPerfectWeights, updatePerfectWeightsButton } from "./perfect-weights.js";
 
-
 const appState: AppState = {
   model: undefined as unknown as Sequential,
   isTraining: false,
@@ -19,7 +18,6 @@ const appState: AppState = {
   neurons_per_layer: 6
 };
 
-// Set up backend selection when the DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
   const dom: DomElements = {
     trainButton: document.getElementById('train-button') as HTMLButtonElement,
@@ -116,5 +114,3 @@ function initializeNewModel(dom: DomElements): void {
   // Redraw the architecture in case it changed
   drawNetworkArchitecture(appState, dom);
 }
-
-// Visualize the network architecture

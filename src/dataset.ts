@@ -12,8 +12,6 @@ import { EMBEDDED_INPUT_SIZE, embedInput } from "./embeddings.js";
 import { tf, Tensor2D } from "./tf.js";
 import { TrainingData } from "./types.js";
 
-
-
 // Generate training data for the classification task
 function generateData(): TrainingData {
   const inputArray: number[][] = [];
