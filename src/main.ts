@@ -1,8 +1,3 @@
-import {
-  INPUT_SIZE,
-  OUTPUT_SIZE,
-  EPOCHS_PER_BATCH,
-} from "./constants.js";
 import { generateData } from "./dataset.js";
 import { createModel } from "./model.js";
 import { setBackend } from "./tf.js";
