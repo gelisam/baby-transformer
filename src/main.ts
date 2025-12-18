@@ -1,8 +1,7 @@
 import { generateData } from "./dataset.js";
 import { createModel } from "./model.js";
 import { setBackend } from "./tf.js";
-import { VIZ_EXAMPLES_COUNT, pickRandomInputs, updateVizDataFromTextboxes, drawViz, drawLossCurve } from "./viz.js";
-import { drawNetworkArchitecture } from "./network-viz.js";
+import { VIZ_EXAMPLES_COUNT, pickRandomInputs, updateVizDataFromTextboxes, drawViz, drawLossCurve, drawNetworkArchitecture } from "./visualization.js";
 import { TrainingData, AppState, DomElements } from "./types.js";
 import { Sequential } from "./tf.js";
 import { toggleTrainingMode, updateLayerConfiguration } from "./ui-controls.js";

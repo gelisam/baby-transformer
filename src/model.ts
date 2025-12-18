@@ -1,3 +1,10 @@
+/**
+ * Neural network model creation and training.
+ * 
+ * This module handles the creation of the transformer-like model and
+ * manages the training loop with visualization updates.
+ */
+
 import { OUTPUT_SIZE } from "./constants.js";
 import { EMBEDDING_DIM, EMBEDDED_INPUT_SIZE, UNEMBEDDING_MATRIX } from "./embeddings.js";
 import { tf, Sequential } from "./tf.js";
@@ -5,6 +12,19 @@ import { AppState, DomElements } from "./types.js";
 import { drawViz, drawLossCurve } from "./viz.js";
 import { TRAINING_CONFIG, UI_MESSAGES } from "./config.js";
 
+/**
+ * Create a sequential neural network model.
+ * 
+ * The model architecture consists of:
+ * - Embedding layer (converts tokens to embeddings)
+ * - Hidden ReLU layers (configurable number and size)
+ * - Linear layer (reduces to embedding dimension)
+ * - Unembedding + softmax layer (produces token probabilities)
+ * 
+ * @param numLayers - Number of hidden layers
+ * @param neuronsPerLayer - Number of neurons in each hidden layer
+ * @returns A compiled TensorFlow.js Sequential model
+ */
 function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
   const model = tf.sequential();
 
@@ -56,6 +76,16 @@ function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
   return model;
 }
 
+/**
+ * Execute a single training step.
+ * 
+ * This function trains the model for one batch of epochs, updates the UI
+ * with current loss and visualizations, and schedules the next training step
+ * if training is still active.
+ * 
+ * @param appState - The application state containing the model and training data
+ * @param dom - DOM elements for UI updates
+ */
 async function trainingStep(appState: AppState, dom: DomElements) {
   if (!appState.isTraining) {
     // Training has been paused

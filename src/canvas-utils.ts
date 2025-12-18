@@ -1,5 +1,8 @@
 /**
- * Canvas drawing utilities for network visualization
+ * Canvas drawing utilities for network visualization.
+ * 
+ * This module provides reusable canvas drawing functions for visualizing
+ * the neural network architecture.
  */
 
 const ARROW_HEAD_SIZE = 8;
@@ -7,7 +10,12 @@ const ARROW_LINE_WIDTH = 6;
 const ARROW_COLOR = 'darkblue';
 
 /**
- * Draw a downward arrow on the canvas
+ * Draw a downward arrow on the canvas.
+ * 
+ * @param ctx - The 2D rendering context
+ * @param x - The x-coordinate of the arrow shaft
+ * @param startY - The starting y-coordinate (top of arrow)
+ * @param endY - The ending y-coordinate (tip of arrow)
  */
 function drawDownwardArrow(
   ctx: CanvasRenderingContext2D,
@@ -35,7 +43,9 @@ function drawDownwardArrow(
 }
 
 /**
- * Clear a canvas
+ * Clear a canvas by removing all drawn content.
+ * 
+ * @param canvas - The HTML canvas element to clear
  */
 function clearCanvas(canvas: HTMLCanvasElement): void {
   const ctx = canvas.getContext('2d');

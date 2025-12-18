@@ -2,8 +2,14 @@ import { INPUT_SIZE } from "./constants.js";
 import { TOKENS, tokenStringToTokenNumber } from "./tokens.js";
 
 /**
- * Parse a string input into an array of token numbers
- * Returns null if the input is invalid
+ * Parse a string input into an array of token numbers.
+ * 
+ * @param inputStr - The input string to parse (e.g., "A=1 B=2 C=")
+ * @returns An array of token numbers if valid, null if invalid
+ * 
+ * @example
+ * parseInputString("A=1 B=2 C=") // Returns array of token numbers
+ * parseInputString("invalid") // Returns null
  */
 function parseInputString(inputStr: string): number[] | null {
   const tokens: number[] = [];

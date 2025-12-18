@@ -2,13 +2,18 @@ import { Tensor2D } from "./tf.js";
 import { TrainingData } from "./types.js";
 
 /**
- * Manages the lifecycle of TensorFlow.js tensors to prevent memory leaks
+ * Manages the lifecycle of TensorFlow.js tensors to prevent memory leaks.
+ * 
+ * This class provides methods to track, dispose, and manage tensor resources
+ * throughout the application lifecycle.
  */
 class ResourceManager {
   private resources: Set<Tensor2D> = new Set();
 
   /**
-   * Register a tensor for tracking
+   * Register a tensor for tracking.
+   * @param tensor - The tensor to track
+   * @returns The same tensor for chaining
    */
   track(tensor: Tensor2D): Tensor2D {
     this.resources.add(tensor);
@@ -16,7 +21,9 @@ class ResourceManager {
   }
 
   /**
-   * Safely dispose a single tensor
+   * Safely dispose a single tensor.
+   * Handles cases where the tensor is undefined or already disposed.
+   * @param tensor - The tensor to dispose
    */
   dispose(tensor: Tensor2D | undefined): void {
     if (tensor && !tensor.isDisposed) {
@@ -31,7 +38,8 @@ class ResourceManager {
   }
 
   /**
-   * Safely dispose training data tensors
+   * Safely dispose training data tensors.
+   * @param data - The training data containing tensors to dispose
    */
   disposeTrainingData(data: TrainingData | undefined): void {
     if (data) {
@@ -41,7 +49,8 @@ class ResourceManager {
   }
 
   /**
-   * Dispose all tracked resources
+   * Dispose all tracked resources.
+   * Useful for cleanup when the application is shutting down.
    */
   disposeAll(): void {
     for (const tensor of this.resources) {
