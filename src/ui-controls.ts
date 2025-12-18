@@ -14,29 +14,13 @@ async function toggleTrainingMode(appState: AppState, dom: DomElements) {
   }
 }
 
-function updateLayerConfiguration(appState: AppState, dom: DomElements, initializeNewModel: (dom: DomElements) => void, numLayers: number, neuronsPerLayer: number): void {
+function updateLayerConfiguration(appState: AppState, dom: DomElements, initializeApp: () => void): void {
   // Stop training and reinitialize model
   if (appState.isTraining) {
     toggleTrainingMode(appState, dom); // Toggles isTraining to false
   }
-  if (appState.data) {
-    try {
-      appState.data.inputTensor.dispose();
-      appState.data.outputTensor.dispose();
-    } catch (e) {
-      // Tensors may already be disposed
-    }
-  }
-  if (appState.vizData) {
-    try {
-      appState.vizData.inputTensor.dispose();
-      appState.vizData.outputTensor.dispose();
-    } catch (e) {
-      // Tensors may already be disposed
-    }
-  }
 
-  initializeNewModel(dom);
+  initializeApp();
   updatePerfectWeightsButton(appState, dom);
 }
 
