@@ -16,15 +16,15 @@ import {
   embedInput
 } from "./embeddings.js";
 import { tf, Tensor2D } from "./tf.js";
-import { TrainingData, AppState } from "./types.js";
+import { TrainingData, AppState, DomElements } from "./types.js";
 
 const VIZ_ROWS = 2;
 const VIZ_COLUMNS = 3;
 const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
 
-function updateTextboxesFromInputs(inputArray: number[][], outputArray: number[]): void {
+function updateTextboxesFromInputs(inputArray: number[][], outputArray: number[], dom: DomElements): void {
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
-    const inputElement = document.getElementById(`input-${i}`) as HTMLInputElement;
+    const inputElement = dom.inputElements[i];
     if (inputElement) {
       const inputTokenStrings = inputArray[i].map(tokenNumberToTokenString).join('');
       inputElement.value = inputTokenStrings;
@@ -32,7 +32,7 @@ function updateTextboxesFromInputs(inputArray: number[][], outputArray: number[]
   }
 }
 
-function pickRandomInputs(data: TrainingData): TrainingData {
+function pickRandomInputs(data: TrainingData, dom: DomElements): TrainingData {
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
@@ -46,7 +46,7 @@ function pickRandomInputs(data: TrainingData): TrainingData {
   const inputTensor = tf.tensor2d(embeddedInputArray, [VIZ_EXAMPLES_COUNT, EMBEDDED_INPUT_SIZE]);
   const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
-  updateTextboxesFromInputs(inputArray, outputArray);
+  updateTextboxesFromInputs(inputArray, outputArray, dom);
 
   return {
     inputArray,
@@ -80,12 +80,12 @@ function parseInputString(inputStr: string): number[] | null {
   return tokens.length === INPUT_SIZE ? tokens : null;
 }
 
-function updateVizDataFromTextboxes(appState: AppState): void {
+function updateVizDataFromTextboxes(appState: AppState, dom: DomElements): void {
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
 
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
-    const inputElement = document.getElementById(`input-${i}`) as HTMLInputElement;
+    const inputElement = dom.inputElements[i];
     if (inputElement) {
       const parsed = parseInputString(inputElement.value);
       if (parsed) {
@@ -126,11 +126,11 @@ function updateVizDataFromTextboxes(appState: AppState): void {
     outputTensor
   };
 
-  drawViz(appState, appState.vizData);
+  drawViz(appState, appState.vizData, dom);
 }
 
-async function drawViz(appState: AppState, vizData: TrainingData): Promise<void> {
-  const canvas = document.getElementById('output-canvas') as HTMLCanvasElement;
+async function drawViz(appState: AppState, vizData: TrainingData, dom: DomElements): Promise<void> {
+  const canvas = dom.outputCanvas;
   const ctx = canvas.getContext('2d')!;
 
   const inputArray = vizData.inputArray;
@@ -188,12 +188,12 @@ async function drawViz(appState: AppState, vizData: TrainingData): Promise<void>
   predictionTensor.dispose();
 }
 
-function drawLossCurve(appState: AppState): void {
+function drawLossCurve(appState: AppState, dom: DomElements): void {
   if (appState.lossHistory.length < 2) {
     return;
   }
 
-  const canvas = document.getElementById('loss-canvas') as HTMLCanvasElement;
+  const canvas = dom.lossCanvas;
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -222,8 +222,8 @@ function drawLossCurve(appState: AppState): void {
   ctx.stroke();
 }
 
-function drawNetworkArchitecture(appState: AppState): void {
-  const canvas = document.getElementById('network-canvas') as HTMLCanvasElement;
+function drawNetworkArchitecture(appState: AppState, dom: DomElements): void {
+  const canvas = dom.networkCanvas;
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 

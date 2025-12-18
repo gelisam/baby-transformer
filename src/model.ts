@@ -1,7 +1,7 @@
 import { OUTPUT_SIZE, EPOCHS_PER_BATCH } from "./constants.js";
 import { EMBEDDING_DIM, EMBEDDED_INPUT_SIZE, UNEMBEDDING_MATRIX } from "./embeddings.js";
 import { tf, Sequential } from "./tf.js";
-import { AppState } from "./types.js";
+import { AppState, DomElements } from "./types.js";
 import { drawViz, drawLossCurve } from "./viz.js";
 
 function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
@@ -55,13 +55,13 @@ function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
   return model;
 }
 
-async function trainingStep(appState: AppState) {
+async function trainingStep(appState: AppState, dom: DomElements) {
   if (!appState.isTraining) {
     // Training has been paused
     return;
   }
 
-  const statusElement = document.getElementById('status')!;
+  const statusElement = dom.statusElement;
 
   // Train for one epoch
   const history = await appState.model.fit(appState.data.inputTensor, appState.data.outputTensor, {
@@ -76,11 +76,11 @@ async function trainingStep(appState: AppState) {
   statusElement.innerHTML = `Training... Epoch ${appState.currentEpoch} - Loss: ${loss.toFixed(4)}`;
 
   appState.lossHistory.push({ epoch: appState.currentEpoch, loss });
-  await drawViz(appState, appState.vizData);
-  drawLossCurve(appState);
+  await drawViz(appState, appState.vizData, dom);
+  drawLossCurve(appState, dom);
 
   // Request the next frame
-  requestAnimationFrame(() => trainingStep(appState));
+  requestAnimationFrame(() => trainingStep(appState, dom));
 }
 
 export { createModel, trainingStep };

@@ -1,5 +1,5 @@
 import { INPUT_SIZE, OUTPUT_SIZE } from "./constants.js";
-import { AppState } from "./types.js";
+import { AppState, DomElements } from "./types.js";
 import { tf } from "./tf.js";
 import { toggleTrainingMode } from "./ui-controls.js";
 import { drawViz } from "./viz.js";
@@ -12,9 +12,9 @@ function canUsePerfectWeights(numLayers: number, neuronsPerLayer: number): { can
   };
 }
 
-function updatePerfectWeightsButton(appState: AppState): void {
-  const button = document.getElementById('perfect-weights-button') as HTMLButtonElement;
-  const tooltipText = document.getElementById('perfect-weights-tooltip-text') as HTMLSpanElement;
+function updatePerfectWeightsButton(appState: AppState, dom: DomElements): void {
+  const button = dom.perfectWeightsButton;
+  const tooltipText = dom.perfectWeightsTooltipText;
   const result = canUsePerfectWeights(appState.num_layers, appState.neurons_per_layer);
 
   button.disabled = !result.canUse;
@@ -26,9 +26,9 @@ function updatePerfectWeightsButton(appState: AppState): void {
   }
 }
 
-async function setPerfectWeights(appState: AppState): Promise<void> {
+async function setPerfectWeights(appState: AppState, dom: DomElements): Promise<void> {
   if (appState.isTraining) {
-    toggleTrainingMode(appState); // Toggles isTraining to false
+    toggleTrainingMode(appState, dom); // Toggles isTraining to false
   }
 
   // We need to complete this:
@@ -281,7 +281,7 @@ async function setPerfectWeights(appState: AppState): Promise<void> {
   ];
   appState.model.setWeights(perfectWeights);
 
-  await drawViz(appState, appState.vizData);
+  await drawViz(appState, appState.vizData, dom);
   perfectWeights.forEach(tensor => tensor.dispose());
 }
 
