@@ -2,7 +2,7 @@ import { OUTPUT_SIZE, EPOCHS_PER_BATCH } from "./constants.js";
 import { EMBEDDING_DIM, EMBEDDED_INPUT_SIZE, UNEMBEDDING_MATRIX } from "./embeddings.js";
 import { tf, Sequential } from "./tf.js";
 import { AppState, DomElements } from "./types.js";
-import { drawViz, drawLossCurve } from "./viz.js";
+import { drawPredictions, drawLossCurve } from "./viz/index.js";
 
 function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
   const model = tf.sequential();
@@ -76,7 +76,7 @@ async function trainingStep(appState: AppState, dom: DomElements) {
   statusElement.innerHTML = `Training... Epoch ${appState.currentEpoch} - Loss: ${loss.toFixed(4)}`;
 
   appState.lossHistory.push({ epoch: appState.currentEpoch, loss });
-  await drawViz(appState, appState.vizData, dom);
+  await drawPredictions(appState, appState.vizData, dom);
   drawLossCurve(appState, dom);
 
   // Request the next frame

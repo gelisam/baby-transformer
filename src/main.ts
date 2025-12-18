@@ -1,7 +1,14 @@
 import { generateData } from "./dataset.js";
 import { createModel } from "./model.js";
 import { setBackend } from "./tf.js";
-import { VIZ_EXAMPLES_COUNT, pickRandomInputs, updateVizDataFromTextboxes, drawViz, drawLossCurve, drawNetworkArchitecture } from "./viz.js";
+import {
+  VIZ_EXAMPLES_COUNT,
+  pickRandomInputs,
+  updateVizDataFromTextboxes,
+  drawPredictions,
+  drawLossCurve,
+  drawNetworkArchitecture
+} from "./viz/index.js";
 import { TrainingData, AppState, DomElements } from "./types.js";
 import { Sequential } from "./tf.js";
 import { toggleTrainingMode, updateLayerConfiguration } from "./ui-controls.js";
@@ -14,8 +21,8 @@ const appState: AppState = {
   lossHistory: [] as { epoch: number, loss: number }[],
   data: undefined as unknown as TrainingData,
   vizData: undefined as unknown as TrainingData,
-  num_layers: 4,
-  neurons_per_layer: 6
+  numLayers: 4,
+  neuronsPerLayer: 6
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -60,15 +67,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Add event listeners for layer configuration sliders
   dom.numLayersSlider.addEventListener('input', () => {
-    appState.num_layers = parseInt(dom.numLayersSlider.value, 10);
-    dom.numLayersValue.textContent = appState.num_layers.toString();
-    updateLayerConfiguration(appState, dom, initializeNewModel, appState.num_layers, appState.neurons_per_layer);
+    appState.numLayers = parseInt(dom.numLayersSlider.value, 10);
+    dom.numLayersValue.textContent = appState.numLayers.toString();
+    updateLayerConfiguration(appState, dom, initializeNewModel, appState.numLayers, appState.neuronsPerLayer);
   });
 
   dom.neuronsPerLayerSlider.addEventListener('input', () => {
-    appState.neurons_per_layer = parseInt(dom.neuronsPerLayerSlider.value, 10);
-    dom.neuronsPerLayerValue.textContent = appState.neurons_per_layer.toString();
-    updateLayerConfiguration(appState, dom, initializeNewModel, appState.num_layers, appState.neurons_per_layer);
+    appState.neuronsPerLayer = parseInt(dom.neuronsPerLayerSlider.value, 10);
+    dom.neuronsPerLayerValue.textContent = appState.neuronsPerLayer.toString();
+    updateLayerConfiguration(appState, dom, initializeNewModel, appState.numLayers, appState.neuronsPerLayer);
   });
 
   // Add event listeners to the input textboxes
@@ -93,7 +100,7 @@ function initializeNewModel(dom: DomElements): void {
   if (appState.model) {
     appState.model.dispose();
   }
-  appState.model = createModel(appState.num_layers, appState.neurons_per_layer);
+  appState.model = createModel(appState.numLayers, appState.neuronsPerLayer);
 
   // Generate new data
   // No need to clean up old data tensors here, it's handled on backend change
@@ -109,7 +116,7 @@ function initializeNewModel(dom: DomElements): void {
   dom.statusElement.innerHTML = 'Ready to train!';
 
   // Visualize the initial (untrained) state
-  drawViz(appState, appState.vizData, dom);
+  drawPredictions(appState, appState.vizData, dom);
 
   // Redraw the architecture in case it changed
   drawNetworkArchitecture(appState, dom);

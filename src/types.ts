@@ -14,8 +14,8 @@ interface AppState {
   lossHistory: { epoch: number; loss: number }[];
   data: TrainingData;
   vizData: TrainingData;
-  num_layers: number;
-  neurons_per_layer: number;
+  numLayers: number;
+  neuronsPerLayer: number;
 }
 
 interface DomElements {
