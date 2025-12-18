@@ -1,26 +1,18 @@
-import {
-  INPUT_SIZE,
-  OUTPUT_SIZE
-} from "./constants.js";
-import {
-  NUMBERS,
-  TOKENS,
-  indexToShortTokenString,
-  tokenNumberToIndex,
-  tokenNumberToTokenString,
-  tokenStringToTokenNumber
-} from "./tokens.js";
-import {
-  EMBEDDED_INPUT_SIZE,
-  EMBEDDING_DIM,
-  embedInput
-} from "./embeddings.js";
-import { tf, Tensor2D } from "./tf.js";
+import { INPUT_SIZE, OUTPUT_SIZE } from "./constants.js";
+import { NUMBERS, indexToShortTokenString, tokenNumberToTokenString, tokenStringToTokenNumber } from "./tokens.js";
+import { Tensor2D } from "./tf.js";
 import { TrainingData, AppState, DomElements } from "./types.js";
+import { parseInputString } from "./input-parser.js";
+import { createTrainingData, pickRandomExamples } from "./data-manager.js";
+import { clearCanvas } from "./canvas-utils.js";
+import { ResourceManager } from "./resource-manager.js";
+import { VIZ_CONFIG, CANVAS_CONFIG } from "./config.js";
 
-const VIZ_ROWS = 2;
-const VIZ_COLUMNS = 3;
+const VIZ_ROWS = VIZ_CONFIG.rows;
+const VIZ_COLUMNS = VIZ_CONFIG.columns;
 const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
+
+const resourceManager = new ResourceManager();
 
 function updateTextboxesFromInputs(inputArray: number[][], outputArray: number[], dom: DomElements): void {
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
@@ -33,51 +25,10 @@ function updateTextboxesFromInputs(inputArray: number[][], outputArray: number[]
 }
 
 function pickRandomInputs(data: TrainingData, dom: DomElements): TrainingData {
-  const inputArray: number[][] = [];
-  const outputArray: number[] = [];
-  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
-    const randomIndex = Math.floor(Math.random() * data.inputArray.length);
-    inputArray.push(data.inputArray[randomIndex]);
-    outputArray.push(data.outputArray[randomIndex]);
-  }
-
-  const embeddedInputArray = inputArray.map(embedInput);
-
-  const inputTensor = tf.tensor2d(embeddedInputArray, [VIZ_EXAMPLES_COUNT, EMBEDDED_INPUT_SIZE]);
-  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
-
+  const { inputArray, outputArray } = pickRandomExamples(data, VIZ_EXAMPLES_COUNT);
+  const vizData = createTrainingData(inputArray, outputArray);
   updateTextboxesFromInputs(inputArray, outputArray, dom);
-
-  return {
-    inputArray,
-    outputArray,
-    inputTensor,
-    outputTensor
-  };
-}
-
-function parseInputString(inputStr: string): number[] | null {
-  const tokens: number[] = [];
-  let i = 0;
-
-  while (i < inputStr.length) {
-    let matched = false;
-
-    for (const token of TOKENS) {
-      if (inputStr.substring(i, i + token.length) === token) {
-        tokens.push(tokenStringToTokenNumber(token));
-        i += token.length;
-        matched = true;
-        break;
-      }
-    }
-
-    if (!matched) {
-      return null;
-    }
-  }
-
-  return tokens.length === INPUT_SIZE ? tokens : null;
+  return vizData;
 }
 
 function updateVizDataFromTextboxes(appState: AppState, dom: DomElements): void {
@@ -110,22 +61,10 @@ function updateVizDataFromTextboxes(appState: AppState, dom: DomElements): void 
     }
   }
 
-  if (appState.vizData) {
-    appState.vizData.inputTensor.dispose();
-    appState.vizData.outputTensor.dispose();
-  }
+  // Use ResourceManager for safe disposal
+  resourceManager.disposeTrainingData(appState.vizData);
 
-  const embeddedInputArray = inputArray.map(embedInput);
-  const inputTensor = tf.tensor2d(embeddedInputArray, [VIZ_EXAMPLES_COUNT, EMBEDDED_INPUT_SIZE]);
-  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
-
-  appState.vizData = {
-    inputArray,
-    outputArray,
-    inputTensor,
-    outputTensor
-  };
-
+  appState.vizData = createTrainingData(inputArray, outputArray);
   drawViz(appState, appState.vizData, dom);
 }
 
@@ -142,8 +81,8 @@ async function drawViz(appState: AppState, vizData: TrainingData, dom: DomElemen
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const sectionSpacing = 10;
-  const barSpacing = 3;
+  const sectionSpacing = VIZ_CONFIG.sectionSpacing;
+  const barSpacing = VIZ_CONFIG.barSpacing;
 
   const availableWidth = canvas.width - (sectionSpacing * (VIZ_COLUMNS + 1));
   const sectionWidth = availableWidth / VIZ_COLUMNS;
@@ -195,21 +134,23 @@ function drawLossCurve(appState: AppState, dom: DomElements): void {
 
   const canvas = dom.lossCanvas;
   const ctx = canvas.getContext('2d')!;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  clearCanvas(canvas);
 
   const minLoss = Math.min(...appState.lossHistory.map(d => d.loss));
   const maxLoss = Math.max(...appState.lossHistory.map(d => d.loss));
   const minEpoch = appState.lossHistory[0].epoch;
   const maxEpoch = appState.lossHistory[appState.lossHistory.length - 1].epoch;
 
+  const margin = CANVAS_CONFIG.lossChart;
+
   function toCanvasX(epoch: number): number {
-    return ((epoch - minEpoch) / (maxEpoch - minEpoch)) * (canvas.width - 60) + 30;
+    return ((epoch - minEpoch) / (maxEpoch - minEpoch)) * (canvas.width - 2 * margin.marginX) + margin.marginX;
   }
 
   function toCanvasY(loss: number): number {
     const range = maxLoss - minLoss;
     const effectiveRange = range === 0 ? 1 : range;
-    return canvas.height - 30 - ((loss - minLoss) / effectiveRange) * (canvas.height - 60);
+    return canvas.height - margin.marginY - ((loss - minLoss) / effectiveRange) * (canvas.height - 2 * margin.marginY);
   }
 
   ctx.strokeStyle = 'lightgrey';
@@ -222,205 +163,10 @@ function drawLossCurve(appState: AppState, dom: DomElements): void {
   ctx.stroke();
 }
 
-function drawNetworkArchitecture(appState: AppState, dom: DomElements): void {
-  const canvas = dom.networkCanvas;
-  const ctx = canvas.getContext('2d')!;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  const inputLayer = INPUT_SIZE;
-  const embeddingLayer = EMBEDDED_INPUT_SIZE;
-  const hiddenLayers = Array(appState.num_layers).fill(appState.neurons_per_layer);
-  const linearLayer = EMBEDDING_DIM;
-  const outputLayer = OUTPUT_SIZE;
-  const layers = [inputLayer, embeddingLayer, ...hiddenLayers, linearLayer, outputLayer];
-
-  const layerHeight = 20;
-  const maxLayerWidth = canvas.width * 0.4;
-  const layerGapY = 40;
-  const startY = 30;
-  const canvasWidth = canvas.width;
-  const arrowHeadSize = 8;
-
-  const maxNeurons = Math.max(...layers);
-
-  function drawDownwardArrow(ctx: CanvasRenderingContext2D, x: number, startY: number, endY: number): void {
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = 'darkblue';
-    ctx.fillStyle = 'darkblue';
-
-    ctx.beginPath();
-    ctx.moveTo(x, startY);
-    ctx.lineTo(x, endY - arrowHeadSize);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(x, endY);
-    ctx.lineTo(x - arrowHeadSize, endY - arrowHeadSize);
-    ctx.lineTo(x + arrowHeadSize, endY - arrowHeadSize);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  const layerGeometries: { x: number; y: number; width: number; height: number }[] = [];
-
-  for (let i = 0; i < layers.length; i++) {
-    const numNeurons = layers[i];
-    const layerWidth = (numNeurons / maxNeurons) * maxLayerWidth;
-    const layerX = (canvasWidth / 2) - (layerWidth / 2);
-    const layerY = startY + i * layerGapY;
-    layerGeometries.push({ x: layerX, y: layerY, width: layerWidth, height: layerHeight });
-  }
-
-  ctx.strokeStyle = 'gray';
-  ctx.lineWidth = 2;
-  for (let i = 0; i < layerGeometries.length - 1; i++) {
-    const currentLayer = layerGeometries[i];
-    const nextLayer = layerGeometries[i + 1];
-    const currentNeurons = layers[i];
-    const nextNeurons = layers[i + 1];
-
-    const currentNeuronPositions: { x: number; y: number }[] = [];
-    for (let n = 0; n < currentNeurons; n++) {
-      const x = currentLayer.x + (currentLayer.width / currentNeurons) * (n + 0.5);
-      const y = currentLayer.y + currentLayer.height + 1;
-      currentNeuronPositions.push({ x, y });
-    }
-
-    const nextNeuronPositions: { x: number; y: number }[] = [];
-    for (let n = 0; n < nextNeurons; n++) {
-      const x = nextLayer.x + (nextLayer.width / nextNeurons) * (n + 0.5);
-      const y = nextLayer.y;
-      nextNeuronPositions.push({ x, y });
-    }
-
-    const smallerCount = Math.min(currentNeurons, nextNeurons);
-    const largerCount = Math.max(currentNeurons, nextNeurons);
-    const isCurrentSmaller = currentNeurons <= nextNeurons;
-    const smallerPositions = isCurrentSmaller ? currentNeuronPositions : nextNeuronPositions;
-    const largerPositions = isCurrentSmaller ? nextNeuronPositions : currentNeuronPositions;
-
-    const leftoverCount = Math.ceil((largerCount - smallerCount) / 2);
-    const leftoverLeft = leftoverCount;
-    const leftoverRight = leftoverCount;
-
-    for (let l = 0; l < leftoverLeft; l++) {
-      ctx.beginPath();
-      ctx.moveTo(smallerPositions[0].x, smallerPositions[0].y);
-      ctx.lineTo(largerPositions[l].x, largerPositions[l].y);
-      ctx.stroke();
-    }
-
-    const bothEvenOrOdd = (currentNeurons % 2) === (nextNeurons % 2);
-
-    if (bothEvenOrOdd) {
-      const pairCount = smallerCount - 1;
-      for (let p = 0; p < pairCount; p++) {
-        const small1 = p;
-        const small2 = p + 1;
-        const large1 = leftoverLeft + p;
-        const large2 = leftoverLeft + p + 1;
-
-        ctx.beginPath();
-        ctx.moveTo(smallerPositions[small1].x, smallerPositions[small1].y);
-        ctx.lineTo(largerPositions[large2].x, largerPositions[large2].y);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(smallerPositions[small2].x, smallerPositions[small2].y);
-        ctx.lineTo(largerPositions[large1].x, largerPositions[large1].y);
-        ctx.stroke();
-      }
-    } else {
-      const zigCount = smallerCount - 1;
-      for (let z = 0; z < zigCount; z++) {
-        const small1 = z;
-        const small2 = z + 1;
-        const large = leftoverLeft + z;
-
-        ctx.beginPath();
-        ctx.moveTo(smallerPositions[small1].x, smallerPositions[small1].y);
-        ctx.lineTo(largerPositions[large].x, largerPositions[large].y);
-        ctx.lineTo(smallerPositions[small2].x, smallerPositions[small2].y);
-        ctx.stroke();
-      }
-    }
-
-    for (let r = 0; r < leftoverRight; r++) {
-      ctx.beginPath();
-      ctx.moveTo(smallerPositions[smallerCount - 1].x, smallerPositions[smallerCount - 1].y);
-      ctx.lineTo(largerPositions[largerCount - leftoverRight + r].x, largerPositions[largerCount - leftoverRight + r].y);
-      ctx.stroke();
-    }
-  }
-
-  for (let i = 0; i < layers.length; i++) {
-    const numNeurons = layers[i];
-    const geom = layerGeometries[i];
-
-    if (i === 0) {
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = 'darkblue';
-      ctx.beginPath();
-      ctx.moveTo(geom.x, geom.y + geom.height);
-      ctx.lineTo(geom.x + geom.width, geom.y + geom.height);
-      ctx.stroke();
-
-      const arrowX = geom.x + geom.width / 2;
-      const arrowStartY = geom.y;
-      const arrowEndY = geom.y + geom.height - 2;
-
-      drawDownwardArrow(ctx, arrowX, arrowStartY, arrowEndY);
-    } else {
-      ctx.fillStyle = 'darkblue';
-      ctx.fillRect(geom.x, geom.y, geom.width, geom.height);
-
-      ctx.lineWidth = 4;
-      if (i === 1) {
-        ctx.strokeStyle = '#90EE90';
-      } else if (i >= 2 && i < layers.length - 2) {
-        ctx.strokeStyle = '#4682B4';
-      } else if (i === layers.length - 2) {
-        ctx.strokeStyle = '#DDA0DD';
-      } else if (i === layers.length - 1) {
-        ctx.strokeStyle = 'rgba(255, 165, 0, 1)';
-      }
-      ctx.beginPath();
-      ctx.moveTo(geom.x, geom.y + geom.height - 1);
-      ctx.lineTo(geom.x + geom.width, geom.y + geom.height - 1);
-      ctx.stroke();
-    }
-
-    ctx.fillStyle = 'black';
-    ctx.textAlign = 'right';
-    let label = '';
-    if (i === 0) {
-      label = `${numNeurons}-wide input`;
-    } else if (i === 1) {
-      label = `${numNeurons}-wide embedding layer`;
-    } else if (i === layers.length - 2) {
-      label = `${numNeurons}-wide linear layer`;
-    } else if (i === layers.length - 1) {
-      label = `${numNeurons}-wide unembedding+softmax layer`;
-    } else {
-      label = `${numNeurons}-wide ReLU layer`;
-    }
-
-    ctx.fillText(label, canvasWidth - 20, geom.y + geom.height / 2 + 5);
-  }
-
-  const geom = layerGeometries[layerGeometries.length - 1];
-  const arrowX = geom.x + geom.width / 2;
-  const arrowStartY = geom.y + layerHeight + 3;
-  const arrowEndY = geom.y + layerHeight + 3 + geom.height - 2;
-
-  drawDownwardArrow(ctx, arrowX, arrowStartY, arrowEndY);
-}
-
 export {
   pickRandomInputs,
   updateVizDataFromTextboxes,
   drawViz,
   drawLossCurve,
-  drawNetworkArchitecture,
   VIZ_EXAMPLES_COUNT
 };

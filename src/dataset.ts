@@ -1,16 +1,13 @@
 import {
   NUMBERS,
   LETTERS,
-  tokenNumberToIndex,
   tokenStringToTokenNumber
 } from "./tokens.js";
 import {
   INPUT_SIZE,
-  OUTPUT_SIZE,
 } from "./constants.js";
-import { EMBEDDED_INPUT_SIZE, embedInput } from "./embeddings.js";
-import { tf, Tensor2D } from "./tf.js";
 import { TrainingData } from "./types.js";
+import { createTrainingData } from "./data-manager.js";
 
 // Generate training data for the classification task
 function generateData(): TrainingData {
@@ -71,19 +68,7 @@ function generateData(): TrainingData {
 
   generate(2, [], new Map(), allLetters, allNumbers);
 
-  // Convert to tensors with embeddings
-  const numExamples = inputArray.length;
-  const embeddedInputArray = inputArray.map(embedInput);
-
-  const inputTensor = tf.tensor2d(embeddedInputArray, [numExamples, EMBEDDED_INPUT_SIZE]);
-  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
-
-  return {
-    inputArray,
-    outputArray,
-    inputTensor,
-    outputTensor
-  };
+  return createTrainingData(inputArray, outputArray);
 }
 
 export {
