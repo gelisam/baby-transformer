@@ -1,12 +1,14 @@
 import { generateData } from "./dataset.js";
 import { createModel } from "./model.js";
 import { setBackend } from "./tf.js";
-import { VIZ_EXAMPLES_COUNT, pickRandomInputs, updateVizDataFromTextboxes, drawViz, drawLossCurve, drawNetworkArchitecture } from "./viz.js";
+import { VIZ_EXAMPLES_COUNT, pickRandomInputs, updateVizDataFromTextboxes, drawViz, drawLossCurve } from "./viz.js";
+import { drawNetworkArchitecture } from "./network-viz.js";
 import { TrainingData, AppState, DomElements } from "./types.js";
 import { Sequential } from "./tf.js";
 import { toggleTrainingMode, updateLayerConfiguration } from "./ui-controls.js";
 import { setPerfectWeights, updatePerfectWeightsButton } from "./perfect-weights.js";
 import { ResourceManager } from "./resource-manager.js";
+import { NETWORK_DEFAULTS, UI_MESSAGES } from "./config.js";
 
 const resourceManager = new ResourceManager();
 
@@ -17,8 +19,8 @@ const appState: AppState = {
   lossHistory: [] as { epoch: number, loss: number }[],
   data: undefined as unknown as TrainingData,
   vizData: undefined as unknown as TrainingData,
-  num_layers: 4,
-  neurons_per_layer: 6
+  num_layers: NETWORK_DEFAULTS.numLayers,
+  neurons_per_layer: NETWORK_DEFAULTS.neuronsPerLayer
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -105,7 +107,7 @@ function initializeNewModel(dom: DomElements): void {
   appState.currentEpoch = 0;
   appState.lossHistory.length = 0;
 
-  dom.statusElement.innerHTML = 'Ready to train!';
+  dom.statusElement.innerHTML = UI_MESSAGES.ready;
 
   // Visualize the initial (untrained) state
   drawViz(appState, appState.vizData, dom);
