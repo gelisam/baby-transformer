@@ -40,11 +40,11 @@ async function toggleTrainingMode(appState: AppState, dom: DomElements) {
  * or neurons per layer. It stops training, disposes of old tensors,
  * and creates a new model with the updated architecture.
  * 
- * @param appState - The application state
+ * @param appState - The application state (contains numLayers and neuronsPerLayer)
  * @param dom - DOM elements for UI updates
  * @param initializeNewModel - Callback function to create a new model
- * @param numLayers - Number of hidden layers (unused, stored in appState)
- * @param neuronsPerLayer - Neurons per layer (unused, stored in appState)
+ * @param numLayers - Number of hidden layers (passed for signature compatibility)
+ * @param neuronsPerLayer - Neurons per layer (passed for signature compatibility)
  */
 function updateLayerConfiguration(appState: AppState, dom: DomElements, initializeNewModel: (dom: DomElements) => void, numLayers: number, neuronsPerLayer: number): void {
   // Stop training and reinitialize model
