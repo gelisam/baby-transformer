@@ -1,26 +1,18 @@
-import {
-  INPUT_SIZE,
-  OUTPUT_SIZE
-} from "./constants.js";
-import {
-  NUMBERS,
-  TOKENS,
-  indexToShortTokenString,
-  tokenNumberToIndex,
-  tokenNumberToTokenString,
-  tokenStringToTokenNumber
-} from "./tokens.js";
-import {
-  EMBEDDED_INPUT_SIZE,
-  EMBEDDING_DIM,
-  embedInput
-} from "./embeddings.js";
-import { tf, Tensor2D } from "./tf.js";
+import { INPUT_SIZE, OUTPUT_SIZE } from "./constants.js";
+import { NUMBERS, indexToShortTokenString, tokenNumberToTokenString, tokenStringToTokenNumber } from "./tokens.js";
+import { EMBEDDED_INPUT_SIZE, EMBEDDING_DIM } from "./embeddings.js";
+import { Tensor2D } from "./tf.js";
 import { TrainingData, AppState, DomElements } from "./types.js";
+import { parseInputString } from "./input-parser.js";
+import { createTrainingData, pickRandomExamples } from "./data-manager.js";
+import { drawDownwardArrow, clearCanvas } from "./canvas-utils.js";
+import { ResourceManager } from "./resource-manager.js";
 
 const VIZ_ROWS = 2;
 const VIZ_COLUMNS = 3;
 const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
+
+const resourceManager = new ResourceManager();
 
 function updateTextboxesFromInputs(inputArray: number[][], outputArray: number[], dom: DomElements): void {
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
@@ -33,51 +25,10 @@ function updateTextboxesFromInputs(inputArray: number[][], outputArray: number[]
 }
 
 function pickRandomInputs(data: TrainingData, dom: DomElements): TrainingData {
-  const inputArray: number[][] = [];
-  const outputArray: number[] = [];
-  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
-    const randomIndex = Math.floor(Math.random() * data.inputArray.length);
-    inputArray.push(data.inputArray[randomIndex]);
-    outputArray.push(data.outputArray[randomIndex]);
-  }
-
-  const embeddedInputArray = inputArray.map(embedInput);
-
-  const inputTensor = tf.tensor2d(embeddedInputArray, [VIZ_EXAMPLES_COUNT, EMBEDDED_INPUT_SIZE]);
-  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
-
+  const { inputArray, outputArray } = pickRandomExamples(data, VIZ_EXAMPLES_COUNT);
+  const vizData = createTrainingData(inputArray, outputArray);
   updateTextboxesFromInputs(inputArray, outputArray, dom);
-
-  return {
-    inputArray,
-    outputArray,
-    inputTensor,
-    outputTensor
-  };
-}
-
-function parseInputString(inputStr: string): number[] | null {
-  const tokens: number[] = [];
-  let i = 0;
-
-  while (i < inputStr.length) {
-    let matched = false;
-
-    for (const token of TOKENS) {
-      if (inputStr.substring(i, i + token.length) === token) {
-        tokens.push(tokenStringToTokenNumber(token));
-        i += token.length;
-        matched = true;
-        break;
-      }
-    }
-
-    if (!matched) {
-      return null;
-    }
-  }
-
-  return tokens.length === INPUT_SIZE ? tokens : null;
+  return vizData;
 }
 
 function updateVizDataFromTextboxes(appState: AppState, dom: DomElements): void {
@@ -110,22 +61,10 @@ function updateVizDataFromTextboxes(appState: AppState, dom: DomElements): void 
     }
   }
 
-  if (appState.vizData) {
-    appState.vizData.inputTensor.dispose();
-    appState.vizData.outputTensor.dispose();
-  }
+  // Use ResourceManager for safe disposal
+  resourceManager.disposeTrainingData(appState.vizData);
 
-  const embeddedInputArray = inputArray.map(embedInput);
-  const inputTensor = tf.tensor2d(embeddedInputArray, [VIZ_EXAMPLES_COUNT, EMBEDDED_INPUT_SIZE]);
-  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
-
-  appState.vizData = {
-    inputArray,
-    outputArray,
-    inputTensor,
-    outputTensor
-  };
-
+  appState.vizData = createTrainingData(inputArray, outputArray);
   drawViz(appState, appState.vizData, dom);
 }
 
@@ -195,7 +134,7 @@ function drawLossCurve(appState: AppState, dom: DomElements): void {
 
   const canvas = dom.lossCanvas;
   const ctx = canvas.getContext('2d')!;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  clearCanvas(canvas);
 
   const minLoss = Math.min(...appState.lossHistory.map(d => d.loss));
   const maxLoss = Math.max(...appState.lossHistory.map(d => d.loss));
@@ -225,7 +164,7 @@ function drawLossCurve(appState: AppState, dom: DomElements): void {
 function drawNetworkArchitecture(appState: AppState, dom: DomElements): void {
   const canvas = dom.networkCanvas;
   const ctx = canvas.getContext('2d')!;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  clearCanvas(canvas);
 
   const inputLayer = INPUT_SIZE;
   const embeddingLayer = EMBEDDED_INPUT_SIZE;
@@ -239,27 +178,8 @@ function drawNetworkArchitecture(appState: AppState, dom: DomElements): void {
   const layerGapY = 40;
   const startY = 30;
   const canvasWidth = canvas.width;
-  const arrowHeadSize = 8;
 
   const maxNeurons = Math.max(...layers);
-
-  function drawDownwardArrow(ctx: CanvasRenderingContext2D, x: number, startY: number, endY: number): void {
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = 'darkblue';
-    ctx.fillStyle = 'darkblue';
-
-    ctx.beginPath();
-    ctx.moveTo(x, startY);
-    ctx.lineTo(x, endY - arrowHeadSize);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(x, endY);
-    ctx.lineTo(x - arrowHeadSize, endY - arrowHeadSize);
-    ctx.lineTo(x + arrowHeadSize, endY - arrowHeadSize);
-    ctx.closePath();
-    ctx.fill();
-  }
 
   const layerGeometries: { x: number; y: number; width: number; height: number }[] = [];
 

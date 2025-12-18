@@ -1,6 +1,9 @@
 import { AppState, DomElements } from "./types.js";
 import { trainingStep } from "./model.js";
 import { updatePerfectWeightsButton } from "./perfect-weights.js";
+import { ResourceManager } from "./resource-manager.js";
+
+const resourceManager = new ResourceManager();
 
 async function toggleTrainingMode(appState: AppState, dom: DomElements) {
   appState.isTraining = !appState.isTraining;
@@ -19,22 +22,10 @@ function updateLayerConfiguration(appState: AppState, dom: DomElements, initiali
   if (appState.isTraining) {
     toggleTrainingMode(appState, dom); // Toggles isTraining to false
   }
-  if (appState.data) {
-    try {
-      appState.data.inputTensor.dispose();
-      appState.data.outputTensor.dispose();
-    } catch (e) {
-      // Tensors may already be disposed
-    }
-  }
-  if (appState.vizData) {
-    try {
-      appState.vizData.inputTensor.dispose();
-      appState.vizData.outputTensor.dispose();
-    } catch (e) {
-      // Tensors may already be disposed
-    }
-  }
+  
+  // Safely dispose tensors using ResourceManager
+  resourceManager.disposeTrainingData(appState.data);
+  resourceManager.disposeTrainingData(appState.vizData);
 
   initializeNewModel(dom);
   updatePerfectWeightsButton(appState, dom);

@@ -6,6 +6,9 @@ import { TrainingData, AppState, DomElements } from "./types.js";
 import { Sequential } from "./tf.js";
 import { toggleTrainingMode, updateLayerConfiguration } from "./ui-controls.js";
 import { setPerfectWeights, updatePerfectWeightsButton } from "./perfect-weights.js";
+import { ResourceManager } from "./resource-manager.js";
+
+const resourceManager = new ResourceManager();
 
 const appState: AppState = {
   model: undefined as unknown as Sequential,
@@ -45,14 +48,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (appState.isTraining) {
       toggleTrainingMode(appState, dom); // Toggles isTraining to false
     }
-    if (appState.data) {
-      appState.data.inputTensor.dispose();
-      appState.data.outputTensor.dispose();
-    }
-    if (appState.vizData) {
-      appState.vizData.inputTensor.dispose();
-      appState.vizData.outputTensor.dispose();
-    }
+    
+    // Use ResourceManager for tensor cleanup
+    resourceManager.disposeTrainingData(appState.data);
+    resourceManager.disposeTrainingData(appState.vizData);
 
     await setBackend(dom.backendSelector);
     initializeNewModel(dom); // Initialize a new model for the new backend
