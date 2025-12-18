@@ -52,16 +52,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Add event listeners for layer configuration sliders
+  const reinitializeApp = () => initializeApp(dom);
   dom.numLayersSlider.addEventListener('input', () => {
     appState.num_layers = parseInt(dom.numLayersSlider.value, 10);
     dom.numLayersValue.textContent = appState.num_layers.toString();
-    updateLayerConfiguration(appState, dom, () => initializeApp(dom));
+    updateLayerConfiguration(appState, dom, reinitializeApp);
   });
 
   dom.neuronsPerLayerSlider.addEventListener('input', () => {
     appState.neurons_per_layer = parseInt(dom.neuronsPerLayerSlider.value, 10);
     dom.neuronsPerLayerValue.textContent = appState.neurons_per_layer.toString();
-    updateLayerConfiguration(appState, dom, () => initializeApp(dom));
+    updateLayerConfiguration(appState, dom, reinitializeApp);
   });
 
   // Add event listeners to the input textboxes

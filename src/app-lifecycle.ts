@@ -7,8 +7,16 @@ function disposeTrainingData(data?: TrainingData): void {
   if (!data) {
     return;
   }
-  data.inputTensor.dispose();
-  data.outputTensor.dispose();
+  try {
+    data.inputTensor.dispose();
+  } catch (e) {
+    // Tensor may already be disposed
+  }
+  try {
+    data.outputTensor.dispose();
+  } catch (e) {
+    // Tensor may already be disposed
+  }
 }
 
 function disposeAppState(appState: AppState): void {
