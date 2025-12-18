@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       appState.vizData.outputTensor.dispose();
     }
 
-    await setBackend(dom.backendSelector);
+    await setBackend(dom.backendSelector.value);
     initializeNewModel(dom); // Initialize a new model for the new backend
   });
 
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initial setup
   drawNetworkArchitecture(appState, dom);
-  await setBackend(dom.backendSelector);
+  await setBackend(dom.backendSelector.value);
   initializeNewModel(dom);
   updatePerfectWeightsButton(appState, dom);
 });

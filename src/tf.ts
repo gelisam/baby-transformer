@@ -6,9 +6,7 @@ type Tensor2D = import('@tensorflow/tfjs').Tensor2D;
 type Sequential = import('@tensorflow/tfjs').Sequential;
 
 // Function to set the backend and update UI
-async function setBackend(backendSelector: HTMLSelectElement) {
-  const requestedBackend = backendSelector.value;
-
+async function setBackend(requestedBackend: string) {
   try {
     await tf.setBackend(requestedBackend);
     console.log(`TensorFlow.js backend set to: ${tf.getBackend()}`);
