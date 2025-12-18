@@ -111,6 +111,11 @@ function drawConnectionsBetweenLayers(
   const smallerPositions = isCurrentSmaller ? currentPositions : nextPositions;
   const largerPositions = isCurrentSmaller ? nextPositions : currentPositions;
 
+  // Calculate how many "overflow" neurons exist on each side of the larger layer.
+  // These overflow neurons connect to the edge neurons of the smaller layer.
+  // The algorithm centers the smaller layer's connections over the larger layer,
+  // then draws crossing lines between adjacent pairs to create a visually balanced
+  // network diagram.
   const leftoverCount = Math.ceil((largerCount - smallerCount) / 2);
 
   // Draw left overflow connections
@@ -242,7 +247,7 @@ function drawNetworkArchitecture(appState: AppState, dom: DomElements): void {
 
   const inputLayer = INPUT_SIZE;
   const embeddingLayer = EMBEDDED_INPUT_SIZE;
-  const hiddenLayers = Array(appState.numLayers).fill(appState.neuronsPerLayer);
+  const hiddenLayers = Array.from({ length: appState.numLayers }, () => appState.neuronsPerLayer);
   const linearLayer = EMBEDDING_DIM;
   const outputLayer = OUTPUT_SIZE;
   const layers = [inputLayer, embeddingLayer, ...hiddenLayers, linearLayer, outputLayer];
