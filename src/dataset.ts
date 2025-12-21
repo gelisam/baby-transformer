@@ -10,10 +10,15 @@ import {
 } from "./constants.js";
 import { EMBEDDED_INPUT_SIZE, embedInput } from "./embeddings.js";
 import { tf, Tensor2D } from "./tf.js";
-import { TrainingData } from "./types.js";
+
+// Module-local state for training data
+let trainingInputArray: number[][] = [];
+let trainingOutputArray: number[] = [];
+let trainingInputTensor: Tensor2D | null = null;
+let trainingOutputTensor: Tensor2D | null = null;
 
 // Generate training data for the classification task
-function generateData(): TrainingData {
+function generateData(): void {
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
   function addExample(sequence: number[]) {
@@ -75,18 +80,55 @@ function generateData(): TrainingData {
   const numExamples = inputArray.length;
   const embeddedInputArray = inputArray.map(embedInput);
 
-  const inputTensor = tf.tensor2d(embeddedInputArray, [numExamples, EMBEDDED_INPUT_SIZE]);
-  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
+  // Dispose old tensors if they exist
+  if (trainingInputTensor) {
+    try { trainingInputTensor.dispose(); } catch (e) { /* ignore */ }
+  }
+  if (trainingOutputTensor) {
+    try { trainingOutputTensor.dispose(); } catch (e) { /* ignore */ }
+  }
 
-  return {
-    inputArray,
-    outputArray,
-    inputTensor,
-    outputTensor
-  };
+  trainingInputArray = inputArray;
+  trainingOutputArray = outputArray;
+  trainingInputTensor = tf.tensor2d(embeddedInputArray, [numExamples, EMBEDDED_INPUT_SIZE]);
+  trainingOutputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
+}
+
+// Getters for training data
+function getTrainingInputArray(): number[][] {
+  return trainingInputArray;
+}
+
+function getTrainingOutputArray(): number[] {
+  return trainingOutputArray;
+}
+
+function getTrainingInputTensor(): Tensor2D | null {
+  return trainingInputTensor;
+}
+
+function getTrainingOutputTensor(): Tensor2D | null {
+  return trainingOutputTensor;
+}
+
+// Dispose training data tensors
+function disposeTrainingData() {
+  if (trainingInputTensor) {
+    try { trainingInputTensor.dispose(); } catch (e) { /* ignore */ }
+    trainingInputTensor = null;
+  }
+  if (trainingOutputTensor) {
+    try { trainingOutputTensor.dispose(); } catch (e) { /* ignore */ }
+    trainingOutputTensor = null;
+  }
 }
 
 export {
-  generateData
+  generateData,
+  getTrainingInputArray,
+  getTrainingOutputArray,
+  getTrainingInputTensor,
+  getTrainingOutputTensor,
+  disposeTrainingData
 };
 

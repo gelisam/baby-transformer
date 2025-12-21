@@ -1,23 +1,41 @@
-import { AppState, DomElements } from "./types.js";
-import { trainingStep } from "./model.js";
 import { ReinitializeModelImpl } from "./orchestrators/reinitializeModel.js";
+import { ToggleTrainingImpl } from "./orchestrators/toggleTraining.js";
+import { toggleTrainingImpl, getIsTraining } from "./model.js";
 
-async function toggleTrainingMode(appState: AppState, dom: DomElements) {
-  appState.isTraining = !appState.isTraining;
-  const trainButton = dom.trainButton;
+// Module-local state for DOM elements
+let trainButton: HTMLButtonElement | null = null;
 
-  if (appState.isTraining) {
-    trainButton.innerText = 'Pause';
-    requestAnimationFrame(() => trainingStep(appState, dom));
-  } else {
-    trainButton.innerText = 'Train Model';
+// Initialize DOM elements
+function initUiControlsDom(button: HTMLButtonElement) {
+  trainButton = button;
+}
+
+// Toggle training and update button text
+function toggleTrainingMode() {
+  toggleTrainingImpl();
+  updateTrainButtonText();
+}
+
+function updateTrainButtonText() {
+  if (trainButton) {
+    trainButton.innerText = getIsTraining() ? 'Pause' : 'Train Model';
   }
 }
 
 // Implementation for the reinitializeModel orchestrator
-// Currently a no-op, but can be extended in the future
-const reinitializeModel: ReinitializeModelImpl = (appState, dom) => {
-  // No-op for now - ui-controls doesn't need to do anything on model reinitialize
+const reinitializeModel: ReinitializeModelImpl = (numLayers, neuronsPerLayer) => {
+  // Reset button text when model is reinitialized
+  updateTrainButtonText();
 };
 
-export { toggleTrainingMode, reinitializeModel };
+// Implementation for toggleTraining orchestrator
+const toggleTraining: ToggleTrainingImpl = () => {
+  toggleTrainingMode();
+};
+
+export { 
+  initUiControlsDom,
+  toggleTrainingMode, 
+  reinitializeModel,
+  toggleTraining
+};

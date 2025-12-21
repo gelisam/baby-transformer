@@ -1,5 +1,7 @@
-import { Tensor2D, Sequential } from "./tf.js";
+import { Tensor2D } from "./tf.js";
 
+// TrainingData is kept for internal use within modules if needed
+// but is no longer passed around between modules
 interface TrainingData {
   inputArray: number[][];
   outputArray: number[];
@@ -7,32 +9,8 @@ interface TrainingData {
   outputTensor: Tensor2D;
 }
 
-interface AppState {
-  model: Sequential;
-  isTraining: boolean;
-  currentEpoch: number;
-  lossHistory: { epoch: number; loss: number }[];
-  data: TrainingData;
-  vizData: TrainingData;
-  num_layers: number;
-  neurons_per_layer: number;
-}
+// Note: AppState and DomElements have been removed in favor of
+// module-local state. Each module now manages its own globals
+// and communicates through orchestrator functions.
 
-interface DomElements {
-  trainButton: HTMLButtonElement;
-  perfectWeightsButton: HTMLButtonElement;
-  perfectWeightsTooltipText: HTMLSpanElement;
-  backendSelector: HTMLSelectElement;
-  numLayersSlider: HTMLInputElement;
-  numLayersValue: HTMLSpanElement;
-  neuronsPerLayerSlider: HTMLInputElement;
-  neuronsPerLayerValue: HTMLSpanElement;
-  inputElements: HTMLInputElement[];
-  statusElement: HTMLElement;
-  outputCanvas: HTMLCanvasElement;
-  lossCanvas: HTMLCanvasElement;
-  networkCanvas: HTMLCanvasElement;
-  toaster: HTMLElement;
-}
-
-export { TrainingData, AppState, DomElements };
+export { TrainingData };

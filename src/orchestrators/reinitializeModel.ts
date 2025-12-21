@@ -1,5 +1,3 @@
-import { AppState, DomElements } from "../types.js";
-
 /**
  * Orchestrator for model re-initialization.
  * 
@@ -10,13 +8,15 @@ import { AppState, DomElements } from "../types.js";
  * 
  * Each module can define its own implementation of `reinitializeModel` that
  * will be called by the main implementation in the appropriate order.
+ * 
+ * Arguments are passed explicitly rather than through shared state objects.
  */
 
 // Type definition for module-specific implementations
-export type ReinitializeModelImpl = (appState: AppState, dom: DomElements) => void;
+export type ReinitializeModelImpl = (numLayers: number, neuronsPerLayer: number) => void;
 
 // Type for the global orchestrator function
-export type ReinitializeModelOrchestrator = (appState: AppState, dom: DomElements) => void;
+export type ReinitializeModelOrchestrator = (numLayers: number, neuronsPerLayer: number) => void;
 
 // Extend the Window interface to include our orchestrator
 declare global {
