@@ -43,6 +43,29 @@ window.reinitializeModel = (appState: AppState, dom: DomElements): void => {
   uiControlsReinitialize(appState, dom);
 };
 
+// Helper function to stop training and dispose tensors before reinitializing
+function prepareForReinitialize(appState: AppState, dom: DomElements): void {
+  if (appState.isTraining) {
+    toggleTrainingMode(appState, dom);
+  }
+  if (appState.data) {
+    try {
+      appState.data.inputTensor.dispose();
+      appState.data.outputTensor.dispose();
+    } catch (e) {
+      // Tensors may already be disposed
+    }
+  }
+  if (appState.vizData) {
+    try {
+      appState.vizData.inputTensor.dispose();
+      appState.vizData.outputTensor.dispose();
+    } catch (e) {
+      // Tensors may already be disposed
+    }
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const dom: DomElements = {
     trainButton: document.getElementById('train-button') as HTMLButtonElement,
@@ -64,21 +87,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   dom.trainButton.addEventListener('click', () => toggleTrainingMode(appState, dom));
   dom.perfectWeightsButton.addEventListener('click', () => setPerfectWeights(appState, dom));
 
-  // Add event listener for changes
+  // Add event listener for backend changes
   dom.backendSelector.addEventListener('change', async () => {
-    // Stop training and clean up old tensors before changing backend
-    if (appState.isTraining) {
-      toggleTrainingMode(appState, dom); // Toggles isTraining to false
-    }
-    if (appState.data) {
-      appState.data.inputTensor.dispose();
-      appState.data.outputTensor.dispose();
-    }
-    if (appState.vizData) {
-      appState.vizData.inputTensor.dispose();
-      appState.vizData.outputTensor.dispose();
-    }
-
+    prepareForReinitialize(appState, dom);
     await setBackend(dom.backendSelector.value);
     window.reinitializeModel(appState, dom);
   });
@@ -87,52 +98,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   dom.numLayersSlider.addEventListener('input', () => {
     appState.num_layers = parseInt(dom.numLayersSlider.value, 10);
     dom.numLayersValue.textContent = appState.num_layers.toString();
-    // Stop training before reinitializing
-    if (appState.isTraining) {
-      toggleTrainingMode(appState, dom);
-    }
-    if (appState.data) {
-      try {
-        appState.data.inputTensor.dispose();
-        appState.data.outputTensor.dispose();
-      } catch (e) {
-        // Tensors may already be disposed
-      }
-    }
-    if (appState.vizData) {
-      try {
-        appState.vizData.inputTensor.dispose();
-        appState.vizData.outputTensor.dispose();
-      } catch (e) {
-        // Tensors may already be disposed
-      }
-    }
+    prepareForReinitialize(appState, dom);
     window.reinitializeModel(appState, dom);
   });
 
   dom.neuronsPerLayerSlider.addEventListener('input', () => {
     appState.neurons_per_layer = parseInt(dom.neuronsPerLayerSlider.value, 10);
     dom.neuronsPerLayerValue.textContent = appState.neurons_per_layer.toString();
-    // Stop training before reinitializing
-    if (appState.isTraining) {
-      toggleTrainingMode(appState, dom);
-    }
-    if (appState.data) {
-      try {
-        appState.data.inputTensor.dispose();
-        appState.data.outputTensor.dispose();
-      } catch (e) {
-        // Tensors may already be disposed
-      }
-    }
-    if (appState.vizData) {
-      try {
-        appState.vizData.inputTensor.dispose();
-        appState.vizData.outputTensor.dispose();
-      } catch (e) {
-        // Tensors may already be disposed
-      }
-    }
+    prepareForReinitialize(appState, dom);
     window.reinitializeModel(appState, dom);
   });
 
@@ -146,8 +119,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Initial setup - draw network architecture before model init
-  vizReinitialize(appState, dom); // This draws the network architecture
+  // Initial setup - draw network architecture (vizReinitialize handles this even without a model)
+  vizReinitialize(appState, dom);
   await setBackend(dom.backendSelector.value);
   window.reinitializeModel(appState, dom);
 });
