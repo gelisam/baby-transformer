@@ -1,6 +1,6 @@
 import { AppState, DomElements } from "./types.js";
 import { trainingStep } from "./model.js";
-import { updatePerfectWeightsButton } from "./perfect-weights.js";
+import { ReinitializeModelImpl } from "./orchestrators/reinitializeModel.js";
 
 async function toggleTrainingMode(appState: AppState, dom: DomElements) {
   appState.isTraining = !appState.isTraining;
@@ -14,30 +14,10 @@ async function toggleTrainingMode(appState: AppState, dom: DomElements) {
   }
 }
 
-function updateLayerConfiguration(appState: AppState, dom: DomElements, initializeNewModel: (dom: DomElements) => void, numLayers: number, neuronsPerLayer: number): void {
-  // Stop training and reinitialize model
-  if (appState.isTraining) {
-    toggleTrainingMode(appState, dom); // Toggles isTraining to false
-  }
-  if (appState.data) {
-    try {
-      appState.data.inputTensor.dispose();
-      appState.data.outputTensor.dispose();
-    } catch (e) {
-      // Tensors may already be disposed
-    }
-  }
-  if (appState.vizData) {
-    try {
-      appState.vizData.inputTensor.dispose();
-      appState.vizData.outputTensor.dispose();
-    } catch (e) {
-      // Tensors may already be disposed
-    }
-  }
+// Implementation for the reinitializeModel orchestrator
+// Currently a no-op, but can be extended in the future
+const reinitializeModel: ReinitializeModelImpl = (appState, dom) => {
+  // No-op for now - ui-controls doesn't need to do anything on model reinitialize
+};
 
-  initializeNewModel(dom);
-  updatePerfectWeightsButton(appState, dom);
-}
-
-export { toggleTrainingMode, updateLayerConfiguration };
+export { toggleTrainingMode, reinitializeModel };

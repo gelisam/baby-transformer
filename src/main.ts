@@ -1,11 +1,12 @@
 import { generateData } from "./dataset.js";
-import { createModel } from "./model.js";
+import { reinitializeModel as modelReinitialize } from "./model.js";
 import { setBackend } from "./tf.js";
-import { VIZ_EXAMPLES_COUNT, pickRandomInputs, updateVizDataFromTextboxes, drawViz, drawLossCurve, drawNetworkArchitecture } from "./viz.js";
+import { VIZ_EXAMPLES_COUNT, updateVizDataFromTextboxes, reinitializeModel as vizReinitialize } from "./viz.js";
 import { TrainingData, AppState, DomElements } from "./types.js";
 import { Sequential } from "./tf.js";
-import { toggleTrainingMode, updateLayerConfiguration } from "./ui-controls.js";
-import { setPerfectWeights, updatePerfectWeightsButton } from "./perfect-weights.js";
+import { toggleTrainingMode, reinitializeModel as uiControlsReinitialize } from "./ui-controls.js";
+import { setPerfectWeights, reinitializeModel as perfectWeightsReinitialize } from "./perfect-weights.js";
+import "./orchestrators/reinitializeModel.js";
 
 const appState: AppState = {
   model: undefined as unknown as Sequential,
@@ -16,6 +17,30 @@ const appState: AppState = {
   vizData: undefined as unknown as TrainingData,
   num_layers: 4,
   neurons_per_layer: 6
+};
+
+// Define the global orchestrator function
+// This calls all module implementations in the correct order
+window.reinitializeModel = (appState: AppState, dom: DomElements): void => {
+  // 1. First, create a new model (model.ts)
+  modelReinitialize(appState, dom);
+
+  // 2. Generate new data (dataset.ts - called inline as it's simple)
+  appState.data = generateData();
+
+  // 3. Reset training state
+  appState.currentEpoch = 0;
+  appState.lossHistory.length = 0;
+  dom.statusElement.innerHTML = 'Ready to train!';
+
+  // 4. Update visualization (viz.ts)
+  vizReinitialize(appState, dom);
+
+  // 5. Update perfect weights button state (perfect-weights.ts)
+  perfectWeightsReinitialize(appState, dom);
+
+  // 6. Update UI controls state (ui-controls.ts)
+  uiControlsReinitialize(appState, dom);
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -55,20 +80,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     await setBackend(dom.backendSelector.value);
-    initializeNewModel(dom); // Initialize a new model for the new backend
+    window.reinitializeModel(appState, dom);
   });
 
   // Add event listeners for layer configuration sliders
   dom.numLayersSlider.addEventListener('input', () => {
     appState.num_layers = parseInt(dom.numLayersSlider.value, 10);
     dom.numLayersValue.textContent = appState.num_layers.toString();
-    updateLayerConfiguration(appState, dom, initializeNewModel, appState.num_layers, appState.neurons_per_layer);
+    // Stop training before reinitializing
+    if (appState.isTraining) {
+      toggleTrainingMode(appState, dom);
+    }
+    if (appState.data) {
+      try {
+        appState.data.inputTensor.dispose();
+        appState.data.outputTensor.dispose();
+      } catch (e) {
+        // Tensors may already be disposed
+      }
+    }
+    if (appState.vizData) {
+      try {
+        appState.vizData.inputTensor.dispose();
+        appState.vizData.outputTensor.dispose();
+      } catch (e) {
+        // Tensors may already be disposed
+      }
+    }
+    window.reinitializeModel(appState, dom);
   });
 
   dom.neuronsPerLayerSlider.addEventListener('input', () => {
     appState.neurons_per_layer = parseInt(dom.neuronsPerLayerSlider.value, 10);
     dom.neuronsPerLayerValue.textContent = appState.neurons_per_layer.toString();
-    updateLayerConfiguration(appState, dom, initializeNewModel, appState.num_layers, appState.neurons_per_layer);
+    // Stop training before reinitializing
+    if (appState.isTraining) {
+      toggleTrainingMode(appState, dom);
+    }
+    if (appState.data) {
+      try {
+        appState.data.inputTensor.dispose();
+        appState.data.outputTensor.dispose();
+      } catch (e) {
+        // Tensors may already be disposed
+      }
+    }
+    if (appState.vizData) {
+      try {
+        appState.vizData.inputTensor.dispose();
+        appState.vizData.outputTensor.dispose();
+      } catch (e) {
+        // Tensors may already be disposed
+      }
+    }
+    window.reinitializeModel(appState, dom);
   });
 
   // Add event listeners to the input textboxes
@@ -81,36 +146,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Initial setup
-  drawNetworkArchitecture(appState, dom);
+  // Initial setup - draw network architecture before model init
+  vizReinitialize(appState, dom); // This draws the network architecture
   await setBackend(dom.backendSelector.value);
-  initializeNewModel(dom);
-  updatePerfectWeightsButton(appState, dom);
+  window.reinitializeModel(appState, dom);
 });
-
-function initializeNewModel(dom: DomElements): void {
-  // Create a new model
-  if (appState.model) {
-    appState.model.dispose();
-  }
-  appState.model = createModel(appState.num_layers, appState.neurons_per_layer);
-
-  // Generate new data
-  // No need to clean up old data tensors here, it's handled on backend change
-  appState.data = generateData();
-
-  // Generate visualization inputs (only once, not on every frame)
-  appState.vizData = pickRandomInputs(appState.data, dom);
-
-  // Reset training state
-  appState.currentEpoch = 0;
-  appState.lossHistory.length = 0;
-
-  dom.statusElement.innerHTML = 'Ready to train!';
-
-  // Visualize the initial (untrained) state
-  drawViz(appState, appState.vizData, dom);
-
-  // Redraw the architecture in case it changed
-  drawNetworkArchitecture(appState, dom);
-}

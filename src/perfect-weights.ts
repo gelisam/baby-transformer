@@ -3,6 +3,7 @@ import { AppState, DomElements } from "./types.js";
 import { tf } from "./tf.js";
 import { toggleTrainingMode } from "./ui-controls.js";
 import { drawViz } from "./viz.js";
+import { ReinitializeModelImpl } from "./orchestrators/reinitializeModel.js";
 
 function canUsePerfectWeights(numLayers: number, neuronsPerLayer: number): { canUse: boolean, reason: string } {
   // The setPerfectWeights function needs to be updated for the new embedding/unembedding architecture
@@ -285,4 +286,9 @@ async function setPerfectWeights(appState: AppState, dom: DomElements): Promise<
   perfectWeights.forEach(tensor => tensor.dispose());
 }
 
-export { canUsePerfectWeights, updatePerfectWeightsButton, setPerfectWeights };
+// Implementation for the reinitializeModel orchestrator
+const reinitializeModel: ReinitializeModelImpl = (appState, dom) => {
+  updatePerfectWeightsButton(appState, dom);
+};
+
+export { canUsePerfectWeights, updatePerfectWeightsButton, setPerfectWeights, reinitializeModel };

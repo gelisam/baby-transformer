@@ -3,6 +3,7 @@ import { EMBEDDING_DIM, EMBEDDED_INPUT_SIZE, UNEMBEDDING_MATRIX } from "./embedd
 import { tf, Sequential } from "./tf.js";
 import { AppState, DomElements } from "./types.js";
 import { drawViz, drawLossCurve } from "./viz.js";
+import { ReinitializeModelImpl } from "./orchestrators/reinitializeModel.js";
 
 function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
   const model = tf.sequential();
@@ -83,4 +84,13 @@ async function trainingStep(appState: AppState, dom: DomElements) {
   requestAnimationFrame(() => trainingStep(appState, dom));
 }
 
-export { createModel, trainingStep };
+// Implementation for the reinitializeModel orchestrator
+const reinitializeModel: ReinitializeModelImpl = (appState, dom) => {
+  // Create a new model
+  if (appState.model) {
+    appState.model.dispose();
+  }
+  appState.model = createModel(appState.num_layers, appState.neurons_per_layer);
+};
+
+export { createModel, trainingStep, reinitializeModel };

@@ -17,6 +17,7 @@ import {
 } from "./embeddings.js";
 import { tf, Tensor2D } from "./tf.js";
 import { TrainingData, AppState, DomElements } from "./types.js";
+import { ReinitializeModelImpl } from "./orchestrators/reinitializeModel.js";
 
 const VIZ_ROWS = 2;
 const VIZ_COLUMNS = 3;
@@ -416,11 +417,28 @@ function drawNetworkArchitecture(appState: AppState, dom: DomElements): void {
   drawDownwardArrow(ctx, arrowX, arrowStartY, arrowEndY);
 }
 
+// Implementation for the reinitializeModel orchestrator
+const reinitializeModel: ReinitializeModelImpl = (appState, dom) => {
+  // Generate visualization inputs (only once, not on every frame)
+  if (appState.data) {
+    appState.vizData = pickRandomInputs(appState.data, dom);
+  }
+
+  // Visualize the initial (untrained) state
+  if (appState.model && appState.vizData) {
+    drawViz(appState, appState.vizData, dom);
+  }
+
+  // Redraw the architecture in case it changed
+  drawNetworkArchitecture(appState, dom);
+};
+
 export {
   pickRandomInputs,
   updateVizDataFromTextboxes,
   drawViz,
   drawLossCurve,
   drawNetworkArchitecture,
-  VIZ_EXAMPLES_COUNT
+  VIZ_EXAMPLES_COUNT,
+  reinitializeModel
 };
