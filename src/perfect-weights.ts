@@ -5,18 +5,32 @@ import { drawViz } from "./viz.js";
 import { ReinitializeModelImpl } from "./orchestrators/reinitializeModel.js";
 import { getModel, getIsTraining } from "./model.js";
 
-// Module-local state for DOM elements
+// Module-local state for DOM elements (initialized on first use)
 let perfectWeightsButton: HTMLButtonElement | null = null;
 let perfectWeightsTooltipText: HTMLSpanElement | null = null;
+let domInitialized = false;
 
 // Module-local state for layer configuration
 let numLayers = 4;
 let neuronsPerLayer = 6;
 
-// Initialize DOM elements
-function initPerfectWeightsDom(button: HTMLButtonElement, tooltipText: HTMLSpanElement) {
-  perfectWeightsButton = button;
-  perfectWeightsTooltipText = tooltipText;
+// Forward declaration for event handler
+async function handlePerfectWeightsClick(): Promise<void> {
+  await setPerfectWeights();
+}
+
+// Initialize DOM elements by calling document.getElementById directly
+function initPerfectWeightsDom() {
+  if (domInitialized) return;
+  perfectWeightsButton = document.getElementById('perfect-weights-button') as HTMLButtonElement;
+  perfectWeightsTooltipText = document.getElementById('perfect-weights-tooltip-text') as HTMLSpanElement;
+  
+  // Set up event listener
+  if (perfectWeightsButton) {
+    perfectWeightsButton.addEventListener('click', () => handlePerfectWeightsClick());
+  }
+  
+  domInitialized = true;
 }
 
 function canUsePerfectWeights(layers: number, neurons: number): { canUse: boolean, reason: string } {

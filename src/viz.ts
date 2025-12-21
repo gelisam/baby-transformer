@@ -25,12 +25,13 @@ const VIZ_ROWS = 2;
 const VIZ_COLUMNS = 3;
 const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
 
-// Module-local state for DOM elements
+// Module-local state for DOM elements (initialized on first use)
 let outputCanvas: HTMLCanvasElement | null = null;
 let lossCanvas: HTMLCanvasElement | null = null;
 let networkCanvas: HTMLCanvasElement | null = null;
 let inputElements: HTMLInputElement[] = [];
 let statusElement: HTMLElement | null = null;
+let domInitialized = false;
 
 // Module-local state for visualization data
 let vizInputArray: number[][] = [];
@@ -46,19 +47,17 @@ let trainingOutputArray: number[] = [];
 let numLayers = 4;
 let neuronsPerLayer = 6;
 
-// Initialize DOM elements
-function initVizDom(
-  output: HTMLCanvasElement,
-  loss: HTMLCanvasElement,
-  network: HTMLCanvasElement,
-  inputs: HTMLInputElement[],
-  status: HTMLElement
-) {
-  outputCanvas = output;
-  lossCanvas = loss;
-  networkCanvas = network;
-  inputElements = inputs;
-  statusElement = status;
+// Initialize DOM elements by calling document.getElementById directly
+function initVizDom() {
+  if (domInitialized) return;
+  outputCanvas = document.getElementById('output-canvas') as HTMLCanvasElement;
+  lossCanvas = document.getElementById('loss-canvas') as HTMLCanvasElement;
+  networkCanvas = document.getElementById('network-canvas') as HTMLCanvasElement;
+  inputElements = Array.from({ length: VIZ_EXAMPLES_COUNT }, (_, i) => 
+    document.getElementById(`input-${i}`) as HTMLInputElement
+  ).filter((el): el is HTMLInputElement => el !== null);
+  statusElement = document.getElementById('status') as HTMLElement;
+  domInitialized = true;
 }
 
 // Set training data reference for lookups
@@ -511,6 +510,19 @@ function setStatusMessage(message: string) {
   }
 }
 
+// Setup event listeners for input textboxes
+function setupInputEventListeners() {
+  initVizDom(); // Ensure DOM is initialized
+  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
+    const inputElement = inputElements[i];
+    if (inputElement) {
+      inputElement.addEventListener('input', () => {
+        updateVizDataFromTextboxes();
+      });
+    }
+  }
+}
+
 export {
   initVizDom,
   setTrainingDataRef,
@@ -524,5 +536,6 @@ export {
   refreshViz,
   updateTrainingStatus,
   disposeVizData,
-  setStatusMessage
+  setStatusMessage,
+  setupInputEventListeners
 };
