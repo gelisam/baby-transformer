@@ -1,5 +1,5 @@
 import { generateData, getTrainingInputArray, getTrainingOutputArray, getTrainingInputTensor, getTrainingOutputTensor, disposeTrainingData } from "./dataset.js";
-import { reinitializeModel as modelReinitialize, setTrainingData, disposeTrainingData as disposeModelTrainingData, getIsTraining } from "./model.js";
+import { reinitializeModel as modelReinitialize, toggleTraining as modelToggleTraining, setTrainingData, disposeTrainingData as disposeModelTrainingData, getIsTraining } from "./model.js";
 import { setBackend } from "./tf.js";
 import { 
   initVizDom, 
@@ -11,7 +11,7 @@ import {
   setStatusMessage,
   setupInputEventListeners
 } from "./viz.js";
-import { initUiControlsDom, toggleTrainingMode, reinitializeModel as uiControlsReinitialize } from "./ui-controls.js";
+import { initUiControlsDom, reinitializeModel as uiControlsReinitialize, toggleTraining as uiControlsToggleTraining } from "./ui-controls.js";
 import { initPerfectWeightsDom, reinitializeModel as perfectWeightsReinitialize } from "./perfect-weights.js";
 import "./orchestrators/reinitializeModel.js";
 import "./orchestrators/refreshViz.js";
@@ -64,13 +64,17 @@ window.updateTrainingStatus = (epoch: number, loss: number): void => {
 };
 
 window.toggleTraining = (): void => {
-  toggleTrainingMode();
+  // 1. Toggle training state in model.ts (start/stop training loop)
+  modelToggleTraining();
+  
+  // 2. Update UI in ui-controls.ts (button text)
+  uiControlsToggleTraining();
 };
 
 // Helper function to stop training and dispose tensors before reinitializing
 function prepareForReinitialize(): void {
   if (getIsTraining()) {
-    toggleTrainingMode();
+    window.toggleTraining();
   }
   disposeTrainingData();
   disposeModelTrainingData();

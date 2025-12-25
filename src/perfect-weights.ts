@@ -1,9 +1,9 @@
 import { INPUT_SIZE, OUTPUT_SIZE } from "./constants.js";
 import { tf } from "./tf.js";
-import { toggleTrainingMode } from "./ui-controls.js";
 import { drawViz } from "./viz.js";
 import { ReinitializeModelImpl } from "./orchestrators/reinitializeModel.js";
 import { getModel, getIsTraining } from "./model.js";
+import "./orchestrators/toggleTraining.js";
 
 // Module-local state for DOM elements (initialized on first use)
 let perfectWeightsButton: HTMLButtonElement | null = null;
@@ -60,7 +60,7 @@ async function setPerfectWeights(): Promise<void> {
   if (!model) return;
   
   if (getIsTraining()) {
-    toggleTrainingMode();
+    window.toggleTraining();
   }
 
   // We need to complete this:

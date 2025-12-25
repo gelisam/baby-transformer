@@ -2,6 +2,7 @@ import { OUTPUT_SIZE, EPOCHS_PER_BATCH } from "./constants.js";
 import { EMBEDDING_DIM, EMBEDDED_INPUT_SIZE, UNEMBEDDING_MATRIX } from "./embeddings.js";
 import { tf, Sequential, Tensor2D } from "./tf.js";
 import { ReinitializeModelImpl } from "./orchestrators/reinitializeModel.js";
+import { ToggleTrainingImpl } from "./orchestrators/toggleTraining.js";
 import "./orchestrators/refreshViz.js";
 import "./orchestrators/updateTrainingStatus.js";
 import "./orchestrators/toggleTraining.js";
@@ -103,13 +104,13 @@ const reinitializeModel: ReinitializeModelImpl = (numLayers, neuronsPerLayer) =>
   lossHistory = [];
 };
 
-// Implementation for toggleTraining orchestrator
-function toggleTrainingImpl() {
+// Implementation for the toggleTraining orchestrator
+const toggleTraining: ToggleTrainingImpl = () => {
   isTraining = !isTraining;
   if (isTraining) {
     requestAnimationFrame(() => trainingStep());
   }
-}
+};
 
 // Getters for external access
 function getModel(): Sequential | null {
@@ -148,7 +149,7 @@ function disposeTrainingData() {
 export { 
   createModel, 
   reinitializeModel, 
-  toggleTrainingImpl,
+  toggleTraining,
   getModel, 
   getIsTraining, 
   getLossHistory,

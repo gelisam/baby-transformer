@@ -1,6 +1,6 @@
 import { ReinitializeModelImpl } from "./orchestrators/reinitializeModel.js";
 import { ToggleTrainingImpl } from "./orchestrators/toggleTraining.js";
-import { toggleTrainingImpl, getIsTraining } from "./model.js";
+import { getIsTraining } from "./model.js";
 
 // Module-local state for DOM elements (initialized on first use)
 let trainButton: HTMLButtonElement | null = null;
@@ -19,12 +19,6 @@ function initUiControlsDom() {
   domInitialized = true;
 }
 
-// Toggle training and update button text
-function toggleTrainingMode() {
-  toggleTrainingImpl();
-  updateTrainButtonText();
-}
-
 function updateTrainButtonText() {
   if (trainButton) {
     trainButton.innerText = getIsTraining() ? 'Pause' : 'Train Model';
@@ -38,13 +32,13 @@ const reinitializeModel: ReinitializeModelImpl = (numLayers, neuronsPerLayer) =>
 };
 
 // Implementation for toggleTraining orchestrator
+// This module only handles the UI update (button text)
 const toggleTraining: ToggleTrainingImpl = () => {
-  toggleTrainingMode();
+  updateTrainButtonText();
 };
 
 export { 
   initUiControlsDom,
-  toggleTrainingMode, 
   reinitializeModel,
   toggleTraining
 };
