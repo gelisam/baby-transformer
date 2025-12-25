@@ -1,18 +1,9 @@
-import { generateData, getTrainingInputArray, getTrainingOutputArray, getTrainingInputTensor, getTrainingOutputTensor, disposeTrainingData } from "./dataset.js";
-import { reinitializeModel as modelReinitialize, toggleTraining as modelToggleTraining, setTrainingData, disposeTrainingData as disposeModelTrainingData, getIsTraining } from "./model.js";
+import * as dataset from "./dataset.js";
+import * as model from "./model.js";
 import { setBackend } from "./tf.js";
-import { 
-  initVizDom, 
-  setTrainingDataRef,
-  reinitializeModel as vizReinitialize,
-  refreshViz as vizRefreshViz,
-  updateTrainingStatus as vizUpdateTrainingStatus,
-  disposeVizData,
-  setStatusMessage,
-  setupInputEventListeners
-} from "./viz.js";
-import { initUiControlsDom, reinitializeModel as uiControlsReinitialize, toggleTraining as uiControlsToggleTraining } from "./ui-controls.js";
-import { initPerfectWeightsDom, reinitializeModel as perfectWeightsReinitialize } from "./perfect-weights.js";
+import * as viz from "./viz.js";
+import * as uiControls from "./ui-controls.js";
+import * as perfectWeights from "./perfect-weights.js";
 import "./orchestrators/reinitializeModel.js";
 import "./orchestrators/refreshViz.js";
 import "./orchestrators/updateTrainingStatus.js";
@@ -27,65 +18,65 @@ let neuronsPerLayer = 6;
 
 window.reinitializeModel = (newNumLayers: number, newNeuronsPerLayer: number): void => {
   // 1. First, create a new model (model.ts)
-  modelReinitialize(newNumLayers, newNeuronsPerLayer);
+  model.reinitializeModel(newNumLayers, newNeuronsPerLayer);
 
   // 2. Generate new data (dataset.ts)
-  generateData();
+  dataset.generateData();
 
   // 3. Set training data in model.ts
-  const inputTensor = getTrainingInputTensor();
-  const outputTensor = getTrainingOutputTensor();
+  const inputTensor = dataset.getTrainingInputTensor();
+  const outputTensor = dataset.getTrainingOutputTensor();
   if (inputTensor && outputTensor) {
-    setTrainingData(inputTensor, outputTensor);
+    model.setTrainingData(inputTensor, outputTensor);
   }
 
   // 4. Set training data reference for viz lookups
-  setTrainingDataRef(getTrainingInputArray(), getTrainingOutputArray());
+  viz.setTrainingDataRef(dataset.getTrainingInputArray(), dataset.getTrainingOutputArray());
 
   // 5. Update visualization (viz.ts)
-  vizReinitialize(newNumLayers, newNeuronsPerLayer);
+  viz.reinitializeModel(newNumLayers, newNeuronsPerLayer);
 
   // 6. Update perfect weights button state (perfect-weights.ts)
-  perfectWeightsReinitialize(newNumLayers, newNeuronsPerLayer);
+  perfectWeights.reinitializeModel(newNumLayers, newNeuronsPerLayer);
 
   // 7. Update UI controls state (ui-controls.ts)
-  uiControlsReinitialize(newNumLayers, newNeuronsPerLayer);
+  uiControls.reinitializeModel(newNumLayers, newNeuronsPerLayer);
 
   // 8. Set ready status
-  setStatusMessage('Ready to train!');
+  viz.setStatusMessage('Ready to train!');
 };
 
 window.refreshViz = (): void => {
-  vizRefreshViz();
+  viz.refreshViz();
 };
 
 window.updateTrainingStatus = (epoch: number, loss: number): void => {
-  vizUpdateTrainingStatus(epoch, loss);
+  viz.updateTrainingStatus(epoch, loss);
 };
 
 window.toggleTraining = (): void => {
   // 1. Toggle training state in model.ts (start/stop training loop)
-  modelToggleTraining();
+  model.toggleTraining();
   
   // 2. Update UI in ui-controls.ts (button text)
-  uiControlsToggleTraining();
+  uiControls.toggleTraining();
 };
 
 // Helper function to stop training and dispose tensors before reinitializing
 function prepareForReinitialize(): void {
-  if (getIsTraining()) {
+  if (model.getIsTraining()) {
     window.toggleTraining();
   }
-  disposeTrainingData();
-  disposeModelTrainingData();
-  disposeVizData();
+  dataset.disposeTrainingData();
+  model.disposeTrainingData();
+  viz.disposeVizData();
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Initialize module DOM references (each module calls document.getElementById directly)
-  initVizDom();
-  initUiControlsDom();
-  initPerfectWeightsDom();
+  viz.initVizDom();
+  uiControls.initUiControlsDom();
+  perfectWeights.initPerfectWeightsDom();
 
   // Get DOM elements needed only by main.ts for event listeners
   const backendSelector = document.getElementById('backend-selector') as HTMLSelectElement;
@@ -117,7 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Set up input textbox event listeners in viz module
-  setupInputEventListeners();
+  viz.setupInputEventListeners();
 
   // Initial setup
   await setBackend(backendSelector.value);
