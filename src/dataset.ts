@@ -12,8 +12,16 @@ import { EMBEDDED_INPUT_SIZE, embedInput } from "./embeddings.js";
 import { tf, Tensor2D } from "./tf.js";
 import "./orchestrators/setTrainingData.js";
 
-// Generate training data for the classification task
-function generateData(): void {
+// Result type for generated training data
+interface TrainingData {
+  inputArray: number[][];
+  outputArray: number[];
+  inputTensor: Tensor2D;
+  outputTensor: Tensor2D;
+}
+
+// Pure function: Generate training data for the classification task
+function generateData(): TrainingData {
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
   function addExample(sequence: number[]) {
@@ -78,11 +86,17 @@ function generateData(): void {
   const inputTensor = tf.tensor2d(embeddedInputArray, [numExamples, EMBEDDED_INPUT_SIZE]);
   const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
-  // Call the orchestrator to distribute the training data
-  window.setTrainingData(inputArray, outputArray, inputTensor, outputTensor);
+  return { inputArray, outputArray, inputTensor, outputTensor };
+}
+
+// Imperative shell: Generate data and push to other modules via orchestrator
+function refreshTrainingData(): void {
+  const data = generateData();
+  window.setTrainingData(data.inputArray, data.outputArray, data.inputTensor, data.outputTensor);
 }
 
 export {
-  generateData
+  generateData,
+  refreshTrainingData
 };
 
