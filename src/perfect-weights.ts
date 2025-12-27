@@ -1,7 +1,7 @@
 import { INPUT_SIZE, OUTPUT_SIZE } from "./constants.js";
 import { tf } from "./tf.js";
 import { drawViz } from "./viz.js";
-import { ReinitializeModelImpl } from "./orchestrators/reinitializeModel.js";
+import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
 import { getModel, getIsTraining } from "./model.js";
 import "./orchestrators/toggleTraining.js";
 
@@ -318,7 +318,7 @@ async function setPerfectWeights(): Promise<void> {
 }
 
 // Implementation for the reinitializeModel orchestrator
-const reinitializeModel: ReinitializeModelImpl = (newNumLayers, newNeuronsPerLayer) => {
+const reinitializeModel: ReinitializeModel = (newNumLayers, newNeuronsPerLayer) => {
   numLayers = newNumLayers;
   neuronsPerLayer = newNeuronsPerLayer;
   updatePerfectWeightsButton();

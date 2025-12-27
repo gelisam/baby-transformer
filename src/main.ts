@@ -8,6 +8,7 @@ import "./orchestrators/reinitializeModel.js";
 import "./orchestrators/refreshViz.js";
 import "./orchestrators/updateTrainingStatus.js";
 import "./orchestrators/toggleTraining.js";
+import "./orchestrators/setTrainingData.js";
 
 // Module-local state for layer configuration
 let numLayers = 4;
@@ -20,29 +21,19 @@ window.reinitializeModel = (newNumLayers: number, newNeuronsPerLayer: number): v
   // 1. First, create a new model (model.ts)
   model.reinitializeModel(newNumLayers, newNeuronsPerLayer);
 
-  // 2. Generate new data (dataset.ts)
+  // 2. Generate new data (dataset.ts) - this will call window.setTrainingData
   dataset.generateData();
 
-  // 3. Set training data in model.ts
-  const inputTensor = dataset.getTrainingInputTensor();
-  const outputTensor = dataset.getTrainingOutputTensor();
-  if (inputTensor && outputTensor) {
-    model.setTrainingData(inputTensor, outputTensor);
-  }
-
-  // 4. Set training data reference for viz lookups
-  viz.setTrainingDataRef(dataset.getTrainingInputArray(), dataset.getTrainingOutputArray());
-
-  // 5. Update visualization (viz.ts)
+  // 3. Update visualization (viz.ts)
   viz.reinitializeModel(newNumLayers, newNeuronsPerLayer);
 
-  // 6. Update perfect weights button state (perfect-weights.ts)
+  // 4. Update perfect weights button state (perfect-weights.ts)
   perfectWeights.reinitializeModel(newNumLayers, newNeuronsPerLayer);
 
-  // 7. Update UI controls state (ui-controls.ts)
+  // 5. Update UI controls state (ui-controls.ts)
   uiControls.reinitializeModel(newNumLayers, newNeuronsPerLayer);
 
-  // 8. Set ready status
+  // 6. Set ready status
   viz.setStatusMessage('Ready to train!');
 };
 
@@ -62,12 +53,19 @@ window.toggleTraining = (): void => {
   uiControls.toggleTraining();
 };
 
+window.setTrainingData = (inputArray, outputArray, inputTensor, outputTensor): void => {
+  // 1. Set training data in model.ts
+  model.setTrainingData(inputArray, outputArray, inputTensor, outputTensor);
+  
+  // 2. Set training data reference in viz.ts for lookup
+  viz.setTrainingData(inputArray, outputArray, inputTensor, outputTensor);
+};
+
 // Helper function to stop training and dispose tensors before reinitializing
 function prepareForReinitialize(): void {
   if (model.getIsTraining()) {
     window.toggleTraining();
   }
-  dataset.disposeTrainingData();
   model.disposeTrainingData();
   viz.disposeVizData();
 }

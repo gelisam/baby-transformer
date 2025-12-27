@@ -1,5 +1,5 @@
-import { ReinitializeModelImpl } from "./orchestrators/reinitializeModel.js";
-import { ToggleTrainingImpl } from "./orchestrators/toggleTraining.js";
+import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
+import { ToggleTraining } from "./orchestrators/toggleTraining.js";
 import { getIsTraining } from "./model.js";
 
 // Module-local state for DOM elements (initialized on first use)
@@ -26,14 +26,14 @@ function updateTrainButtonText() {
 }
 
 // Implementation for the reinitializeModel orchestrator
-const reinitializeModel: ReinitializeModelImpl = (numLayers, neuronsPerLayer) => {
+const reinitializeModel: ReinitializeModel = (numLayers, neuronsPerLayer) => {
   // Reset button text when model is reinitialized
   updateTrainButtonText();
 };
 
 // Implementation for toggleTraining orchestrator
 // This module only handles the UI update (button text)
-const toggleTraining: ToggleTrainingImpl = () => {
+const toggleTraining: ToggleTraining = () => {
   updateTrainButtonText();
 };
 

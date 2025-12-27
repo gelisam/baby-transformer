@@ -12,15 +12,12 @@
  * Arguments are passed explicitly rather than through shared state objects.
  */
 
-// Type definition for module-specific implementations
-export type ReinitializeModelImpl = (numLayers: number, neuronsPerLayer: number) => void;
-
-// Type for the global orchestrator function
-export type ReinitializeModelOrchestrator = (numLayers: number, neuronsPerLayer: number) => void;
+// Type for the orchestrator function (used by both window and module implementations)
+export type ReinitializeModel = (numLayers: number, neuronsPerLayer: number) => void;
 
 // Extend the Window interface to include our orchestrator
 declare global {
   interface Window {
-    reinitializeModel: ReinitializeModelOrchestrator;
+    reinitializeModel: ReinitializeModel;
   }
 }

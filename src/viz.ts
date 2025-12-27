@@ -16,9 +16,10 @@ import {
   embedInput
 } from "./embeddings.js";
 import { tf, Tensor2D } from "./tf.js";
-import { ReinitializeModelImpl } from "./orchestrators/reinitializeModel.js";
-import { RefreshVizImpl } from "./orchestrators/refreshViz.js";
-import { UpdateTrainingStatusImpl } from "./orchestrators/updateTrainingStatus.js";
+import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
+import { RefreshViz } from "./orchestrators/refreshViz.js";
+import { UpdateTrainingStatus } from "./orchestrators/updateTrainingStatus.js";
+import { SetTrainingData } from "./orchestrators/setTrainingData.js";
 import { getModel, getLossHistory } from "./model.js";
 
 const VIZ_ROWS = 2;
@@ -58,12 +59,6 @@ function initVizDom() {
   ).filter((el): el is HTMLInputElement => el !== null);
   statusElement = document.getElementById('status') as HTMLElement;
   domInitialized = true;
-}
-
-// Set training data reference for lookups
-function setTrainingDataRef(inputArray: number[][], outputArray: number[]) {
-  trainingInputArray = inputArray;
-  trainingOutputArray = outputArray;
 }
 
 function updateTextboxesFromInputs(inputArray: number[][]): void {
@@ -464,7 +459,7 @@ function drawNetworkArchitecture(): void {
 }
 
 // Implementation for the reinitializeModel orchestrator
-const reinitializeModel: ReinitializeModelImpl = (newNumLayers, newNeuronsPerLayer) => {
+const reinitializeModel: ReinitializeModel = (newNumLayers, newNeuronsPerLayer) => {
   numLayers = newNumLayers;
   neuronsPerLayer = newNeuronsPerLayer;
   
@@ -479,16 +474,22 @@ const reinitializeModel: ReinitializeModelImpl = (newNumLayers, newNeuronsPerLay
 };
 
 // Implementation for the refreshViz orchestrator
-const refreshViz: RefreshVizImpl = () => {
+const refreshViz: RefreshViz = () => {
   drawViz();
   drawLossCurve();
 };
 
 // Implementation for updateTrainingStatus orchestrator
-const updateTrainingStatus: UpdateTrainingStatusImpl = (epoch, loss) => {
+const updateTrainingStatus: UpdateTrainingStatus = (epoch, loss) => {
   if (statusElement) {
     statusElement.innerHTML = `Training... Epoch ${epoch} - Loss: ${loss.toFixed(4)}`;
   }
+};
+
+// Implementation for setTrainingData orchestrator
+const setTrainingData: SetTrainingData = (inputArray, outputArray, _inputTensor, _outputTensor) => {
+  trainingInputArray = inputArray;
+  trainingOutputArray = outputArray;
 };
 
 // Dispose viz tensors
@@ -525,7 +526,6 @@ function setupInputEventListeners() {
 
 export {
   initVizDom,
-  setTrainingDataRef,
   pickRandomInputs,
   updateVizDataFromTextboxes,
   drawViz,
@@ -535,6 +535,7 @@ export {
   reinitializeModel,
   refreshViz,
   updateTrainingStatus,
+  setTrainingData,
   disposeVizData,
   setStatusMessage,
   setupInputEventListeners

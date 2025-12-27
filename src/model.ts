@@ -1,8 +1,9 @@
 import { OUTPUT_SIZE, EPOCHS_PER_BATCH } from "./constants.js";
 import { EMBEDDING_DIM, EMBEDDED_INPUT_SIZE, UNEMBEDDING_MATRIX } from "./embeddings.js";
 import { tf, Sequential, Tensor2D } from "./tf.js";
-import { ReinitializeModelImpl } from "./orchestrators/reinitializeModel.js";
-import { ToggleTrainingImpl } from "./orchestrators/toggleTraining.js";
+import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
+import { ToggleTraining } from "./orchestrators/toggleTraining.js";
+import { SetTrainingData } from "./orchestrators/setTrainingData.js";
 import "./orchestrators/refreshViz.js";
 import "./orchestrators/updateTrainingStatus.js";
 import "./orchestrators/toggleTraining.js";
@@ -92,7 +93,7 @@ async function trainingStep() {
 }
 
 // Implementation for the reinitializeModel orchestrator
-const reinitializeModel: ReinitializeModelImpl = (numLayers, neuronsPerLayer) => {
+const reinitializeModel: ReinitializeModel = (numLayers, neuronsPerLayer) => {
   // Create a new model
   if (model) {
     model.dispose();
@@ -105,11 +106,17 @@ const reinitializeModel: ReinitializeModelImpl = (numLayers, neuronsPerLayer) =>
 };
 
 // Implementation for the toggleTraining orchestrator
-const toggleTraining: ToggleTrainingImpl = () => {
+const toggleTraining: ToggleTraining = () => {
   isTraining = !isTraining;
   if (isTraining) {
     requestAnimationFrame(() => trainingStep());
   }
+};
+
+// Implementation for the setTrainingData orchestrator
+const setTrainingData: SetTrainingData = (_inputArray, _outputArray, inputTensor, outputTensor) => {
+  trainingInputTensor = inputTensor;
+  trainingOutputTensor = outputTensor;
 };
 
 // Getters for external access
@@ -129,12 +136,6 @@ function getCurrentEpoch(): number {
   return currentEpoch;
 }
 
-// Setters for training data
-function setTrainingData(inputTensor: Tensor2D, outputTensor: Tensor2D) {
-  trainingInputTensor = inputTensor;
-  trainingOutputTensor = outputTensor;
-}
-
 function disposeTrainingData() {
   if (trainingInputTensor) {
     try { trainingInputTensor.dispose(); } catch (e) { /* ignore */ }
@@ -150,10 +151,10 @@ export {
   createModel, 
   reinitializeModel, 
   toggleTraining,
+  setTrainingData,
   getModel, 
   getIsTraining, 
   getLossHistory,
   getCurrentEpoch,
-  setTrainingData,
   disposeTrainingData
 };

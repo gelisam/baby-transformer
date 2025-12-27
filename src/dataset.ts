@@ -10,12 +10,7 @@ import {
 } from "./constants.js";
 import { EMBEDDED_INPUT_SIZE, embedInput } from "./embeddings.js";
 import { tf, Tensor2D } from "./tf.js";
-
-// Module-local state for training data
-let trainingInputArray: number[][] = [];
-let trainingOutputArray: number[] = [];
-let trainingInputTensor: Tensor2D | null = null;
-let trainingOutputTensor: Tensor2D | null = null;
+import "./orchestrators/setTrainingData.js";
 
 // Generate training data for the classification task
 function generateData(): void {
@@ -80,55 +75,14 @@ function generateData(): void {
   const numExamples = inputArray.length;
   const embeddedInputArray = inputArray.map(embedInput);
 
-  // Dispose old tensors if they exist
-  if (trainingInputTensor) {
-    try { trainingInputTensor.dispose(); } catch (e) { /* ignore */ }
-  }
-  if (trainingOutputTensor) {
-    try { trainingOutputTensor.dispose(); } catch (e) { /* ignore */ }
-  }
+  const inputTensor = tf.tensor2d(embeddedInputArray, [numExamples, EMBEDDED_INPUT_SIZE]);
+  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
-  trainingInputArray = inputArray;
-  trainingOutputArray = outputArray;
-  trainingInputTensor = tf.tensor2d(embeddedInputArray, [numExamples, EMBEDDED_INPUT_SIZE]);
-  trainingOutputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
-}
-
-// Getters for training data
-function getTrainingInputArray(): number[][] {
-  return trainingInputArray;
-}
-
-function getTrainingOutputArray(): number[] {
-  return trainingOutputArray;
-}
-
-function getTrainingInputTensor(): Tensor2D | null {
-  return trainingInputTensor;
-}
-
-function getTrainingOutputTensor(): Tensor2D | null {
-  return trainingOutputTensor;
-}
-
-// Dispose training data tensors
-function disposeTrainingData() {
-  if (trainingInputTensor) {
-    try { trainingInputTensor.dispose(); } catch (e) { /* ignore */ }
-    trainingInputTensor = null;
-  }
-  if (trainingOutputTensor) {
-    try { trainingOutputTensor.dispose(); } catch (e) { /* ignore */ }
-    trainingOutputTensor = null;
-  }
+  // Call the orchestrator to distribute the training data
+  window.setTrainingData(inputArray, outputArray, inputTensor, outputTensor);
 }
 
 export {
-  generateData,
-  getTrainingInputArray,
-  getTrainingOutputArray,
-  getTrainingInputTensor,
-  getTrainingOutputTensor,
-  disposeTrainingData
+  generateData
 };
 
