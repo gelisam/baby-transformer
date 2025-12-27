@@ -2,8 +2,8 @@ import { INPUT_SIZE, OUTPUT_SIZE } from "./constants.js";
 import { tf } from "./tf.js";
 import { drawViz } from "./viz.js";
 import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
-import { getModel, getIsTraining } from "./model.js";
-import "./orchestrators/toggleTraining.js";
+import { getModel } from "./model.js";
+import "./orchestrators/stopTraining.js";
 
 // Module-local state for DOM elements (initialized on first use)
 let perfectWeightsButton: HTMLButtonElement | null = null;
@@ -59,9 +59,8 @@ async function setPerfectWeights(): Promise<void> {
   const model = getModel();
   if (!model) return;
   
-  if (getIsTraining()) {
-    window.toggleTraining();
-  }
+  // Always stop training when setting perfect weights
+  window.stopTraining();
 
   // We need to complete this:
   //   <letter1>=<number1> <letter2>=<number2> <letter3>=____

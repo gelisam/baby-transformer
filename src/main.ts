@@ -7,7 +7,8 @@ import * as perfectWeights from "./perfect-weights.js";
 import "./orchestrators/reinitializeModel.js";
 import "./orchestrators/refreshViz.js";
 import "./orchestrators/updateTrainingStatus.js";
-import "./orchestrators/toggleTraining.js";
+import "./orchestrators/startTraining.js";
+import "./orchestrators/stopTraining.js";
 import "./orchestrators/setTrainingData.js";
 
 // Module-local state for layer configuration
@@ -45,12 +46,20 @@ window.updateTrainingStatus = (epoch: number, loss: number): void => {
   viz.updateTrainingStatus(epoch, loss);
 };
 
-window.toggleTraining = (): void => {
-  // 1. Toggle training state in model.ts (start/stop training loop)
-  model.toggleTraining();
+window.startTraining = (): void => {
+  // 1. Start training in model.ts (start training loop)
+  model.startTraining();
   
   // 2. Update UI in ui-controls.ts (button text)
-  uiControls.toggleTraining();
+  uiControls.startTraining();
+};
+
+window.stopTraining = (): void => {
+  // 1. Stop training in model.ts (stop training loop)
+  model.stopTraining();
+  
+  // 2. Update UI in ui-controls.ts (button text)
+  uiControls.stopTraining();
 };
 
 window.setTrainingData = (inputArray, outputArray, inputTensor, outputTensor): void => {
@@ -63,9 +72,8 @@ window.setTrainingData = (inputArray, outputArray, inputTensor, outputTensor): v
 
 // Helper function to stop training and dispose tensors before reinitializing
 function prepareForReinitialize(): void {
-  if (model.getIsTraining()) {
-    window.toggleTraining();
-  }
+  // Always stop training (safe to call even if not training)
+  window.stopTraining();
   model.disposeTrainingData();
   viz.disposeVizData();
 }

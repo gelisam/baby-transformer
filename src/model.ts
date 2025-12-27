@@ -2,11 +2,11 @@ import { OUTPUT_SIZE, EPOCHS_PER_BATCH } from "./constants.js";
 import { EMBEDDING_DIM, EMBEDDED_INPUT_SIZE, UNEMBEDDING_MATRIX } from "./embeddings.js";
 import { tf, Sequential, Tensor2D } from "./tf.js";
 import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
-import { ToggleTraining } from "./orchestrators/toggleTraining.js";
+import { StartTraining } from "./orchestrators/startTraining.js";
+import { StopTraining } from "./orchestrators/stopTraining.js";
 import { SetTrainingData } from "./orchestrators/setTrainingData.js";
 import "./orchestrators/refreshViz.js";
 import "./orchestrators/updateTrainingStatus.js";
-import "./orchestrators/toggleTraining.js";
 
 // Module-local state
 let model: Sequential | null = null;
@@ -105,12 +105,15 @@ const reinitializeModel: ReinitializeModel = (numLayers, neuronsPerLayer) => {
   lossHistory = [];
 };
 
-// Implementation for the toggleTraining orchestrator
-const toggleTraining: ToggleTraining = () => {
-  isTraining = !isTraining;
-  if (isTraining) {
-    requestAnimationFrame(() => trainingStep());
-  }
+// Implementation for the startTraining orchestrator
+const startTraining: StartTraining = () => {
+  isTraining = true;
+  requestAnimationFrame(() => trainingStep());
+};
+
+// Implementation for the stopTraining orchestrator
+const stopTraining: StopTraining = () => {
+  isTraining = false;
 };
 
 // Implementation for the setTrainingData orchestrator
@@ -122,10 +125,6 @@ const setTrainingData: SetTrainingData = (_inputArray, _outputArray, inputTensor
 // Getters for external access
 function getModel(): Sequential | null {
   return model;
-}
-
-function getIsTraining(): boolean {
-  return isTraining;
 }
 
 function getLossHistory(): { epoch: number; loss: number }[] {
@@ -150,10 +149,10 @@ function disposeTrainingData() {
 export { 
   createModel, 
   reinitializeModel, 
-  toggleTraining,
+  startTraining,
+  stopTraining,
   setTrainingData,
   getModel, 
-  getIsTraining, 
   getLossHistory,
   getCurrentEpoch,
   disposeTrainingData

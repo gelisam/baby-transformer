@@ -122,3 +122,71 @@ function initVizDom() {
 - Modules are self-contained
 - Clear which DOM elements each module needs
 - No need to pass DOM elements through function parameters
+
+## 6. Prefer Separate Enable/Disable Orchestrators Over Toggle + Getter
+
+Instead of defining a toggle orchestrator and a getter to check the current state, define two separate orchestrator functions (one to enable, one to disable). The UI component that needs to toggle can maintain its own state.
+
+### Instead of:
+```typescript
+// orchestrators/toggleTraining.ts
+export type ToggleTraining = () => void;
+
+// model.ts
+let isTraining = false;
+export function getIsTraining() { return isTraining; }
+const toggleTraining: ToggleTraining = () => {
+  isTraining = !isTraining;
+  if (isTraining) startLoop();
+};
+
+// ui-controls.ts
+import { getIsTraining } from "./model.js";
+button.addEventListener('click', () => window.toggleTraining());
+function updateButton() {
+  button.innerText = getIsTraining() ? 'Pause' : 'Train';
+}
+```
+
+### Do this:
+```typescript
+// orchestrators/startTraining.ts
+export type StartTraining = () => void;
+
+// orchestrators/stopTraining.ts
+export type StopTraining = () => void;
+
+// model.ts
+let isTraining = false;
+const startTraining: StartTraining = () => {
+  isTraining = true;
+  startLoop();
+};
+const stopTraining: StopTraining = () => {
+  isTraining = false;
+};
+
+// ui-controls.ts
+let isTraining = false;  // module-local state
+button.addEventListener('click', () => {
+  if (isTraining) {
+    window.stopTraining();
+  } else {
+    window.startTraining();
+  }
+});
+const startTraining: StartTraining = () => {
+  isTraining = true;
+  updateButton();
+};
+const stopTraining: StopTraining = () => {
+  isTraining = false;
+  updateButton();
+};
+```
+
+### Why:
+- No need for getters to check state from other modules
+- Each module maintains its own copy of the state
+- Toggle logic is localized to the component that needs it (the button)
+- Other modules can call `stopTraining()` without worrying about the current state

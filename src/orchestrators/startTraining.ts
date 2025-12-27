@@ -1,15 +1,15 @@
 /**
- * Orchestrator for toggling training mode.
+ * Orchestrator for starting training mode.
  * 
- * This orchestrator is triggered when the user starts or stops training.
+ * This orchestrator is triggered when training is started.
  */
 
 // Type for the orchestrator function (used by both window and module implementations)
-export type ToggleTraining = () => void;
+export type StartTraining = () => void;
 
 // Extend the Window interface to include our orchestrator
 declare global {
   interface Window {
-    toggleTraining: ToggleTraining;
+    startTraining: StartTraining;
   }
 }
