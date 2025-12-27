@@ -1,43 +1,44 @@
-import { AppState, DomElements } from "./types.js";
-import { trainingStep } from "./model.js";
-import { updatePerfectWeightsButton } from "./perfect-weights.js";
+import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
+import { ToggleTraining } from "./orchestrators/toggleTraining.js";
+import { getIsTraining } from "./model.js";
 
-async function toggleTrainingMode(appState: AppState, dom: DomElements) {
-  appState.isTraining = !appState.isTraining;
-  const trainButton = dom.trainButton;
+// Module-local state for DOM elements (initialized on first use)
+let trainButton: HTMLButtonElement | null = null;
+let domInitialized = false;
 
-  if (appState.isTraining) {
-    trainButton.innerText = 'Pause';
-    requestAnimationFrame(() => trainingStep(appState, dom));
-  } else {
-    trainButton.innerText = 'Train Model';
+// Initialize DOM elements by calling document.getElementById directly
+function initUiControlsDom() {
+  if (domInitialized) return;
+  trainButton = document.getElementById('train-button') as HTMLButtonElement;
+  
+  // Set up event listener
+  if (trainButton) {
+    trainButton.addEventListener('click', () => window.toggleTraining());
+  }
+  
+  domInitialized = true;
+}
+
+function updateTrainButtonText() {
+  if (trainButton) {
+    trainButton.innerText = getIsTraining() ? 'Pause' : 'Train Model';
   }
 }
 
-function updateLayerConfiguration(appState: AppState, dom: DomElements, initializeNewModel: (dom: DomElements) => void, numLayers: number, neuronsPerLayer: number): void {
-  // Stop training and reinitialize model
-  if (appState.isTraining) {
-    toggleTrainingMode(appState, dom); // Toggles isTraining to false
-  }
-  if (appState.data) {
-    try {
-      appState.data.inputTensor.dispose();
-      appState.data.outputTensor.dispose();
-    } catch (e) {
-      // Tensors may already be disposed
-    }
-  }
-  if (appState.vizData) {
-    try {
-      appState.vizData.inputTensor.dispose();
-      appState.vizData.outputTensor.dispose();
-    } catch (e) {
-      // Tensors may already be disposed
-    }
-  }
+// Implementation for the reinitializeModel orchestrator
+const reinitializeModel: ReinitializeModel = (numLayers, neuronsPerLayer) => {
+  // Reset button text when model is reinitialized
+  updateTrainButtonText();
+};
 
-  initializeNewModel(dom);
-  updatePerfectWeightsButton(appState, dom);
-}
+// Implementation for toggleTraining orchestrator
+// This module only handles the UI update (button text)
+const toggleTraining: ToggleTraining = () => {
+  updateTrainButtonText();
+};
 
-export { toggleTrainingMode, updateLayerConfiguration };
+export { 
+  initUiControlsDom,
+  reinitializeModel,
+  toggleTraining
+};
