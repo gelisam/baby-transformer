@@ -81,14 +81,17 @@ function generateData(): TrainingData {
   return { inputArray, outputArray, inputTensor, outputTensor };
 }
 
-// Imperative shell: Generate data and push to other modules via orchestrator
-function refreshTrainingData(): void {
+import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
+
+// Implementation of the reinitializeModel orchestrator
+// Generates new training data and pushes to other modules via setTrainingData orchestrator
+const reinitializeModel: ReinitializeModel = (_numLayers, _neuronsPerLayer) => {
   const data = generateData();
   window.setTrainingData(data);
-}
+};
 
 export {
   generateData,
-  refreshTrainingData
+  reinitializeModel
 };
 

@@ -22,8 +22,8 @@ window.reinitializeModel = (newNumLayers: number, newNeuronsPerLayer: number): v
   // 1. First, create a new model (model.ts)
   model.reinitializeModel(newNumLayers, newNeuronsPerLayer);
 
-  // 2. Generate new data and push to modules via orchestrator
-  dataset.refreshTrainingData();
+  // 2. Generate new data and push to modules via orchestrator (dataset.ts)
+  dataset.reinitializeModel(newNumLayers, newNeuronsPerLayer);
 
   // 3. Update visualization (viz.ts)
   viz.reinitializeModel(newNumLayers, newNeuronsPerLayer);
