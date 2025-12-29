@@ -2,11 +2,10 @@ import { OUTPUT_SIZE, EPOCHS_PER_BATCH } from "./constants.js";
 import { EMBEDDING_DIM, EMBEDDED_INPUT_SIZE, UNEMBEDDING_MATRIX } from "./embeddings.js";
 import { tf, Sequential, Tensor2D } from "./tf.js";
 import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
-import { StartTraining } from "./orchestrators/startTraining.js";
-import { StopTraining } from "./orchestrators/stopTraining.js";
+import { StartTraining, StopTraining } from "./orchestrators/training.js";
 import { SetTrainingData } from "./orchestrators/setTrainingData.js";
 import "./orchestrators/refreshViz.js";
-import "./orchestrators/updateTrainingStatus.js";
+import "./orchestrators/onTrainingStepCompleted.js";
 
 // Module-local state
 let model: Sequential | null = null;
@@ -85,7 +84,7 @@ async function trainingStep() {
   lossHistory.push({ epoch: currentEpoch, loss });
 
   // Notify other modules via orchestrators
-  window.updateTrainingStatus(currentEpoch, loss);
+  window.onTrainingStepCompleted(currentEpoch, loss);
   window.refreshViz();
 
   // Request the next frame

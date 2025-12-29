@@ -6,9 +6,8 @@ import * as uiControls from "./ui-controls.js";
 import * as perfectWeights from "./perfect-weights.js";
 import "./orchestrators/reinitializeModel.js";
 import "./orchestrators/refreshViz.js";
-import "./orchestrators/updateTrainingStatus.js";
-import "./orchestrators/startTraining.js";
-import "./orchestrators/stopTraining.js";
+import "./orchestrators/onTrainingStepCompleted.js";
+import "./orchestrators/training.js";
 import "./orchestrators/setTrainingData.js";
 
 // Module-local state for layer configuration
@@ -42,8 +41,8 @@ window.refreshViz = (): void => {
   viz.refreshViz();
 };
 
-window.updateTrainingStatus = (epoch: number, loss: number): void => {
-  viz.updateTrainingStatus(epoch, loss);
+window.onTrainingStepCompleted = (epoch: number, loss: number): void => {
+  viz.onTrainingStepCompleted(epoch, loss);
 };
 
 window.startTraining = (): void => {

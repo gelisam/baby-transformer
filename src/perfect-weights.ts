@@ -3,7 +3,7 @@ import { tf } from "./tf.js";
 import { drawViz } from "./viz.js";
 import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
 import { getModel } from "./model.js";
-import "./orchestrators/stopTraining.js";
+import "./orchestrators/training.js";
 
 // Module-local state for DOM elements (initialized on first use)
 let perfectWeightsButton: HTMLButtonElement | null = null;

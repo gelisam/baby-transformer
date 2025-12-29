@@ -1,8 +1,6 @@
 import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
-import { StartTraining } from "./orchestrators/startTraining.js";
-import { StopTraining } from "./orchestrators/stopTraining.js";
-import "./orchestrators/startTraining.js";
-import "./orchestrators/stopTraining.js";
+import { StartTraining, StopTraining } from "./orchestrators/training.js";
+import "./orchestrators/training.js";
 
 // Module-local state for DOM elements (initialized on first use)
 let trainButton: HTMLButtonElement | null = null;
