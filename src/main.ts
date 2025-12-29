@@ -9,6 +9,7 @@ import "./orchestrators/refreshViz.js";
 import "./orchestrators/onEpochCompleted.js";
 import "./orchestrators/training.js";
 import "./orchestrators/setTrainingData.js";
+import "./orchestrators/setModelWeights.js";
 
 // Module-local state for layer configuration
 let numLayers = 4;
@@ -67,6 +68,11 @@ window.setTrainingData = (data): void => {
   
   // 2. Set training data reference in viz.ts for lookup
   viz.setTrainingData(data);
+};
+
+window.setModelWeights = (weights): void => {
+  // Set model weights in model.ts
+  model.setModelWeights(weights);
 };
 
 // Helper function to stop training and dispose tensors before reinitializing

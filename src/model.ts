@@ -4,6 +4,7 @@ import { tf, Sequential, Tensor2D } from "./tf.js";
 import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
 import { StartTraining, StopTraining } from "./orchestrators/training.js";
 import { SetTrainingData } from "./orchestrators/setTrainingData.js";
+import { SetModelWeights } from "./orchestrators/setModelWeights.js";
 import "./orchestrators/refreshViz.js";
 import "./orchestrators/onEpochCompleted.js";
 
@@ -121,11 +122,19 @@ const setTrainingData: SetTrainingData = (data) => {
   trainingOutputTensor = data.outputTensor;
 };
 
-// Getters for external access
+// Implementation for the setModelWeights orchestrator
+const setModelWeights: SetModelWeights = (weights) => {
+  if (model) {
+    model.setWeights(weights);
+  }
+};
+
+// Getter for model - used by viz.ts for predictions
 function getModel(): Sequential | null {
   return model;
 }
 
+// Getters for external access
 function getLossHistory(): { epoch: number; loss: number }[] {
   return lossHistory;
 }
@@ -151,7 +160,8 @@ export {
   startTraining,
   stopTraining,
   setTrainingData,
-  getModel, 
+  setModelWeights,
+  getModel,
   getLossHistory,
   getCurrentEpoch,
   disposeTrainingData

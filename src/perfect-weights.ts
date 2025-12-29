@@ -2,8 +2,8 @@ import { INPUT_SIZE, OUTPUT_SIZE } from "./constants.js";
 import { tf } from "./tf.js";
 import { drawViz } from "./viz.js";
 import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
-import { getModel } from "./model.js";
 import "./orchestrators/training.js";
+import "./orchestrators/setModelWeights.js";
 
 // Module-local state for DOM elements (initialized on first use)
 let perfectWeightsButton: HTMLButtonElement | null = null;
@@ -56,9 +56,6 @@ function updatePerfectWeightsButton(): void {
 }
 
 async function setPerfectWeights(): Promise<void> {
-  const model = getModel();
-  if (!model) return;
-  
   // Always stop training when setting perfect weights
   window.stopTraining();
 
@@ -310,7 +307,7 @@ async function setPerfectWeights(): Promise<void> {
     ...extraLayerWeights,
     outputWeights.toTensor(), outputBias.toTensor()
   ];
-  model.setWeights(perfectWeights);
+  window.setModelWeights(perfectWeights);
 
   await drawViz();
   perfectWeights.forEach(tensor => tensor.dispose());
