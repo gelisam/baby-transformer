@@ -117,9 +117,9 @@ const stopTraining: StopTraining = () => {
 };
 
 // Implementation for the setTrainingData orchestrator
-const setTrainingData: SetTrainingData = (_inputArray, _outputArray, inputTensor, outputTensor) => {
-  trainingInputTensor = inputTensor;
-  trainingOutputTensor = outputTensor;
+const setTrainingData: SetTrainingData = (data) => {
+  trainingInputTensor = data.inputTensor;
+  trainingOutputTensor = data.outputTensor;
 };
 
 // Getters for external access

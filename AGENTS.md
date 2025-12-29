@@ -1,26 +1,6 @@
 # Coding Patterns for This Codebase
 
-This document describes the coding patterns used in this codebase. When modifying or extending the code, please follow these patterns.
-
-## 1. Orchestrator Pattern for Cross-Module Communication
-
-When modules need to communicate or share data, use the orchestrator pattern instead of direct imports between modules.
-
-### How it works:
-1. Define the orchestrator function type in `src/orchestrators/myOrchestrator.ts`
-2. Implement `window.myOrchestrator()` in `main.ts` which calls all module implementations in sequence
-3. Each module that needs to react to the event exports its own implementation of the function
-4. Any module can call `window.myOrchestrator()` to trigger all implementations
-5. Modules only import from `orchestrators/*.ts`, not from each other or from `main.ts`
-
-### Why:
-- Decouples modules from each other
-- Each module manages its own state independently
-- Clear, explicit data flow between modules
-
-## 2. No OOP-Style Getters and Setters
-
-Don't use OOP-style getters and setters to expose module-local state. Instead, push changes to other modules using orchestrator functions.
+This document describes the coding patterns used in this codebase. When modifying or extending the code, please follow these patterns. See `.github/orchestrator.instructions.md` for more details on the orchestrator pattern.
 
 ### Instead of:
 ```typescript
@@ -34,6 +14,11 @@ const data = getData(); // pulls data
 ```
 
 ### Do this:
+1. Use the orchestrator pattern for cross-module communication
+2. Don't use OOP-style getters and setters; push changes via orchestrators
+3. Divide work into pure core (computation) and imperative shell (side effects)
+4. Each module manages its own state using module-local variables
+
 ```typescript
 // module-a.ts
 function computeData(): Data { ... }
@@ -48,145 +33,3 @@ const setData: SetData = (newData) => {
   data = newData; // stores locally
 };
 ```
-
-### Why:
-- Other modules can store the values in module-local variables
-- When those modules need to read the value, they read from their own module-local variable
-- Clearer data flow and ownership
-
-## 3. Pure Core, Imperative Shell
-
-When possible, divide work into two functions:
-1. **Pure core**: A pure function that computes and returns a result without side effects
-2. **Imperative shell**: A wrapper function that calls the pure function and handles side effects (like calling orchestrators)
-
-### Example:
-```typescript
-// Pure core: computes the result
-function generateData(): TrainingData {
-  // ... computation ...
-  return { inputArray, outputArray, inputTensor, outputTensor };
-}
-
-// Imperative shell: handles side effects
-function refreshTrainingData(): void {
-  const data = generateData();
-  window.setTrainingData(data.inputArray, data.outputArray, data.inputTensor, data.outputTensor);
-}
-```
-
-### Why:
-- Pure functions are easier to test and reason about
-- Side effects are isolated and explicit
-- Better separation of concerns
-
-## 4. Module-Local State
-
-Each module should manage its own state using module-local variables. State should not be shared across modules directly.
-
-### Example:
-```typescript
-// model.ts - owns model state
-let model: Sequential | null = null;
-let isTraining = false;
-let currentEpoch = 0;
-
-// viz.ts - owns visualization state
-let vizInputArray: number[][] = [];
-let trainingInputArray: number[][] = [];
-```
-
-### Why:
-- Clear ownership of state
-- Modules are self-contained
-- State changes are explicit via orchestrators
-
-## 5. Direct DOM Access During Initialization
-
-Each module should call `document.getElementById()` directly during its initialization, rather than receiving DOM elements from `main.ts`.
-
-### Example:
-```typescript
-// viz.ts
-let outputCanvas: HTMLCanvasElement | null = null;
-let domInitialized = false;
-
-function initVizDom() {
-  if (domInitialized) return;
-  outputCanvas = document.getElementById('output-canvas') as HTMLCanvasElement;
-  domInitialized = true;
-}
-```
-
-### Why:
-- Modules are self-contained
-- Clear which DOM elements each module needs
-- No need to pass DOM elements through function parameters
-
-## 6. Prefer Separate Enable/Disable Orchestrators Over Toggle + Getter
-
-Instead of defining a toggle orchestrator and a getter to check the current state, define two separate orchestrator functions (one to enable, one to disable). The UI component that needs to toggle can maintain its own state.
-
-### Instead of:
-```typescript
-// orchestrators/toggleTraining.ts
-export type ToggleTraining = () => void;
-
-// model.ts
-let isTraining = false;
-export function getIsTraining() { return isTraining; }
-const toggleTraining: ToggleTraining = () => {
-  isTraining = !isTraining;
-  if (isTraining) startLoop();
-};
-
-// ui-controls.ts
-import { getIsTraining } from "./model.js";
-button.addEventListener('click', () => window.toggleTraining());
-function updateButton() {
-  button.innerText = getIsTraining() ? 'Pause' : 'Train';
-}
-```
-
-### Do this:
-```typescript
-// orchestrators/startTraining.ts
-export type StartTraining = () => void;
-
-// orchestrators/stopTraining.ts
-export type StopTraining = () => void;
-
-// model.ts
-let isTraining = false;
-const startTraining: StartTraining = () => {
-  isTraining = true;
-  startLoop();
-};
-const stopTraining: StopTraining = () => {
-  isTraining = false;
-};
-
-// ui-controls.ts
-let isTraining = false;  // module-local state
-button.addEventListener('click', () => {
-  if (isTraining) {
-    window.stopTraining();
-  } else {
-    window.startTraining();
-  }
-});
-const startTraining: StartTraining = () => {
-  isTraining = true;
-  updateButton();
-};
-const stopTraining: StopTraining = () => {
-  isTraining = false;
-  updateButton();
-};
-```
-
-### Why:
-- No need for getters to check state from other modules
-- Each module maintains its own copy of the state
-- Toggle logic is localized to the component that needs it (the button)
-- Other modules can call `stopTraining()` without worrying about the current state

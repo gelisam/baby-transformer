@@ -487,9 +487,9 @@ const updateTrainingStatus: UpdateTrainingStatus = (epoch, loss) => {
 };
 
 // Implementation for setTrainingData orchestrator
-const setTrainingData: SetTrainingData = (inputArray, outputArray, _inputTensor, _outputTensor) => {
-  trainingInputArray = inputArray;
-  trainingOutputArray = outputArray;
+const setTrainingData: SetTrainingData = (data) => {
+  trainingInputArray = data.inputArray;
+  trainingOutputArray = data.outputArray;
 };
 
 // Dispose viz tensors

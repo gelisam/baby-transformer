@@ -62,12 +62,12 @@ window.stopTraining = (): void => {
   uiControls.stopTraining();
 };
 
-window.setTrainingData = (inputArray, outputArray, inputTensor, outputTensor): void => {
+window.setTrainingData = (data): void => {
   // 1. Set training data in model.ts
-  model.setTrainingData(inputArray, outputArray, inputTensor, outputTensor);
+  model.setTrainingData(data);
   
   // 2. Set training data reference in viz.ts for lookup
-  viz.setTrainingData(inputArray, outputArray, inputTensor, outputTensor);
+  viz.setTrainingData(data);
 };
 
 // Helper function to stop training and dispose tensors before reinitializing

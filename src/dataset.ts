@@ -10,15 +10,7 @@ import {
 } from "./constants.js";
 import { EMBEDDED_INPUT_SIZE, embedInput } from "./embeddings.js";
 import { tf, Tensor2D } from "./tf.js";
-import "./orchestrators/setTrainingData.js";
-
-// Result type for generated training data
-interface TrainingData {
-  inputArray: number[][];
-  outputArray: number[];
-  inputTensor: Tensor2D;
-  outputTensor: Tensor2D;
-}
+import { TrainingData } from "./orchestrators/setTrainingData.js";
 
 // Pure function: Generate training data for the classification task
 function generateData(): TrainingData {
@@ -92,7 +84,7 @@ function generateData(): TrainingData {
 // Imperative shell: Generate data and push to other modules via orchestrator
 function refreshTrainingData(): void {
   const data = generateData();
-  window.setTrainingData(data.inputArray, data.outputArray, data.inputTensor, data.outputTensor);
+  window.setTrainingData(data);
 }
 
 export {
