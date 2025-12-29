@@ -5,7 +5,7 @@ import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
 import { StartTraining, StopTraining } from "./orchestrators/training.js";
 import { SetTrainingData } from "./orchestrators/setTrainingData.js";
 import "./orchestrators/refreshViz.js";
-import "./orchestrators/onTrainingStepCompleted.js";
+import "./orchestrators/onEpochCompleted.js";
 
 // Module-local state
 let model: Sequential | null = null;
@@ -84,7 +84,7 @@ async function trainingStep() {
   lossHistory.push({ epoch: currentEpoch, loss });
 
   // Notify other modules via orchestrators
-  window.onTrainingStepCompleted(currentEpoch, loss);
+  window.onEpochCompleted(currentEpoch, loss);
   window.refreshViz();
 
   // Request the next frame

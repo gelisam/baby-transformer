@@ -18,7 +18,7 @@ import {
 import { tf, Tensor2D } from "./tf.js";
 import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
 import { RefreshViz } from "./orchestrators/refreshViz.js";
-import { OnTrainingStepCompleted } from "./orchestrators/onTrainingStepCompleted.js";
+import { OnEpochCompleted } from "./orchestrators/onEpochCompleted.js";
 import { SetTrainingData } from "./orchestrators/setTrainingData.js";
 import { getModel, getLossHistory } from "./model.js";
 
@@ -479,8 +479,8 @@ const refreshViz: RefreshViz = () => {
   drawLossCurve();
 };
 
-// Implementation for onTrainingStepCompleted orchestrator
-const onTrainingStepCompleted: OnTrainingStepCompleted = (epoch, loss) => {
+// Implementation for onEpochCompleted orchestrator
+const onEpochCompleted: OnEpochCompleted = (epoch, loss) => {
   if (statusElement) {
     statusElement.innerHTML = `Training... Epoch ${epoch} - Loss: ${loss.toFixed(4)}`;
   }
@@ -534,7 +534,7 @@ export {
   VIZ_EXAMPLES_COUNT,
   reinitializeModel,
   refreshViz,
-  onTrainingStepCompleted,
+  onEpochCompleted,
   setTrainingData,
   disposeVizData,
   setStatusMessage,

@@ -6,7 +6,7 @@ import * as uiControls from "./ui-controls.js";
 import * as perfectWeights from "./perfect-weights.js";
 import "./orchestrators/reinitializeModel.js";
 import "./orchestrators/refreshViz.js";
-import "./orchestrators/onTrainingStepCompleted.js";
+import "./orchestrators/onEpochCompleted.js";
 import "./orchestrators/training.js";
 import "./orchestrators/setTrainingData.js";
 
@@ -41,8 +41,8 @@ window.refreshViz = (): void => {
   viz.refreshViz();
 };
 
-window.onTrainingStepCompleted = (epoch: number, loss: number): void => {
-  viz.onTrainingStepCompleted(epoch, loss);
+window.onEpochCompleted = (epoch: number, loss: number): void => {
+  viz.onEpochCompleted(epoch, loss);
 };
 
 window.startTraining = (): void => {
