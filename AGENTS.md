@@ -1,6 +1,6 @@
 # Coding Patterns for This Codebase
 
-This document describes the coding patterns used in this codebase. When modifying or extending the code, please follow these patterns. See `.github/orchestrator.instructions.md` for more details on the orchestrator pattern.
+This document describes the coding patterns used in this codebase. When modifying or extending the code, please follow these patterns.
 
 ### Instead of:
 ```typescript
@@ -14,9 +14,9 @@ const data = getData(); // pulls data
 ```
 
 ### Do this:
-1. Use the orchestrator pattern for cross-module communication
+1. Use the orchestrator pattern for cross-module communication (see `.github/orchestrator.instructions.md` for details)
 2. Don't use OOP-style getters and setters; push changes via orchestrators
-3. Divide work into pure core (computation) and imperative shell (side effects)
+3. Divide work into pure core (computation) and imperative shell (side effects, including calling orchestrator functions)
 4. Each module manages its own state using module-local variables
 
 ```typescript
