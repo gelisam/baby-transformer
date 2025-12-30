@@ -16,15 +16,54 @@ import {
   embedInput
 } from "./embeddings.js";
 import { tf, Tensor2D } from "./tf.js";
-import { TrainingData, AppState, DomElements } from "./types.js";
+import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
+import { RefreshViz } from "./orchestrators/refreshViz.js";
+import { OnEpochCompleted } from "./orchestrators/onEpochCompleted.js";
+import { SetTrainingData } from "./orchestrators/setTrainingData.js";
+import { getModel, getLossHistory } from "./model.js";
 
 const VIZ_ROWS = 2;
 const VIZ_COLUMNS = 3;
 const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
 
-function updateTextboxesFromInputs(inputArray: number[][], dom: DomElements): void {
+// Module-local state for DOM elements (initialized on first use)
+let outputCanvas: HTMLCanvasElement | null = null;
+let lossCanvas: HTMLCanvasElement | null = null;
+let networkCanvas: HTMLCanvasElement | null = null;
+let inputElements: HTMLInputElement[] = [];
+let statusElement: HTMLElement | null = null;
+let domInitialized = false;
+
+// Module-local state for visualization data
+let vizInputArray: number[][] = [];
+let vizOutputArray: number[] = [];
+let vizInputTensor: Tensor2D | null = null;
+let vizOutputTensor: Tensor2D | null = null;
+
+// Module-local state for training data reference (for lookup)
+let trainingInputArray: number[][] = [];
+let trainingOutputArray: number[] = [];
+
+// Module-local state for architecture display
+let numLayers = 4;
+let neuronsPerLayer = 6;
+
+// Initialize DOM elements by calling document.getElementById directly
+function initVizDom() {
+  if (domInitialized) return;
+  outputCanvas = document.getElementById('output-canvas') as HTMLCanvasElement;
+  lossCanvas = document.getElementById('loss-canvas') as HTMLCanvasElement;
+  networkCanvas = document.getElementById('network-canvas') as HTMLCanvasElement;
+  inputElements = Array.from({ length: VIZ_EXAMPLES_COUNT }, (_, i) => 
+    document.getElementById(`input-${i}`) as HTMLInputElement
+  ).filter((el): el is HTMLInputElement => el !== null);
+  statusElement = document.getElementById('status') as HTMLElement;
+  domInitialized = true;
+}
+
+function updateTextboxesFromInputs(inputArray: number[][]): void {
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
-    const inputElement = dom.inputElements[i];
+    const inputElement = inputElements[i];
     if (inputElement) {
       const inputTokenStrings = inputArray[i].map(tokenNumberToTokenString).join('');
       inputElement.value = inputTokenStrings;
@@ -32,28 +71,33 @@ function updateTextboxesFromInputs(inputArray: number[][], dom: DomElements): vo
   }
 }
 
-function pickRandomInputs(data: TrainingData, dom: DomElements): TrainingData {
+function pickRandomInputs(): void {
+  if (trainingInputArray.length === 0) return;
+  
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
-    const randomIndex = Math.floor(Math.random() * data.inputArray.length);
-    inputArray.push(data.inputArray[randomIndex]);
-    outputArray.push(data.outputArray[randomIndex]);
+    const randomIndex = Math.floor(Math.random() * trainingInputArray.length);
+    inputArray.push(trainingInputArray[randomIndex]);
+    outputArray.push(trainingOutputArray[randomIndex]);
   }
 
   const embeddedInputArray = inputArray.map(embedInput);
 
-  const inputTensor = tf.tensor2d(embeddedInputArray, [VIZ_EXAMPLES_COUNT, EMBEDDED_INPUT_SIZE]);
-  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
+  // Dispose old tensors
+  if (vizInputTensor) {
+    try { vizInputTensor.dispose(); } catch (e) { /* ignore */ }
+  }
+  if (vizOutputTensor) {
+    try { vizOutputTensor.dispose(); } catch (e) { /* ignore */ }
+  }
 
-  updateTextboxesFromInputs(inputArray, dom);
+  vizInputArray = inputArray;
+  vizOutputArray = outputArray;
+  vizInputTensor = tf.tensor2d(embeddedInputArray, [VIZ_EXAMPLES_COUNT, EMBEDDED_INPUT_SIZE]);
+  vizOutputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
-  return {
-    inputArray,
-    outputArray,
-    inputTensor,
-    outputTensor
-  };
+  updateTextboxesFromInputs(inputArray);
 }
 
 function parseInputString(inputStr: string): number[] | null {
@@ -80,80 +124,76 @@ function parseInputString(inputStr: string): number[] | null {
   return tokens.length === INPUT_SIZE ? tokens : null;
 }
 
-function updateVizDataFromTextboxes(appState: AppState, dom: DomElements): void {
+function updateVizDataFromTextboxes(): void {
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
 
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
-    const inputElement = dom.inputElements[i];
+    const inputElement = inputElements[i];
     if (inputElement) {
       const parsed = parseInputString(inputElement.value);
       if (parsed) {
         inputArray.push(parsed);
-        const matchingIndex = appState.data.inputArray.findIndex(arr =>
+        const matchingIndex = trainingInputArray.findIndex(arr =>
           arr.every((val, idx) => val === parsed[idx])
         );
         if (matchingIndex >= 0) {
-          outputArray.push(appState.data.outputArray[matchingIndex]);
+          outputArray.push(trainingOutputArray[matchingIndex]);
         } else {
           outputArray.push(tokenStringToTokenNumber(NUMBERS[0]));
         }
       } else {
-        if (appState.vizData && appState.vizData.inputArray[i]) {
-          inputArray.push(appState.vizData.inputArray[i]);
-          outputArray.push(appState.vizData.outputArray[i]);
-        } else {
-          inputArray.push(appState.data.inputArray[0]);
-          outputArray.push(appState.data.outputArray[0]);
+        if (vizInputArray[i]) {
+          inputArray.push(vizInputArray[i]);
+          outputArray.push(vizOutputArray[i]);
+        } else if (trainingInputArray[0]) {
+          inputArray.push(trainingInputArray[0]);
+          outputArray.push(trainingOutputArray[0]);
         }
       }
     }
   }
 
-  if (appState.vizData) {
-    appState.vizData.inputTensor.dispose();
-    appState.vizData.outputTensor.dispose();
+  // Dispose old tensors
+  if (vizInputTensor) {
+    try { vizInputTensor.dispose(); } catch (e) { /* ignore */ }
+  }
+  if (vizOutputTensor) {
+    try { vizOutputTensor.dispose(); } catch (e) { /* ignore */ }
   }
 
   const embeddedInputArray = inputArray.map(embedInput);
-  const inputTensor = tf.tensor2d(embeddedInputArray, [VIZ_EXAMPLES_COUNT, EMBEDDED_INPUT_SIZE]);
-  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
+  vizInputArray = inputArray;
+  vizOutputArray = outputArray;
+  vizInputTensor = tf.tensor2d(embeddedInputArray, [VIZ_EXAMPLES_COUNT, EMBEDDED_INPUT_SIZE]);
+  vizOutputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
-  appState.vizData = {
-    inputArray,
-    outputArray,
-    inputTensor,
-    outputTensor
-  };
-
-  drawViz(appState, appState.vizData, dom);
+  drawViz();
 }
 
-async function drawViz(appState: AppState, vizData: TrainingData, dom: DomElements): Promise<void> {
-  const canvas = dom.outputCanvas;
-  const ctx = canvas.getContext('2d')!;
+async function drawViz(): Promise<void> {
+  const model = getModel();
+  if (!outputCanvas || !model || !vizInputTensor) return;
+  
+  const ctx = outputCanvas.getContext('2d')!;
 
-  const inputArray = vizData.inputArray;
-  const outputArray = vizData.outputArray;
-  const inputTensor = vizData.inputTensor;
-
-  const predictionTensor = appState.model.predict(inputTensor) as Tensor2D;
+  const predictionTensor = model.predict(vizInputTensor) as Tensor2D;
   const predictionArray = await predictionTensor.array() as number[][];
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
 
   const sectionSpacing = 10;
   const barSpacing = 3;
 
-  const availableWidth = canvas.width - (sectionSpacing * (VIZ_COLUMNS + 1));
+  const availableWidth = outputCanvas.width - (sectionSpacing * (VIZ_COLUMNS + 1));
   const sectionWidth = availableWidth / VIZ_COLUMNS;
-  const availableHeight = canvas.height - (sectionSpacing * (VIZ_ROWS + 1));
+  const availableHeight = outputCanvas.height - (sectionSpacing * (VIZ_ROWS + 1));
   const sectionHeight = availableHeight / VIZ_ROWS;
 
   ctx.strokeStyle = 'black';
   ctx.lineWidth = 1;
 
-  for (let i = 0; i < inputArray.length; i++) {
+  for (let i = 0; i < vizInputArray.length; i++) {
     const col = i % VIZ_COLUMNS;
     const row = Math.floor(i / VIZ_COLUMNS);
 
@@ -162,7 +202,7 @@ async function drawViz(appState: AppState, vizData: TrainingData, dom: DomElemen
 
     ctx.strokeRect(sectionX, sectionY, sectionWidth, sectionHeight);
 
-    const inputTokenStrings = inputArray[i].map(tokenNumberToTokenString).join('');
+    const inputTokenStrings = vizInputArray[i].map(tokenNumberToTokenString).join('');
     ctx.font = '12px monospace';
     ctx.fillStyle = 'black';
     ctx.fillText(inputTokenStrings, sectionX + 5, sectionY + 15);
@@ -188,20 +228,21 @@ async function drawViz(appState: AppState, vizData: TrainingData, dom: DomElemen
   predictionTensor.dispose();
 }
 
-function drawLossCurve(appState: AppState, dom: DomElements): void {
-  if (appState.lossHistory.length < 2) {
+function drawLossCurve(): void {
+  const lossHistory = getLossHistory();
+  if (!lossCanvas || lossHistory.length < 2) {
     return;
   }
 
-  const canvas = dom.lossCanvas;
-  const ctx = canvas.getContext('2d')!;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const ctx = lossCanvas.getContext('2d')!;
+  ctx.clearRect(0, 0, lossCanvas.width, lossCanvas.height);
 
-  const minLoss = Math.min(...appState.lossHistory.map(d => d.loss));
-  const maxLoss = Math.max(...appState.lossHistory.map(d => d.loss));
-  const minEpoch = appState.lossHistory[0].epoch;
-  const maxEpoch = appState.lossHistory[appState.lossHistory.length - 1].epoch;
+  const minLoss = Math.min(...lossHistory.map(d => d.loss));
+  const maxLoss = Math.max(...lossHistory.map(d => d.loss));
+  const minEpoch = lossHistory[0].epoch;
+  const maxEpoch = lossHistory[lossHistory.length - 1].epoch;
 
+  const canvas = lossCanvas;
   function toCanvasX(epoch: number): number {
     return ((epoch - minEpoch) / (maxEpoch - minEpoch)) * (canvas.width - 60) + 30;
   }
@@ -215,30 +256,31 @@ function drawLossCurve(appState: AppState, dom: DomElements): void {
   ctx.strokeStyle = 'lightgrey';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(toCanvasX(appState.lossHistory[0].epoch), toCanvasY(appState.lossHistory[0].loss));
-  for (let i = 1; i < appState.lossHistory.length; i++) {
-    ctx.lineTo(toCanvasX(appState.lossHistory[i].epoch), toCanvasY(appState.lossHistory[i].loss));
+  ctx.moveTo(toCanvasX(lossHistory[0].epoch), toCanvasY(lossHistory[0].loss));
+  for (let i = 1; i < lossHistory.length; i++) {
+    ctx.lineTo(toCanvasX(lossHistory[i].epoch), toCanvasY(lossHistory[i].loss));
   }
   ctx.stroke();
 }
 
-function drawNetworkArchitecture(appState: AppState, dom: DomElements): void {
-  const canvas = dom.networkCanvas;
-  const ctx = canvas.getContext('2d')!;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+function drawNetworkArchitecture(): void {
+  if (!networkCanvas) return;
+  
+  const ctx = networkCanvas.getContext('2d')!;
+  ctx.clearRect(0, 0, networkCanvas.width, networkCanvas.height);
 
   const inputLayer = INPUT_SIZE;
   const embeddingLayer = EMBEDDED_INPUT_SIZE;
-  const hiddenLayers = Array(appState.num_layers).fill(appState.neurons_per_layer);
+  const hiddenLayers = Array(numLayers).fill(neuronsPerLayer);
   const linearLayer = EMBEDDING_DIM;
   const outputLayer = OUTPUT_SIZE;
   const layers = [inputLayer, embeddingLayer, ...hiddenLayers, linearLayer, outputLayer];
 
   const layerHeight = 20;
-  const maxLayerWidth = canvas.width * 0.4;
+  const maxLayerWidth = networkCanvas.width * 0.4;
   const layerGapY = 40;
   const startY = 30;
-  const canvasWidth = canvas.width;
+  const canvasWidth = networkCanvas.width;
   const arrowHeadSize = 8;
 
   const maxNeurons = Math.max(...layers);
@@ -354,7 +396,7 @@ function drawNetworkArchitecture(appState: AppState, dom: DomElements): void {
   }
 
   for (let i = 0; i < layers.length; i++) {
-    const numNeurons = layers[i];
+    const layerNeurons = layers[i];
     const geom = layerGeometries[i];
 
     if (i === 0) {
@@ -394,15 +436,15 @@ function drawNetworkArchitecture(appState: AppState, dom: DomElements): void {
     ctx.textAlign = 'right';
     let label = '';
     if (i === 0) {
-      label = `${numNeurons}-wide input`;
+      label = `${layerNeurons}-wide input`;
     } else if (i === 1) {
-      label = `${numNeurons}-wide embedding layer`;
+      label = `${layerNeurons}-wide embedding layer`;
     } else if (i === layers.length - 2) {
-      label = `${numNeurons}-wide linear layer`;
+      label = `${layerNeurons}-wide linear layer`;
     } else if (i === layers.length - 1) {
-      label = `${numNeurons}-wide unembedding+softmax layer`;
+      label = `${layerNeurons}-wide unembedding+softmax layer`;
     } else {
-      label = `${numNeurons}-wide ReLU layer`;
+      label = `${layerNeurons}-wide ReLU layer`;
     }
 
     ctx.fillText(label, canvasWidth - 20, geom.y + geom.height / 2 + 5);
@@ -416,11 +458,85 @@ function drawNetworkArchitecture(appState: AppState, dom: DomElements): void {
   drawDownwardArrow(ctx, arrowX, arrowStartY, arrowEndY);
 }
 
+// Implementation for the reinitializeModel orchestrator
+const reinitializeModel: ReinitializeModel = (newNumLayers, newNeuronsPerLayer) => {
+  numLayers = newNumLayers;
+  neuronsPerLayer = newNeuronsPerLayer;
+  
+  // Pick random visualization inputs
+  pickRandomInputs();
+
+  // Visualize the initial (untrained) state
+  drawViz();
+
+  // Redraw the architecture in case it changed
+  drawNetworkArchitecture();
+};
+
+// Implementation for the refreshViz orchestrator
+const refreshViz: RefreshViz = () => {
+  drawViz();
+  drawLossCurve();
+};
+
+// Implementation for onEpochCompleted orchestrator
+const onEpochCompleted: OnEpochCompleted = (epoch, loss) => {
+  if (statusElement) {
+    statusElement.innerHTML = `Training... Epoch ${epoch} - Loss: ${loss.toFixed(4)}`;
+  }
+};
+
+// Implementation for setTrainingData orchestrator
+const setTrainingData: SetTrainingData = (data) => {
+  trainingInputArray = data.inputArray;
+  trainingOutputArray = data.outputArray;
+};
+
+// Dispose viz tensors
+function disposeVizData() {
+  if (vizInputTensor) {
+    try { vizInputTensor.dispose(); } catch (e) { /* ignore */ }
+    vizInputTensor = null;
+  }
+  if (vizOutputTensor) {
+    try { vizOutputTensor.dispose(); } catch (e) { /* ignore */ }
+    vizOutputTensor = null;
+  }
+}
+
+// Set status message
+function setStatusMessage(message: string) {
+  if (statusElement) {
+    statusElement.innerHTML = message;
+  }
+}
+
+// Setup event listeners for input textboxes
+function setupInputEventListeners() {
+  initVizDom(); // Ensure DOM is initialized
+  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
+    const inputElement = inputElements[i];
+    if (inputElement) {
+      inputElement.addEventListener('input', () => {
+        updateVizDataFromTextboxes();
+      });
+    }
+  }
+}
+
 export {
+  initVizDom,
   pickRandomInputs,
   updateVizDataFromTextboxes,
   drawViz,
   drawLossCurve,
   drawNetworkArchitecture,
-  VIZ_EXAMPLES_COUNT
+  VIZ_EXAMPLES_COUNT,
+  reinitializeModel,
+  refreshViz,
+  onEpochCompleted,
+  setTrainingData,
+  disposeVizData,
+  setStatusMessage,
+  setupInputEventListeners
 };

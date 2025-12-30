@@ -1,10 +1,39 @@
 import { INPUT_SIZE, OUTPUT_SIZE } from "./constants.js";
-import { AppState, DomElements } from "./types.js";
 import { tf } from "./tf.js";
-import { toggleTrainingMode } from "./ui-controls.js";
 import { drawViz } from "./viz.js";
+import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
+import "./orchestrators/training.js";
+import "./orchestrators/setModelWeights.js";
 
-function canUsePerfectWeights(numLayers: number, neuronsPerLayer: number): { canUse: boolean, reason: string } {
+// Module-local state for DOM elements (initialized on first use)
+let perfectWeightsButton: HTMLButtonElement | null = null;
+let perfectWeightsTooltipText: HTMLSpanElement | null = null;
+let domInitialized = false;
+
+// Module-local state for layer configuration
+let numLayers = 4;
+let neuronsPerLayer = 6;
+
+// Forward declaration for event handler
+async function handlePerfectWeightsClick(): Promise<void> {
+  await setPerfectWeights();
+}
+
+// Initialize DOM elements by calling document.getElementById directly
+function initPerfectWeightsDom() {
+  if (domInitialized) return;
+  perfectWeightsButton = document.getElementById('perfect-weights-button') as HTMLButtonElement;
+  perfectWeightsTooltipText = document.getElementById('perfect-weights-tooltip-text') as HTMLSpanElement;
+  
+  // Set up event listener
+  if (perfectWeightsButton) {
+    perfectWeightsButton.addEventListener('click', () => handlePerfectWeightsClick());
+  }
+  
+  domInitialized = true;
+}
+
+function canUsePerfectWeights(layers: number, neurons: number): { canUse: boolean, reason: string } {
   // The setPerfectWeights function needs to be updated for the new embedding/unembedding architecture
   return {
     canUse: false,
@@ -12,24 +41,23 @@ function canUsePerfectWeights(numLayers: number, neuronsPerLayer: number): { can
   };
 }
 
-function updatePerfectWeightsButton(appState: AppState, dom: DomElements): void {
-  const button = dom.perfectWeightsButton;
-  const tooltipText = dom.perfectWeightsTooltipText;
-  const result = canUsePerfectWeights(appState.num_layers, appState.neurons_per_layer);
+function updatePerfectWeightsButton(): void {
+  if (!perfectWeightsButton || !perfectWeightsTooltipText) return;
+  
+  const result = canUsePerfectWeights(numLayers, neuronsPerLayer);
 
-  button.disabled = !result.canUse;
+  perfectWeightsButton.disabled = !result.canUse;
 
   if (!result.canUse) {
-    tooltipText.textContent = result.reason;
+    perfectWeightsTooltipText.textContent = result.reason;
   } else {
-    tooltipText.textContent = '';
+    perfectWeightsTooltipText.textContent = '';
   }
 }
 
-async function setPerfectWeights(appState: AppState, dom: DomElements): Promise<void> {
-  if (appState.isTraining) {
-    toggleTrainingMode(appState, dom); // Toggles isTraining to false
-  }
+async function setPerfectWeights(): Promise<void> {
+  // Always stop training when setting perfect weights
+  window.stopTraining();
 
   // We need to complete this:
   //   <letter1>=<number1> <letter2>=<number2> <letter3>=____
@@ -139,8 +167,8 @@ async function setPerfectWeights(appState: AppState, dom: DomElements): Promise<
   const number2 = 3;
   const letter3 = 4;
 
-  const /*mut*/ layer1weights = tf.buffer([INPUT_SIZE, appState.neurons_per_layer])
-  const /*mut*/ layer1bias = tf.buffer([appState.neurons_per_layer]);
+  const /*mut*/ layer1weights = tf.buffer([INPUT_SIZE, neuronsPerLayer])
+  const /*mut*/ layer1bias = tf.buffer([neuronsPerLayer]);
   const sub1from3 = 0;
   const sub3from1 = 1;
   const sub2from3 = 2;
@@ -164,8 +192,8 @@ async function setPerfectWeights(appState: AppState, dom: DomElements): Promise<
   // const number2layer1 = relu(1.0 * number2)
   layer1weights.set(1.0, number2, number2layer1);
 
-  const /*mut*/ layer2weights = tf.buffer([appState.neurons_per_layer, appState.neurons_per_layer])
-  const /*mut*/ layer2bias = tf.buffer([appState.neurons_per_layer]);
+  const /*mut*/ layer2weights = tf.buffer([neuronsPerLayer, neuronsPerLayer])
+  const /*mut*/ layer2bias = tf.buffer([neuronsPerLayer]);
   const contribution1 = 0;
   const contribution2 = 1;
   // const contribution1 = relu(1.0 * number1layer1 + -1000.0 * sub1from3 + -1000.0 * sub3from1)
@@ -177,8 +205,8 @@ async function setPerfectWeights(appState: AppState, dom: DomElements): Promise<
   layer2weights.set(-1000.0, sub2from3, contribution2);
   layer2weights.set(-1000.0, sub3from2, contribution2);
 
-  const /*mut*/ layer3weights = tf.buffer([appState.neurons_per_layer, appState.neurons_per_layer])
-  const /*mut*/ layer3bias = tf.buffer([appState.neurons_per_layer]);
+  const /*mut*/ layer3weights = tf.buffer([neuronsPerLayer, neuronsPerLayer])
+  const /*mut*/ layer3bias = tf.buffer([neuronsPerLayer]);
   const sub1fromOut = 0;
   const sub2fromOut = 1;
   const sub3fromOut = 2;
@@ -210,8 +238,8 @@ async function setPerfectWeights(appState: AppState, dom: DomElements): Promise<
   layer3weights.set(-1.0, contribution2, subOutFrom3);
   layer3bias.set(3.0, subOutFrom3);
 
-  const /*mut*/ layer4weights = tf.buffer([appState.neurons_per_layer, appState.neurons_per_layer])
-  const /*mut*/ layer4bias = tf.buffer([appState.neurons_per_layer]);
+  const /*mut*/ layer4weights = tf.buffer([neuronsPerLayer, neuronsPerLayer])
+  const /*mut*/ layer4bias = tf.buffer([neuronsPerLayer]);
   const probability1 = 0;
   const probability2 = 1;
   const probability3 = 2;
@@ -231,9 +259,9 @@ async function setPerfectWeights(appState: AppState, dom: DomElements): Promise<
   // Layers 5 and beyond (if any) implement identity function on their first 3
   // inputs.
   const extraLayerWeights: any[] = [];
-  for (let layerIdx = 4; layerIdx < appState.num_layers; layerIdx++) {
-    const prevLayerSize = appState.neurons_per_layer;
-    const currLayerSize = appState.neurons_per_layer;
+  for (let layerIdx = 4; layerIdx < numLayers; layerIdx++) {
+    const prevLayerSize = neuronsPerLayer;
+    const currLayerSize = neuronsPerLayer;
 
     const weights = tf.buffer([prevLayerSize, currLayerSize]);
     const bias = tf.buffer([currLayerSize]);
@@ -259,7 +287,7 @@ async function setPerfectWeights(appState: AppState, dom: DomElements): Promise<
   // way up and P(A="A=") way down.
 
   // Output layer connects to the last hidden layer
-  const /*mut*/ outputWeights = tf.buffer([appState.neurons_per_layer, OUTPUT_SIZE])
+  const /*mut*/ outputWeights = tf.buffer([neuronsPerLayer, OUTPUT_SIZE])
   const /*mut*/ outputBias = tf.buffer([OUTPUT_SIZE]);
   outputWeights.set(1000.0, probability1, probability1);
   outputWeights.set(1000.0, probability2, probability2);
@@ -279,10 +307,23 @@ async function setPerfectWeights(appState: AppState, dom: DomElements): Promise<
     ...extraLayerWeights,
     outputWeights.toTensor(), outputBias.toTensor()
   ];
-  appState.model.setWeights(perfectWeights);
+  window.setModelWeights(perfectWeights);
 
-  await drawViz(appState, appState.vizData, dom);
+  await drawViz();
   perfectWeights.forEach(tensor => tensor.dispose());
 }
 
-export { canUsePerfectWeights, updatePerfectWeightsButton, setPerfectWeights };
+// Implementation for the reinitializeModel orchestrator
+const reinitializeModel: ReinitializeModel = (newNumLayers, newNeuronsPerLayer) => {
+  numLayers = newNumLayers;
+  neuronsPerLayer = newNeuronsPerLayer;
+  updatePerfectWeightsButton();
+};
+
+export { 
+  initPerfectWeightsDom,
+  canUsePerfectWeights, 
+  updatePerfectWeightsButton, 
+  setPerfectWeights, 
+  reinitializeModel 
+};

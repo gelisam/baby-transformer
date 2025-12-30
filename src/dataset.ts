@@ -10,9 +10,9 @@ import {
 } from "./constants.js";
 import { EMBEDDED_INPUT_SIZE, embedInput } from "./embeddings.js";
 import { tf, Tensor2D } from "./tf.js";
-import { TrainingData } from "./types.js";
+import { TrainingData } from "./orchestrators/setTrainingData.js";
 
-// Generate training data for the classification task
+// Pure function: Generate training data for the classification task
 function generateData(): TrainingData {
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
@@ -78,15 +78,20 @@ function generateData(): TrainingData {
   const inputTensor = tf.tensor2d(embeddedInputArray, [numExamples, EMBEDDED_INPUT_SIZE]);
   const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
-  return {
-    inputArray,
-    outputArray,
-    inputTensor,
-    outputTensor
-  };
+  return { inputArray, outputArray, inputTensor, outputTensor };
 }
 
+import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
+
+// Implementation of the reinitializeModel orchestrator
+// Generates new training data and pushes to other modules via setTrainingData orchestrator
+const reinitializeModel: ReinitializeModel = (_numLayers, _neuronsPerLayer) => {
+  const data = generateData();
+  window.setTrainingData(data);
+};
+
 export {
-  generateData
+  generateData,
+  reinitializeModel
 };
 
