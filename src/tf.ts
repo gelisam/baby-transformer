@@ -2,6 +2,7 @@
 
 const tf = (globalThis as any).tf as typeof import('@tensorflow/tfjs');
 
+type Tensor = import('@tensorflow/tfjs').Tensor;
 type Tensor2D = import('@tensorflow/tfjs').Tensor2D;
 type Sequential = import('@tensorflow/tfjs').Sequential;
 
@@ -15,4 +16,4 @@ async function setBackend(requestedBackend: string) {
   }
 }
 
-export { tf, Tensor2D, Sequential, setBackend };
+export { tf, Tensor, Tensor2D, Sequential, setBackend };

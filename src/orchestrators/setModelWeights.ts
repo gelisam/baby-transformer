@@ -4,10 +4,7 @@
  * Used by perfect-weights.ts to push computed weights to the model.
  */
 
-import { tf } from "../tf.js";
-
-// Type alias for TensorFlow Tensor
-type Tensor = ReturnType<typeof tf.tensor>;
+import { Tensor } from "../tf.js";
 
 // Type for the setModelWeights orchestrator function
 export type SetModelWeights = (weights: Tensor[]) => void;

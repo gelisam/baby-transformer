@@ -1,5 +1,5 @@
 import { INPUT_SIZE, OUTPUT_SIZE } from "../constants.js";
-import { tf } from "../tf.js";
+import { tf, Tensor } from "../tf.js";
 import { ReinitializeModel} from "../orchestrators/reinitializeModel.js";
 import {} from "../orchestrators/setModelWeights.js";
 import {} from "../orchestrators/training.js";
@@ -299,7 +299,7 @@ async function setPerfectWeights(): Promise<void> {
   outputBias.set(-Infinity, 4);
   outputBias.set(-Infinity, 5);
 
-  const perfectWeights = [
+  const perfectWeights: Tensor[] = [
     layer1weights.toTensor(), layer1bias.toTensor(),
     layer2weights.toTensor(), layer2bias.toTensor(),
     layer3weights.toTensor(), layer3bias.toTensor(),
