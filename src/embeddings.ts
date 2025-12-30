@@ -1,5 +1,5 @@
-import { INPUT_SIZE } from "./constants.js";
 import { transposeArray } from "./array.js";
+import { INPUT_SIZE } from "./constants.js";
 import { tokenNumberToIndex } from "./tokens.js";
 
 const EMBEDDING_DIM = 2;

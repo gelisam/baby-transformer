@@ -1,15 +1,15 @@
 import {
-  NUMBERS,
-  LETTERS,
-  tokenNumberToIndex,
-  tokenStringToTokenNumber
-} from "../tokens.js";
-import {
   INPUT_SIZE,
   OUTPUT_SIZE,
 } from "../constants.js";
 import { EMBEDDED_INPUT_SIZE, embedInput } from "../embeddings.js";
 import { tf, Tensor2D } from "../tf.js";
+import {
+  NUMBERS,
+  LETTERS,
+  tokenNumberToIndex,
+  tokenStringToTokenNumber
+} from "../tokens.js";
 import { TrainingData } from "../orchestrators/setTrainingData.js";
 
 // Pure function: Generate training data for the classification task

@@ -3,6 +3,12 @@ import {
   OUTPUT_SIZE
 } from "../constants.js";
 import {
+  EMBEDDED_INPUT_SIZE,
+  EMBEDDING_DIM,
+  embedInput
+} from "../embeddings.js";
+import { tf, Tensor2D } from "../tf.js";
+import {
   NUMBERS,
   TOKENS,
   indexToShortTokenString,
@@ -10,15 +16,9 @@ import {
   tokenNumberToTokenString,
   tokenStringToTokenNumber
 } from "../tokens.js";
-import {
-  EMBEDDED_INPUT_SIZE,
-  EMBEDDING_DIM,
-  embedInput
-} from "../embeddings.js";
-import { tf, Tensor2D } from "../tf.js";
-import { ReinitializeModel } from "../orchestrators/reinitializeModel.js";
-import { RefreshViz } from "../orchestrators/refreshViz.js";
 import { OnEpochCompleted } from "../orchestrators/onEpochCompleted.js";
+import { RefreshViz } from "../orchestrators/refreshViz.js";
+import { ReinitializeModel } from "../orchestrators/reinitializeModel.js";
 import { SetTrainingData } from "../orchestrators/setTrainingData.js";
 import { getModel, getLossHistory } from "./model.js";
 

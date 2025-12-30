@@ -1,15 +1,15 @@
+import { setBackend } from "./tf.js";
+import {} from "./orchestrators/onEpochCompleted.js";
+import {} from "./orchestrators/refreshViz.js";
+import {} from "./orchestrators/reinitializeModel.js";
+import {} from "./orchestrators/setModelWeights.js";
+import {} from "./orchestrators/setTrainingData.js";
+import {} from "./orchestrators/training.js";
 import * as dataset from "./components/dataset.js";
 import * as model from "./components/model.js";
-import { setBackend } from "./tf.js";
-import * as viz from "./components/viz.js";
-import * as uiControls from "./components/ui-controls.js";
 import * as perfectWeights from "./components/perfect-weights.js";
-import "./orchestrators/reinitializeModel.js";
-import "./orchestrators/refreshViz.js";
-import "./orchestrators/onEpochCompleted.js";
-import "./orchestrators/training.js";
-import "./orchestrators/setTrainingData.js";
-import "./orchestrators/setModelWeights.js";
+import * as uiControls from "./components/ui-controls.js";
+import * as viz from "./components/viz.js";
 
 // Module-local state for layer configuration
 let numLayers = 4;

@@ -1,9 +1,9 @@
 import { INPUT_SIZE, OUTPUT_SIZE } from "../constants.js";
 import { tf } from "../tf.js";
+import { ReinitializeModel} from "../orchestrators/reinitializeModel.js";
+import {} from "../orchestrators/setModelWeights.js";
+import {} from "../orchestrators/training.js";
 import { drawViz } from "./viz.js";
-import { ReinitializeModel } from "../orchestrators/reinitializeModel.js";
-import "../orchestrators/training.js";
-import "../orchestrators/setModelWeights.js";
 
 // Module-local state for DOM elements (initialized on first use)
 let perfectWeightsButton: HTMLButtonElement | null = null;
