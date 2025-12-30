@@ -1,9 +1,9 @@
-import * as dataset from "./dataset.js";
-import * as model from "./model.js";
+import * as dataset from "./components/dataset.js";
+import * as model from "./components/model.js";
 import { setBackend } from "./tf.js";
-import * as viz from "./viz.js";
-import * as uiControls from "./ui-controls.js";
-import * as perfectWeights from "./perfect-weights.js";
+import * as viz from "./components/viz.js";
+import * as uiControls from "./components/ui-controls.js";
+import * as perfectWeights from "./components/perfect-weights.js";
 import "./orchestrators/reinitializeModel.js";
 import "./orchestrators/refreshViz.js";
 import "./orchestrators/onEpochCompleted.js";

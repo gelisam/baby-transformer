@@ -3,14 +3,14 @@ import {
   LETTERS,
   tokenNumberToIndex,
   tokenStringToTokenNumber
-} from "./tokens.js";
+} from "../tokens.js";
 import {
   INPUT_SIZE,
   OUTPUT_SIZE,
-} from "./constants.js";
-import { EMBEDDED_INPUT_SIZE, embedInput } from "./embeddings.js";
-import { tf, Tensor2D } from "./tf.js";
-import { TrainingData } from "./orchestrators/setTrainingData.js";
+} from "../constants.js";
+import { EMBEDDED_INPUT_SIZE, embedInput } from "../embeddings.js";
+import { tf, Tensor2D } from "../tf.js";
+import { TrainingData } from "../orchestrators/setTrainingData.js";
 
 // Pure function: Generate training data for the classification task
 function generateData(): TrainingData {
@@ -81,7 +81,7 @@ function generateData(): TrainingData {
   return { inputArray, outputArray, inputTensor, outputTensor };
 }
 
-import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
+import { ReinitializeModel } from "../orchestrators/reinitializeModel.js";
 
 // Implementation of the reinitializeModel orchestrator
 // Generates new training data and pushes to other modules via setTrainingData orchestrator

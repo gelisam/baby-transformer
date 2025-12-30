@@ -1,12 +1,12 @@
-import { OUTPUT_SIZE, EPOCHS_PER_BATCH } from "./constants.js";
-import { EMBEDDING_DIM, EMBEDDED_INPUT_SIZE, UNEMBEDDING_MATRIX } from "./embeddings.js";
-import { tf, Sequential, Tensor2D } from "./tf.js";
-import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
-import { StartTraining, StopTraining } from "./orchestrators/training.js";
-import { SetTrainingData } from "./orchestrators/setTrainingData.js";
-import { SetModelWeights } from "./orchestrators/setModelWeights.js";
-import "./orchestrators/refreshViz.js";
-import "./orchestrators/onEpochCompleted.js";
+import { OUTPUT_SIZE, EPOCHS_PER_BATCH } from "../constants.js";
+import { EMBEDDING_DIM, EMBEDDED_INPUT_SIZE, UNEMBEDDING_MATRIX } from "../embeddings.js";
+import { tf, Sequential, Tensor2D } from "../tf.js";
+import { ReinitializeModel } from "../orchestrators/reinitializeModel.js";
+import { StartTraining, StopTraining } from "../orchestrators/training.js";
+import { SetTrainingData } from "../orchestrators/setTrainingData.js";
+import { SetModelWeights } from "../orchestrators/setModelWeights.js";
+import "../orchestrators/refreshViz.js";
+import "../orchestrators/onEpochCompleted.js";
 
 // Module-local state
 let model: Sequential | null = null;

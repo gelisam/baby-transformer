@@ -1,7 +1,7 @@
 import {
   INPUT_SIZE,
   OUTPUT_SIZE
-} from "./constants.js";
+} from "../constants.js";
 import {
   NUMBERS,
   TOKENS,
@@ -9,17 +9,17 @@ import {
   tokenNumberToIndex,
   tokenNumberToTokenString,
   tokenStringToTokenNumber
-} from "./tokens.js";
+} from "../tokens.js";
 import {
   EMBEDDED_INPUT_SIZE,
   EMBEDDING_DIM,
   embedInput
-} from "./embeddings.js";
-import { tf, Tensor2D } from "./tf.js";
-import { ReinitializeModel } from "./orchestrators/reinitializeModel.js";
-import { RefreshViz } from "./orchestrators/refreshViz.js";
-import { OnEpochCompleted } from "./orchestrators/onEpochCompleted.js";
-import { SetTrainingData } from "./orchestrators/setTrainingData.js";
+} from "../embeddings.js";
+import { tf, Tensor2D } from "../tf.js";
+import { ReinitializeModel } from "../orchestrators/reinitializeModel.js";
+import { RefreshViz } from "../orchestrators/refreshViz.js";
+import { OnEpochCompleted } from "../orchestrators/onEpochCompleted.js";
+import { SetTrainingData } from "../orchestrators/setTrainingData.js";
 import { getModel, getLossHistory } from "./model.js";
 
 const VIZ_ROWS = 2;
