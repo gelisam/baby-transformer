@@ -16,16 +16,8 @@ import * as viz from "./components/viz.js";
 let numLayers = 4;
 let neuronsPerLayer = 6;
 
-// Message queue for the message loop
-const messageQueue: Msg[] = [];
-
-// Schedule function to add messages to the queue
-const schedule: Schedule = (msg: Msg) => {
-  messageQueue.push(msg);
-};
-
 // Process a single message
-function processMessage(msg: Msg): void {
+function processMessage(schedule: Schedule, msg: Msg): void {
   switch (msg.type) {
     case "ReinitializeModel": {
       const m = msg as ReinitializeModelMsg;
@@ -95,6 +87,14 @@ function processMessage(msg: Msg): void {
 
 // Define the global message loop
 window.messageLoop = (msgOrMsgs: Msg | Msg[]): void => {
+  // Create a distinct message queue for this invocation
+  const messageQueue: Msg[] = [];
+  
+  // Create a schedule function that adds messages to this invocation's queue
+  const schedule: Schedule = (msg: Msg) => {
+    messageQueue.push(msg);
+  };
+  
   // Add initial message(s) to the queue
   if (Array.isArray(msgOrMsgs)) {
     messageQueue.push(...msgOrMsgs);
@@ -105,7 +105,7 @@ window.messageLoop = (msgOrMsgs: Msg | Msg[]): void => {
   // Process all messages in the queue
   while (messageQueue.length > 0) {
     const msg = messageQueue.shift()!;
-    processMessage(msg);
+    processMessage(schedule, msg);
   }
 };
 
