@@ -10,7 +10,8 @@ import {
   tokenNumberToIndex,
   tokenStringToTokenNumber
 } from "../tokens.js";
-import { TrainingData } from "../orchestrators/setTrainingData.js";
+import { Schedule } from "../messageLoop.js";
+import { TrainingData, SetTrainingDataMsg } from "../messages/setTrainingData.js";
 
 // Pure function: Generate training data for the classification task
 function generateData(): TrainingData {
@@ -81,13 +82,13 @@ function generateData(): TrainingData {
   return { inputArray, outputArray, inputTensor, outputTensor };
 }
 
-import { ReinitializeModel } from "../orchestrators/reinitializeModel.js";
+import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 
-// Implementation of the reinitializeModel orchestrator
-// Generates new training data and pushes to other modules via setTrainingData orchestrator
-const reinitializeModel: ReinitializeModel = (_numLayers, _neuronsPerLayer) => {
+// Implementation of the reinitializeModel message handler
+// Generates new training data and pushes to other modules via setTrainingData message
+const reinitializeModel: ReinitializeModelHandler = (schedule, _numLayers, _neuronsPerLayer) => {
   const data = generateData();
-  window.setTrainingData(data);
+  schedule({ type: "SetTrainingData", data } as SetTrainingDataMsg);
 };
 
 export {

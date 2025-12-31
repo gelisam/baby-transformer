@@ -16,10 +16,11 @@ import {
   tokenNumberToTokenString,
   tokenStringToTokenNumber
 } from "../tokens.js";
-import { OnEpochCompleted } from "../orchestrators/onEpochCompleted.js";
-import { RefreshViz } from "../orchestrators/refreshViz.js";
-import { ReinitializeModel } from "../orchestrators/reinitializeModel.js";
-import { SetTrainingData } from "../orchestrators/setTrainingData.js";
+import { Schedule } from "../messageLoop.js";
+import { OnEpochCompletedHandler } from "../messages/onEpochCompleted.js";
+import { RefreshVizHandler } from "../messages/refreshViz.js";
+import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
+import { SetTrainingDataHandler } from "../messages/setTrainingData.js";
 import { getModel, getLossHistory } from "./model.js";
 
 const VIZ_ROWS = 2;
@@ -458,8 +459,8 @@ function drawNetworkArchitecture(): void {
   drawDownwardArrow(ctx, arrowX, arrowStartY, arrowEndY);
 }
 
-// Implementation for the reinitializeModel orchestrator
-const reinitializeModel: ReinitializeModel = (newNumLayers, newNeuronsPerLayer) => {
+// Implementation for the reinitializeModel message handler
+const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, newNeuronsPerLayer) => {
   numLayers = newNumLayers;
   neuronsPerLayer = newNeuronsPerLayer;
   
@@ -473,21 +474,21 @@ const reinitializeModel: ReinitializeModel = (newNumLayers, newNeuronsPerLayer) 
   drawNetworkArchitecture();
 };
 
-// Implementation for the refreshViz orchestrator
-const refreshViz: RefreshViz = () => {
+// Implementation for the refreshViz message handler
+const refreshViz: RefreshVizHandler = (_schedule) => {
   drawViz();
   drawLossCurve();
 };
 
-// Implementation for onEpochCompleted orchestrator
-const onEpochCompleted: OnEpochCompleted = (epoch, loss) => {
+// Implementation for onEpochCompleted message handler
+const onEpochCompleted: OnEpochCompletedHandler = (_schedule, epoch, loss) => {
   if (statusElement) {
     statusElement.innerHTML = `Training... Epoch ${epoch} - Loss: ${loss.toFixed(4)}`;
   }
 };
 
-// Implementation for setTrainingData orchestrator
-const setTrainingData: SetTrainingData = (data) => {
+// Implementation for setTrainingData message handler
+const setTrainingData: SetTrainingDataHandler = (_schedule, data) => {
   trainingInputArray = data.inputArray;
   trainingOutputArray = data.outputArray;
 };

@@ -1,12 +1,13 @@
 import { OUTPUT_SIZE, EPOCHS_PER_BATCH } from "../constants.js";
 import { EMBEDDING_DIM, EMBEDDED_INPUT_SIZE, UNEMBEDDING_MATRIX } from "../embeddings.js";
 import { tf, Sequential, Tensor2D } from "../tf.js";
-import {} from "../orchestrators/onEpochCompleted.js";
-import {} from "../orchestrators/refreshViz.js";
-import { ReinitializeModel } from "../orchestrators/reinitializeModel.js";
-import { SetModelWeights } from "../orchestrators/setModelWeights.js";
-import { SetTrainingData } from "../orchestrators/setTrainingData.js";
-import { StartTraining, StopTraining } from "../orchestrators/training.js";
+import { Schedule } from "../messageLoop.js";
+import { OnEpochCompletedMsg } from "../messages/onEpochCompleted.js";
+import { RefreshVizMsg } from "../messages/refreshViz.js";
+import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
+import { SetModelWeightsHandler } from "../messages/setModelWeights.js";
+import { SetTrainingDataHandler } from "../messages/setTrainingData.js";
+import { StartTrainingHandler, StopTrainingHandler } from "../messages/training.js";
 
 // Module-local state
 let model: Sequential | null = null;
@@ -84,16 +85,16 @@ async function trainingStep() {
   const loss = history.history.loss[history.history.loss.length - 1] as number;
   lossHistory.push({ epoch: currentEpoch, loss });
 
-  // Notify other modules via orchestrators
-  window.onEpochCompleted(currentEpoch, loss);
-  window.refreshViz();
+  // Notify other modules via messages
+  window.messageLoop({ type: "OnEpochCompleted", epoch: currentEpoch, loss } as OnEpochCompletedMsg);
+  window.messageLoop({ type: "RefreshViz" } as RefreshVizMsg);
 
   // Request the next frame
   requestAnimationFrame(() => trainingStep());
 }
 
-// Implementation for the reinitializeModel orchestrator
-const reinitializeModel: ReinitializeModel = (numLayers, neuronsPerLayer) => {
+// Implementation for the reinitializeModel message handler
+const reinitializeModel: ReinitializeModelHandler = (_schedule, numLayers, neuronsPerLayer) => {
   // Create a new model
   if (model) {
     model.dispose();
@@ -105,25 +106,25 @@ const reinitializeModel: ReinitializeModel = (numLayers, neuronsPerLayer) => {
   lossHistory = [];
 };
 
-// Implementation for the startTraining orchestrator
-const startTraining: StartTraining = () => {
+// Implementation for the startTraining message handler
+const startTraining: StartTrainingHandler = (_schedule) => {
   isTraining = true;
   requestAnimationFrame(() => trainingStep());
 };
 
-// Implementation for the stopTraining orchestrator
-const stopTraining: StopTraining = () => {
+// Implementation for the stopTraining message handler
+const stopTraining: StopTrainingHandler = (_schedule) => {
   isTraining = false;
 };
 
-// Implementation for the setTrainingData orchestrator
-const setTrainingData: SetTrainingData = (data) => {
+// Implementation for the setTrainingData message handler
+const setTrainingData: SetTrainingDataHandler = (_schedule, data) => {
   trainingInputTensor = data.inputTensor;
   trainingOutputTensor = data.outputTensor;
 };
 
-// Implementation for the setModelWeights orchestrator
-const setModelWeights: SetModelWeights = (weights) => {
+// Implementation for the setModelWeights message handler
+const setModelWeights: SetModelWeightsHandler = (_schedule, weights) => {
   if (model) {
     model.setWeights(weights);
   }

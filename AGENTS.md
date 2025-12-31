@@ -14,22 +14,22 @@ const data = getData(); // pulls data
 ```
 
 ### Do this:
-1. Use the orchestrator pattern for cross-component communication (see `.github/orchestrator.instructions.md` for details)
-2. Don't use OOP-style getters and setters; push changes via orchestrators
-3. Divide work into pure core (computation) and imperative shell (side effects, including calling orchestrator functions)
+1. Use the message loop pattern for cross-component communication (see `.github/orchestrator.instructions.md` for details)
+2. Don't use OOP-style getters and setters; push changes via messages
+3. Divide work into pure core (computation) and imperative shell (side effects, including scheduling messages)
 4. Each component manages its own state using component-local variables
 
 ```typescript
 // components/a.ts
 function computeData(): Data { ... }
-function refreshData() {
+function refreshData(schedule: Schedule) {
   const data = computeData();
-  window.setData(data); // pushes data
+  schedule({ type: "SetData", data } as SetDataMsg); // schedules message
 }
 
 // components/b.ts
 let data: Data;
-const setData: SetData = (newData) => {
+const setData: SetDataHandler = (_schedule, newData) => {
   data = newData; // stores locally
 };
 ```

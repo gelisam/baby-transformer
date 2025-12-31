@@ -1,5 +1,6 @@
-import { ReinitializeModel } from "../orchestrators/reinitializeModel.js";
-import { StartTraining, StopTraining } from "../orchestrators/training.js";
+import { Schedule } from "../messageLoop.js";
+import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
+import { StartTrainingHandler, StopTrainingHandler, StartTrainingMsg, StopTrainingMsg } from "../messages/training.js";
 
 // Module-local state for DOM elements (initialized on first use)
 let trainButton: HTMLButtonElement | null = null;
@@ -17,9 +18,9 @@ function initUiControlsDom() {
   if (trainButton) {
     trainButton.addEventListener('click', () => {
       if (isTraining) {
-        window.stopTraining();
+        window.messageLoop({ type: "StopTraining" } as StopTrainingMsg);
       } else {
-        window.startTraining();
+        window.messageLoop({ type: "StartTraining" } as StartTrainingMsg);
       }
     });
   }
@@ -33,22 +34,22 @@ function updateTrainButtonText() {
   }
 }
 
-// Implementation for the reinitializeModel orchestrator
-const reinitializeModel: ReinitializeModel = (_numLayers, _neuronsPerLayer) => {
+// Implementation for the reinitializeModel message handler
+const reinitializeModel: ReinitializeModelHandler = (_schedule, _numLayers, _neuronsPerLayer) => {
   // Reset button text when model is reinitialized
   updateTrainButtonText();
 };
 
-// Implementation for startTraining orchestrator
+// Implementation for startTraining message handler
 // This module updates its local state and button text
-const startTraining: StartTraining = () => {
+const startTraining: StartTrainingHandler = (_schedule) => {
   isTraining = true;
   updateTrainButtonText();
 };
 
-// Implementation for stopTraining orchestrator
+// Implementation for stopTraining message handler
 // This module updates its local state and button text
-const stopTraining: StopTraining = () => {
+const stopTraining: StopTrainingHandler = (_schedule) => {
   isTraining = false;
   updateTrainButtonText();
 };
