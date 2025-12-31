@@ -86,8 +86,10 @@ async function trainingStep() {
   lossHistory.push({ epoch: currentEpoch, loss });
 
   // Notify other modules via messages
-  window.messageLoop({ type: "OnEpochCompleted", epoch: currentEpoch, loss } as OnEpochCompletedMsg);
-  window.messageLoop({ type: "RefreshViz" } as RefreshVizMsg);
+  window.messageLoop([
+    { type: "OnEpochCompleted", epoch: currentEpoch, loss } as OnEpochCompletedMsg,
+    { type: "RefreshViz" } as RefreshVizMsg
+  ]);
 
   // Request the next frame
   requestAnimationFrame(() => trainingStep());
