@@ -14,7 +14,7 @@ const data = getData(); // pulls data
 ```
 
 ### Do this:
-1. Use the message loop pattern for cross-component communication (see `.github/orchestrator.instructions.md` for details)
+1. Use the message loop pattern for cross-component communication (see `.github/messageLoop.instructions.md` for details)
 2. Don't use OOP-style getters and setters; push changes via messages
 3. Divide work into pure core (computation) and imperative shell (side effects, including scheduling messages)
 4. Each component manages its own state using component-local variables
