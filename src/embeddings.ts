@@ -5,15 +5,20 @@ import { tokenNumberToIndex } from "./tokens.js";
 const EMBEDDING_DIM = 3;
 const EMBEDDED_INPUT_SIZE = INPUT_SIZE * EMBEDDING_DIM;
 
-const SQRT3_OVER_2 = Math.sqrt(3) / 2;
+const COS0 = 1;
+const SIN0 = 0;
+const COS120 = -0.5;
+const SIN120 = Math.sqrt(3) / 2;
+const COS240 = -0.5;
+const SIN240 = -Math.sqrt(3) / 2;
 
 const EMBEDDING_MATRIX: number[][] = [
-  [10, 1, 0],                // "1 "
-  [10, -0.5, SQRT3_OVER_2],  // "2 "
-  [0, -0.5, -SQRT3_OVER_2],  // "3 "
-  [1, 10, 0],                // "A="
-  [-0.5, 10, SQRT3_OVER_2],  // "B="
-  [-0.5, 10, -SQRT3_OVER_2]  // "C="
+  [10, COS0, SIN0],      // "1 "
+  [10, COS120, SIN120],  // "2 "
+  [0, COS240, SIN240],   // "3 "
+  [COS0, 10, SIN0],      // "A="
+  [COS120, 10, SIN120],  // "B="
+  [COS240, 10, SIN240]   // "C="
 ];
 const UNEMBEDDING_MATRIX = transposeArray(EMBEDDING_MATRIX);
 
