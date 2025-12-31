@@ -1,8 +1,9 @@
 import { INPUT_SIZE, OUTPUT_SIZE } from "../constants.js";
 import { tf, Tensor } from "../tf.js";
-import { ReinitializeModel} from "../orchestrators/reinitializeModel.js";
-import {} from "../orchestrators/setModelWeights.js";
-import {} from "../orchestrators/training.js";
+import { Schedule } from "../messageLoop.js";
+import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
+import { SetModelWeightsMsg } from "../messages/setModelWeights.js";
+import { StopTrainingMsg } from "../messages/training.js";
 import { drawViz } from "./viz.js";
 
 // Module-local state for DOM elements (initialized on first use)
@@ -57,7 +58,7 @@ function updatePerfectWeightsButton(): void {
 
 async function setPerfectWeights(): Promise<void> {
   // Always stop training when setting perfect weights
-  window.stopTraining();
+  window.messageLoop({ type: "StopTraining" } as StopTrainingMsg);
 
   // We need to complete this:
   //   <letter1>=<number1> <letter2>=<number2> <letter3>=____
@@ -307,14 +308,14 @@ async function setPerfectWeights(): Promise<void> {
     ...extraLayerWeights,
     outputWeights.toTensor(), outputBias.toTensor()
   ];
-  window.setModelWeights(perfectWeights);
+  window.messageLoop({ type: "SetModelWeights", weights: perfectWeights } as SetModelWeightsMsg);
 
   await drawViz();
   perfectWeights.forEach(tensor => tensor.dispose());
 }
 
-// Implementation for the reinitializeModel orchestrator
-const reinitializeModel: ReinitializeModel = (newNumLayers, newNeuronsPerLayer) => {
+// Implementation for the reinitializeModel message handler
+const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, newNeuronsPerLayer) => {
   numLayers = newNumLayers;
   neuronsPerLayer = newNeuronsPerLayer;
   updatePerfectWeightsButton();
