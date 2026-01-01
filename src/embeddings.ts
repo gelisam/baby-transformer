@@ -15,7 +15,7 @@ const SIN240 = -Math.sqrt(3) / 2;
 const EMBEDDING_MATRIX: number[][] = [
   [10, COS0, SIN0],      // "1 "
   [10, COS120, SIN120],  // "2 "
-  [0, COS240, SIN240],   // "3 "
+  [10, COS240, SIN240],  // "3 "
   [COS0, 10, SIN0],      // "A="
   [COS120, 10, SIN120],  // "B="
   [COS240, 10, SIN240]   // "C="
