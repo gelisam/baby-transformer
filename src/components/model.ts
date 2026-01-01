@@ -19,12 +19,6 @@ let lossHistory: { epoch: number; loss: number }[] = [];
 let trainingInputTensor: Tensor2D | null = null;
 let trainingOutputTensor: Tensor2D | null = null;
 
-// The input size is always INPUT_SIZE (5 token indices)
-// The model handles transformation to one-hot or embedding via layers
-function getInputSizeForFormat(_inputFormat: InputFormat): number {
-  return INPUT_SIZE;
-}
-
 function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: InputFormat): Sequential {
   const newModel = tf.sequential();
   const vocabSize = TOKENS.length; // 6 tokens
@@ -223,6 +217,5 @@ export {
   getModel,
   getLossHistory,
   getCurrentEpoch,
-  disposeTrainingData,
-  getInputSizeForFormat
+  disposeTrainingData
 };
