@@ -4,9 +4,7 @@ import {
 } from "../constants.js";
 import type { InputFormat } from "../constants.js";
 import {
-  EMBEDDED_INPUT_SIZE,
-  EMBEDDING_DIM,
-  embedInput
+  EMBEDDING_DIM
 } from "../embeddings.js";
 import { tf, Tensor2D } from "../tf.js";
 import {
@@ -22,8 +20,7 @@ import { OnEpochCompletedHandler } from "../messages/onEpochCompleted.js";
 import { RefreshVizHandler } from "../messages/refreshViz.js";
 import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 import { SetTrainingDataHandler } from "../messages/setTrainingData.js";
-import { getModel, getLossHistory, getInputSizeForFormat } from "./model.js";
-import { transformInput } from "./dataset.js";
+import { getModel, getLossHistory } from "./model.js";
 
 const VIZ_ROWS = 2;
 const VIZ_COLUMNS = 3;
@@ -86,8 +83,8 @@ function pickRandomInputs(): void {
     outputArray.push(trainingOutputArray[randomIndex]);
   }
 
-  const transformedInputArray = inputArray.map(input => transformInput(input, currentInputFormat));
-  const inputSize = getInputSizeForFormat(currentInputFormat);
+  // Convert token numbers (1-6) to token indices (0-5) for the model
+  const inputIndicesArray = inputArray.map(input => input.map(tokenNumberToIndex));
 
   // Dispose old tensors
   if (vizInputTensor) {
@@ -99,7 +96,7 @@ function pickRandomInputs(): void {
 
   vizInputArray = inputArray;
   vizOutputArray = outputArray;
-  vizInputTensor = tf.tensor2d(transformedInputArray, [VIZ_EXAMPLES_COUNT, inputSize]);
+  vizInputTensor = tf.tensor2d(inputIndicesArray, [VIZ_EXAMPLES_COUNT, INPUT_SIZE]);
   vizOutputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
   updateTextboxesFromInputs(inputArray);
@@ -167,11 +164,11 @@ function updateVizDataFromTextboxes(): void {
     try { vizOutputTensor.dispose(); } catch (e) { /* ignore */ }
   }
 
-  const transformedInputArray = inputArray.map(input => transformInput(input, currentInputFormat));
-  const inputSize = getInputSizeForFormat(currentInputFormat);
+  // Convert token numbers (1-6) to token indices (0-5) for the model
+  const inputIndicesArray = inputArray.map(input => input.map(tokenNumberToIndex));
   vizInputArray = inputArray;
   vizOutputArray = outputArray;
-  vizInputTensor = tf.tensor2d(transformedInputArray, [VIZ_EXAMPLES_COUNT, inputSize]);
+  vizInputTensor = tf.tensor2d(inputIndicesArray, [VIZ_EXAMPLES_COUNT, INPUT_SIZE]);
   vizOutputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
   drawViz();
@@ -275,8 +272,17 @@ function drawNetworkArchitecture(): void {
   const ctx = networkCanvas.getContext('2d')!;
   ctx.clearRect(0, 0, networkCanvas.width, networkCanvas.height);
 
-  // Get the input size for the current format (this is what goes into the first ReLU layer)
-  const transformedInputSize = getInputSizeForFormat(currentInputFormat);
+  const vocabSize = TOKENS.length; // 6 tokens
+  
+  // Calculate the size after preprocessing based on input format
+  let transformedInputSize: number;
+  if (currentInputFormat === 'embedding') {
+    transformedInputSize = INPUT_SIZE * EMBEDDING_DIM; // 5 * 3 = 15
+  } else if (currentInputFormat === 'one-hot') {
+    transformedInputSize = INPUT_SIZE * vocabSize; // 5 * 6 = 30
+  } else {
+    transformedInputSize = INPUT_SIZE; // 5 raw indices
+  }
   
   // Build layers array based on current input format
   // For embedding format: input -> embedding preprocessing -> ReLU layers -> linear -> softmax

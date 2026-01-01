@@ -1,6 +1,6 @@
 import { OUTPUT_SIZE, EPOCHS_PER_BATCH, INPUT_SIZE } from "../constants.js";
 import type { InputFormat } from "../constants.js";
-import { EMBEDDING_DIM, EMBEDDED_INPUT_SIZE, UNEMBEDDING_MATRIX } from "../embeddings.js";
+import { EMBEDDING_DIM, EMBEDDING_MATRIX, UNEMBEDDING_MATRIX } from "../embeddings.js";
 import { TOKENS } from "../tokens.js";
 import { tf, Sequential, Tensor2D } from "../tf.js";
 import { Schedule } from "../messageLoop.js";
@@ -19,32 +19,73 @@ let lossHistory: { epoch: number; loss: number }[] = [];
 let trainingInputTensor: Tensor2D | null = null;
 let trainingOutputTensor: Tensor2D | null = null;
 
-// Calculate the input size for the first layer based on the input format
-function getInputSizeForFormat(inputFormat: InputFormat): number {
-  switch (inputFormat) {
-    case 'number':
-      return INPUT_SIZE; // 5 raw token indices
-    case 'one-hot':
-      return INPUT_SIZE * TOKENS.length; // 5 * 6 = 30 one-hot values
-    case 'embedding':
-      return EMBEDDED_INPUT_SIZE; // 5 * 3 = 15 embedding values
-  }
+// The input size is always INPUT_SIZE (5 token indices)
+// The model handles transformation to one-hot or embedding via layers
+function getInputSizeForFormat(_inputFormat: InputFormat): number {
+  return INPUT_SIZE;
 }
 
 function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: InputFormat): Sequential {
   const newModel = tf.sequential();
-  const inputSize = getInputSizeForFormat(inputFormat);
+  const vocabSize = TOKENS.length; // 6 tokens
+  
+  // Add preprocessing layer based on input format
+  // Input is always [batchSize, INPUT_SIZE] with token indices (0-5)
+  if (inputFormat === 'embedding') {
+    // Embedding layer converts token indices to embedding vectors
+    // Then flatten to get [batchSize, INPUT_SIZE * EMBEDDING_DIM]
+    const embeddingWeights = tf.tensor2d(EMBEDDING_MATRIX); // [vocabSize, EMBEDDING_DIM]
+    newModel.add(tf.layers.embedding({
+      inputDim: vocabSize,
+      outputDim: EMBEDDING_DIM,
+      inputLength: INPUT_SIZE,
+      weights: [embeddingWeights],
+      trainable: false
+    }));
+    embeddingWeights.dispose();
+    newModel.add(tf.layers.flatten());
+  } else if (inputFormat === 'one-hot') {
+    // One-hot encoding via embedding layer with identity matrix
+    // Then flatten to get [batchSize, INPUT_SIZE * vocabSize]
+    const identityMatrix: number[][] = [];
+    for (let i = 0; i < vocabSize; i++) {
+      const row = Array(vocabSize).fill(0);
+      row[i] = 1;
+      identityMatrix.push(row);
+    }
+    const oneHotWeights = tf.tensor2d(identityMatrix);
+    newModel.add(tf.layers.embedding({
+      inputDim: vocabSize,
+      outputDim: vocabSize,
+      inputLength: INPUT_SIZE,
+      weights: [oneHotWeights],
+      trainable: false
+    }));
+    oneHotWeights.dispose();
+    newModel.add(tf.layers.flatten());
+  }
+  // For 'number' format, no preprocessing layer - input is used directly
+  
+  // Calculate the size after preprocessing
+  let preLayerSize: number;
+  if (inputFormat === 'embedding') {
+    preLayerSize = INPUT_SIZE * EMBEDDING_DIM;
+  } else if (inputFormat === 'one-hot') {
+    preLayerSize = INPUT_SIZE * vocabSize;
+  } else {
+    preLayerSize = INPUT_SIZE;
+  }
 
   if (numLayers === 0) {
     newModel.add(tf.layers.dense({
       units: EMBEDDING_DIM,
-      inputShape: [inputSize],
+      inputShape: inputFormat === 'number' ? [preLayerSize] : undefined,
       activation: 'linear'
     }));
   } else {
     newModel.add(tf.layers.dense({
       units: neuronsPerLayer,
-      inputShape: [inputSize],
+      inputShape: inputFormat === 'number' ? [preLayerSize] : undefined,
       activation: 'relu'
     }));
 
