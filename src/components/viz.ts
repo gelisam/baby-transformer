@@ -5,7 +5,8 @@ import {
 import {
   EMBEDDED_INPUT_SIZE,
   EMBEDDING_DIM,
-  embedInput
+  embedInput,
+  embedTokenNumber
 } from "../embeddings.js";
 import { tf, Tensor2D } from "../tf.js";
 import {
@@ -49,6 +50,30 @@ let trainingOutputArray: number[] = [];
 let numLayers = 4;
 let neuronsPerLayer = 6;
 
+// Input format type and state
+type InputFormat = 'number' | 'one-hot' | 'embedding';
+let inputFormat: InputFormat = 'number';
+
+// Function to set the input format (called from main.ts)
+function setInputFormat(format: InputFormat): void {
+  inputFormat = format;
+  updateTextboxesFromInputs(vizInputArray);
+}
+
+// Format a single token number as a one-hot vector string
+function formatTokenAsOneHot(tokenNum: number): string {
+  const index = tokenNumberToIndex(tokenNum);
+  const oneHot = Array(TOKENS.length).fill(0);
+  oneHot[index] = 1;
+  return '[' + oneHot.join(',') + ']';
+}
+
+// Format a single token number as an embedding vector string
+function formatTokenAsEmbedding(tokenNum: number): string {
+  const embedding = embedTokenNumber(tokenNum);
+  return '[' + embedding.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2)).join(',') + ']';
+}
+
 // Initialize DOM elements by calling document.getElementById directly
 function initVizDom() {
   if (domInitialized) return;
@@ -65,9 +90,20 @@ function initVizDom() {
 function updateTextboxesFromInputs(inputArray: number[][]): void {
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
     const inputElement = inputElements[i];
-    if (inputElement) {
-      const inputTokenStrings = inputArray[i].map(tokenNumberToTokenString).join('');
-      inputElement.value = inputTokenStrings;
+    if (inputElement && inputArray[i] !== undefined) {
+      let formattedValue: string;
+      switch (inputFormat) {
+        case 'number':
+          formattedValue = inputArray[i].map(tokenNumberToTokenString).join('');
+          break;
+        case 'one-hot':
+          formattedValue = inputArray[i].map(formatTokenAsOneHot).join(' ');
+          break;
+        case 'embedding':
+          formattedValue = inputArray[i].map(formatTokenAsEmbedding).join(' ');
+          break;
+      }
+      inputElement.value = formattedValue;
     }
   }
 }
@@ -539,5 +575,7 @@ export {
   setTrainingData,
   disposeVizData,
   setStatusMessage,
-  setupInputEventListeners
+  setupInputEventListeners,
+  setInputFormat
 };
+export type { InputFormat };

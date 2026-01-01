@@ -11,6 +11,7 @@ import * as model from "./components/model.js";
 import * as perfectWeights from "./components/perfect-weights.js";
 import * as uiControls from "./components/ui-controls.js";
 import * as viz from "./components/viz.js";
+import type { InputFormat } from "./components/viz.js";
 
 // Module-local state for layer configuration
 let numLayers = 4;
@@ -129,6 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const numLayersValue = document.getElementById('num-layers-value') as HTMLSpanElement;
   const neuronsPerLayerSlider = document.getElementById('neurons-per-layer-slider') as HTMLInputElement;
   const neuronsPerLayerValue = document.getElementById('neurons-per-layer-value') as HTMLSpanElement;
+  const inputFormatSelector = document.getElementById('input-format-selector') as HTMLSelectElement;
 
   // Add event listener for backend changes
   backendSelector.addEventListener('change', async () => {
@@ -150,6 +152,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     neuronsPerLayerValue.textContent = neuronsPerLayer.toString();
     prepareForReinitialize();
     window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer } as ReinitializeModelMsg);
+  });
+
+  // Add event listener for input format changes
+  inputFormatSelector.addEventListener('change', () => {
+    viz.setInputFormat(inputFormatSelector.value as InputFormat);
   });
 
   // Set up input textbox event listeners in viz module

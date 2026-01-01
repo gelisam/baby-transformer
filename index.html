@@ -130,6 +130,14 @@
     <h3>Loss Curve</h3>
     <canvas id="loss-canvas" width="600" height="150"></canvas>
     <h3>Predictions</h3>
+    <div style="margin-bottom: 10px;">
+      <label for="input-format-selector">Input Format: </label>
+      <select id="input-format-selector">
+        <option value="number" selected>number (e.g. 6)</option>
+        <option value="one-hot">one hot (e.g. [0,0,0,0,0,1])</option>
+        <option value="embedding">embedding (e.g. [-0.5,10,-sqrt(3)/2])</option>
+      </select>
+    </div>
     <div id="inputs-container" style="margin-bottom: 15px;">
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 600px;">
             <input type="text" id="input-0" class="sequence-input" style="padding: 5px; font-family: monospace;">
