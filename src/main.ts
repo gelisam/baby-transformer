@@ -1,5 +1,6 @@
 import { setBackend } from "./tf.js";
 import { Msg, Schedule } from "./messageLoop.js";
+import type { InputFormat } from "./constants.js";
 import { OnEpochCompletedMsg } from "./messages/onEpochCompleted.js";
 import { RefreshVizMsg } from "./messages/refreshViz.js";
 import { ReinitializeModelMsg } from "./messages/reinitializeModel.js";
@@ -15,6 +16,7 @@ import * as viz from "./components/viz.js";
 // Module-local state for layer configuration
 let numLayers = 4;
 let neuronsPerLayer = 6;
+let inputFormat: InputFormat = 'embedding';
 
 // Process a single message
 function processMessage(schedule: Schedule, msg: Msg): void {
@@ -22,19 +24,19 @@ function processMessage(schedule: Schedule, msg: Msg): void {
     case "ReinitializeModel": {
       const m = msg as ReinitializeModelMsg;
       // 1. First, create a new model (model.ts)
-      model.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer);
+      model.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
 
       // 2. Generate new data and push to modules via message (dataset.ts)
-      dataset.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer);
+      dataset.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
 
       // 3. Update visualization (viz.ts)
-      viz.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer);
+      viz.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
 
       // 4. Update perfect weights button state (perfect-weights.ts)
-      perfectWeights.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer);
+      perfectWeights.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
 
       // 5. Update UI controls state (ui-controls.ts)
-      uiControls.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer);
+      uiControls.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
 
       // 6. Set ready status
       viz.setStatusMessage('Ready to train!');
@@ -129,12 +131,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const numLayersValue = document.getElementById('num-layers-value') as HTMLSpanElement;
   const neuronsPerLayerSlider = document.getElementById('neurons-per-layer-slider') as HTMLInputElement;
   const neuronsPerLayerValue = document.getElementById('neurons-per-layer-value') as HTMLSpanElement;
+  const inputFormatSelector = document.getElementById('input-format-selector') as HTMLSelectElement;
 
   // Add event listener for backend changes
   backendSelector.addEventListener('change', async () => {
     prepareForReinitialize();
     await setBackend(backendSelector.value);
-    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer } as ReinitializeModelMsg);
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
   });
 
   // Add event listeners for layer configuration sliders
@@ -142,14 +145,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     numLayers = parseInt(numLayersSlider.value, 10);
     numLayersValue.textContent = numLayers.toString();
     prepareForReinitialize();
-    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer } as ReinitializeModelMsg);
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
   });
 
   neuronsPerLayerSlider.addEventListener('input', () => {
     neuronsPerLayer = parseInt(neuronsPerLayerSlider.value, 10);
     neuronsPerLayerValue.textContent = neuronsPerLayer.toString();
     prepareForReinitialize();
-    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer } as ReinitializeModelMsg);
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+  });
+
+  // Add event listener for input format changes
+  inputFormatSelector.addEventListener('change', () => {
+    inputFormat = inputFormatSelector.value as InputFormat;
+    prepareForReinitialize();
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
   });
 
   // Set up input textbox event listeners in viz module
@@ -157,5 +167,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initial setup
   await setBackend(backendSelector.value);
-  window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer } as ReinitializeModelMsg);
+  window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
 });
