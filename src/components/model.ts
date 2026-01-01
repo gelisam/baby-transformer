@@ -1,5 +1,7 @@
-import { OUTPUT_SIZE, EPOCHS_PER_BATCH } from "../constants.js";
+import { OUTPUT_SIZE, EPOCHS_PER_BATCH, INPUT_SIZE } from "../constants.js";
+import type { InputFormat } from "../constants.js";
 import { EMBEDDING_DIM, EMBEDDED_INPUT_SIZE, UNEMBEDDING_MATRIX } from "../embeddings.js";
+import { TOKENS } from "../tokens.js";
 import { tf, Sequential, Tensor2D } from "../tf.js";
 import { Schedule } from "../messageLoop.js";
 import { OnEpochCompletedMsg } from "../messages/onEpochCompleted.js";
@@ -17,19 +19,32 @@ let lossHistory: { epoch: number; loss: number }[] = [];
 let trainingInputTensor: Tensor2D | null = null;
 let trainingOutputTensor: Tensor2D | null = null;
 
-function createModel(numLayers: number, neuronsPerLayer: number): Sequential {
+// Calculate the input size for the first layer based on the input format
+function getInputSizeForFormat(inputFormat: InputFormat): number {
+  switch (inputFormat) {
+    case 'number':
+      return INPUT_SIZE; // 5 raw token indices
+    case 'one-hot':
+      return INPUT_SIZE * TOKENS.length; // 5 * 6 = 30 one-hot values
+    case 'embedding':
+      return EMBEDDED_INPUT_SIZE; // 5 * 3 = 15 embedding values
+  }
+}
+
+function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: InputFormat): Sequential {
   const newModel = tf.sequential();
+  const inputSize = getInputSizeForFormat(inputFormat);
 
   if (numLayers === 0) {
     newModel.add(tf.layers.dense({
       units: EMBEDDING_DIM,
-      inputShape: [EMBEDDED_INPUT_SIZE],
+      inputShape: [inputSize],
       activation: 'linear'
     }));
   } else {
     newModel.add(tf.layers.dense({
       units: neuronsPerLayer,
-      inputShape: [EMBEDDED_INPUT_SIZE],
+      inputShape: [inputSize],
       activation: 'relu'
     }));
 
@@ -96,12 +111,12 @@ async function trainingStep() {
 }
 
 // Implementation for the reinitializeModel message handler
-const reinitializeModel: ReinitializeModelHandler = (_schedule, numLayers, neuronsPerLayer) => {
+const reinitializeModel: ReinitializeModelHandler = (_schedule, numLayers, neuronsPerLayer, inputFormat) => {
   // Create a new model
   if (model) {
     model.dispose();
   }
-  model = createModel(numLayers, neuronsPerLayer);
+  model = createModel(numLayers, neuronsPerLayer, inputFormat);
   
   // Reset training state
   currentEpoch = 0;
@@ -167,5 +182,6 @@ export {
   getModel,
   getLossHistory,
   getCurrentEpoch,
-  disposeTrainingData
+  disposeTrainingData,
+  getInputSizeForFormat
 };

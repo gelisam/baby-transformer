@@ -5,6 +5,7 @@
  * such as when:
  * - The backend changes
  * - Layer configuration changes (number of layers, neurons per layer)
+ * - Input format changes
  * 
  * Each module can define its own implementation of `reinitializeModel` that
  * will be called by the main implementation in the appropriate order.
@@ -13,13 +14,15 @@
  */
 
 import { Schedule } from "../messageLoop.js";
+import type { InputFormat } from "../constants.js";
 
 // Message type for reinitialize model
 export type ReinitializeModelMsg = {
   type: "ReinitializeModel";
   numLayers: number;
   neuronsPerLayer: number;
+  inputFormat: InputFormat;
 };
 
 // Type for the message handler (used by module implementations)
-export type ReinitializeModelHandler = (schedule: Schedule, numLayers: number, neuronsPerLayer: number) => void;
+export type ReinitializeModelHandler = (schedule: Schedule, numLayers: number, neuronsPerLayer: number, inputFormat: InputFormat) => void;

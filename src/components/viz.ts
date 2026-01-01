@@ -2,11 +2,11 @@ import {
   INPUT_SIZE,
   OUTPUT_SIZE
 } from "../constants.js";
+import type { InputFormat } from "../constants.js";
 import {
   EMBEDDED_INPUT_SIZE,
   EMBEDDING_DIM,
-  embedInput,
-  embedTokenNumber
+  embedInput
 } from "../embeddings.js";
 import { tf, Tensor2D } from "../tf.js";
 import {
@@ -22,7 +22,8 @@ import { OnEpochCompletedHandler } from "../messages/onEpochCompleted.js";
 import { RefreshVizHandler } from "../messages/refreshViz.js";
 import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 import { SetTrainingDataHandler } from "../messages/setTrainingData.js";
-import { getModel, getLossHistory } from "./model.js";
+import { getModel, getLossHistory, getInputSizeForFormat } from "./model.js";
+import { transformInput } from "./dataset.js";
 
 const VIZ_ROWS = 2;
 const VIZ_COLUMNS = 3;
@@ -49,30 +50,7 @@ let trainingOutputArray: number[] = [];
 // Module-local state for architecture display
 let numLayers = 4;
 let neuronsPerLayer = 6;
-
-// Input format type and state
-type InputFormat = 'number' | 'one-hot' | 'embedding';
-let inputFormat: InputFormat = 'number';
-
-// Function to set the input format (called from main.ts)
-function setInputFormat(format: InputFormat): void {
-  inputFormat = format;
-  updateTextboxesFromInputs(vizInputArray);
-}
-
-// Format a single token number as a one-hot vector string
-function formatTokenAsOneHot(tokenNum: number): string {
-  const index = tokenNumberToIndex(tokenNum);
-  const oneHot = Array(TOKENS.length).fill(0);
-  oneHot[index] = 1;
-  return '[' + oneHot.join(',') + ']';
-}
-
-// Format a single token number as an embedding vector string
-function formatTokenAsEmbedding(tokenNum: number): string {
-  const embedding = embedTokenNumber(tokenNum);
-  return '[' + embedding.map(v => Number.isInteger(v) ? v.toString() : v.toFixed(2)).join(',') + ']';
-}
+let currentInputFormat: InputFormat = 'embedding';
 
 // Initialize DOM elements by calling document.getElementById directly
 function initVizDom() {
@@ -90,20 +68,9 @@ function initVizDom() {
 function updateTextboxesFromInputs(inputArray: number[][]): void {
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
     const inputElement = inputElements[i];
-    if (inputElement && inputArray[i] !== undefined) {
-      let formattedValue: string;
-      switch (inputFormat) {
-        case 'number':
-          formattedValue = inputArray[i].map(tokenNumberToTokenString).join('');
-          break;
-        case 'one-hot':
-          formattedValue = inputArray[i].map(formatTokenAsOneHot).join(' ');
-          break;
-        case 'embedding':
-          formattedValue = inputArray[i].map(formatTokenAsEmbedding).join(' ');
-          break;
-      }
-      inputElement.value = formattedValue;
+    if (inputElement) {
+      const inputTokenStrings = inputArray[i].map(tokenNumberToTokenString).join('');
+      inputElement.value = inputTokenStrings;
     }
   }
 }
@@ -119,7 +86,8 @@ function pickRandomInputs(): void {
     outputArray.push(trainingOutputArray[randomIndex]);
   }
 
-  const embeddedInputArray = inputArray.map(embedInput);
+  const transformedInputArray = inputArray.map(input => transformInput(input, currentInputFormat));
+  const inputSize = getInputSizeForFormat(currentInputFormat);
 
   // Dispose old tensors
   if (vizInputTensor) {
@@ -131,7 +99,7 @@ function pickRandomInputs(): void {
 
   vizInputArray = inputArray;
   vizOutputArray = outputArray;
-  vizInputTensor = tf.tensor2d(embeddedInputArray, [VIZ_EXAMPLES_COUNT, EMBEDDED_INPUT_SIZE]);
+  vizInputTensor = tf.tensor2d(transformedInputArray, [VIZ_EXAMPLES_COUNT, inputSize]);
   vizOutputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
   updateTextboxesFromInputs(inputArray);
@@ -199,10 +167,11 @@ function updateVizDataFromTextboxes(): void {
     try { vizOutputTensor.dispose(); } catch (e) { /* ignore */ }
   }
 
-  const embeddedInputArray = inputArray.map(embedInput);
+  const transformedInputArray = inputArray.map(input => transformInput(input, currentInputFormat));
+  const inputSize = getInputSizeForFormat(currentInputFormat);
   vizInputArray = inputArray;
   vizOutputArray = outputArray;
-  vizInputTensor = tf.tensor2d(embeddedInputArray, [VIZ_EXAMPLES_COUNT, EMBEDDED_INPUT_SIZE]);
+  vizInputTensor = tf.tensor2d(transformedInputArray, [VIZ_EXAMPLES_COUNT, inputSize]);
   vizOutputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
   drawViz();
@@ -306,12 +275,50 @@ function drawNetworkArchitecture(): void {
   const ctx = networkCanvas.getContext('2d')!;
   ctx.clearRect(0, 0, networkCanvas.width, networkCanvas.height);
 
+  // Get the input size for the current format (this is what goes into the first ReLU layer)
+  const transformedInputSize = getInputSizeForFormat(currentInputFormat);
+  
+  // Build layers array based on current input format
+  // For embedding format: input -> embedding preprocessing -> ReLU layers -> linear -> softmax
+  // For one-hot format: input -> one-hot preprocessing -> ReLU layers -> linear -> softmax
+  // For number format: input -> ReLU layers -> linear -> softmax (no preprocessing layer shown)
   const inputLayer = INPUT_SIZE;
-  const embeddingLayer = EMBEDDED_INPUT_SIZE;
   const hiddenLayers = Array(numLayers).fill(neuronsPerLayer);
   const linearLayer = EMBEDDING_DIM;
   const outputLayer = OUTPUT_SIZE;
-  const layers = [inputLayer, embeddingLayer, ...hiddenLayers, linearLayer, outputLayer];
+  
+  // Build layers with optional preprocessing layer
+  let layers: number[];
+  let layerLabels: string[];
+  
+  if (currentInputFormat === 'embedding') {
+    layers = [inputLayer, transformedInputSize, ...hiddenLayers, linearLayer, outputLayer];
+    layerLabels = [
+      `${inputLayer}-wide input`,
+      `${transformedInputSize}-wide embedding layer`,
+      ...hiddenLayers.map(n => `${n}-wide ReLU layer`),
+      `${linearLayer}-wide linear layer`,
+      `${outputLayer}-wide unembedding+softmax layer`
+    ];
+  } else if (currentInputFormat === 'one-hot') {
+    layers = [inputLayer, transformedInputSize, ...hiddenLayers, linearLayer, outputLayer];
+    layerLabels = [
+      `${inputLayer}-wide input`,
+      `${transformedInputSize}-wide one-hot layer`,
+      ...hiddenLayers.map(n => `${n}-wide ReLU layer`),
+      `${linearLayer}-wide linear layer`,
+      `${outputLayer}-wide unembedding+softmax layer`
+    ];
+  } else {
+    // number format - no preprocessing layer
+    layers = [inputLayer, ...hiddenLayers, linearLayer, outputLayer];
+    layerLabels = [
+      `${inputLayer}-wide input`,
+      ...hiddenLayers.map(n => `${n}-wide ReLU layer`),
+      `${linearLayer}-wide linear layer`,
+      `${outputLayer}-wide unembedding+softmax layer`
+    ];
+  }
 
   const layerHeight = 20;
   const maxLayerWidth = networkCanvas.width * 0.4;
@@ -432,11 +439,19 @@ function drawNetworkArchitecture(): void {
     }
   }
 
+  // Determine which layer index is the preprocessing layer (if any)
+  const hasPreprocessingLayer = currentInputFormat !== 'number';
+  const preprocessingLayerIndex = hasPreprocessingLayer ? 1 : -1;
+  const firstReluIndex = hasPreprocessingLayer ? 2 : 1;
+  const linearLayerIndex = layers.length - 2;
+  const softmaxLayerIndex = layers.length - 1;
+
   for (let i = 0; i < layers.length; i++) {
     const layerNeurons = layers[i];
     const geom = layerGeometries[i];
 
     if (i === 0) {
+      // Input layer - draw as line with arrow
       ctx.lineWidth = 2;
       ctx.strokeStyle = 'darkblue';
       ctx.beginPath();
@@ -454,14 +469,14 @@ function drawNetworkArchitecture(): void {
       ctx.fillRect(geom.x, geom.y, geom.width, geom.height);
 
       ctx.lineWidth = 4;
-      if (i === 1) {
-        ctx.strokeStyle = '#90EE90';
-      } else if (i >= 2 && i < layers.length - 2) {
-        ctx.strokeStyle = '#4682B4';
-      } else if (i === layers.length - 2) {
-        ctx.strokeStyle = '#DDA0DD';
-      } else if (i === layers.length - 1) {
-        ctx.strokeStyle = 'rgba(255, 165, 0, 1)';
+      if (i === preprocessingLayerIndex) {
+        ctx.strokeStyle = '#90EE90'; // Light green for preprocessing
+      } else if (i >= firstReluIndex && i < linearLayerIndex) {
+        ctx.strokeStyle = '#4682B4'; // Steel blue for ReLU
+      } else if (i === linearLayerIndex) {
+        ctx.strokeStyle = '#DDA0DD'; // Plum for linear
+      } else if (i === softmaxLayerIndex) {
+        ctx.strokeStyle = 'rgba(255, 165, 0, 1)'; // Orange for softmax
       }
       ctx.beginPath();
       ctx.moveTo(geom.x, geom.y + geom.height - 1);
@@ -471,20 +486,7 @@ function drawNetworkArchitecture(): void {
 
     ctx.fillStyle = 'black';
     ctx.textAlign = 'right';
-    let label = '';
-    if (i === 0) {
-      label = `${layerNeurons}-wide input`;
-    } else if (i === 1) {
-      label = `${layerNeurons}-wide embedding layer`;
-    } else if (i === layers.length - 2) {
-      label = `${layerNeurons}-wide linear layer`;
-    } else if (i === layers.length - 1) {
-      label = `${layerNeurons}-wide unembedding+softmax layer`;
-    } else {
-      label = `${layerNeurons}-wide ReLU layer`;
-    }
-
-    ctx.fillText(label, canvasWidth - 20, geom.y + geom.height / 2 + 5);
+    ctx.fillText(layerLabels[i], canvasWidth - 20, geom.y + geom.height / 2 + 5);
   }
 
   const geom = layerGeometries[layerGeometries.length - 1];
@@ -496,9 +498,10 @@ function drawNetworkArchitecture(): void {
 }
 
 // Implementation for the reinitializeModel message handler
-const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, newNeuronsPerLayer) => {
+const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, newNeuronsPerLayer, newInputFormat) => {
   numLayers = newNumLayers;
   neuronsPerLayer = newNeuronsPerLayer;
+  currentInputFormat = newInputFormat;
   
   // Pick random visualization inputs
   pickRandomInputs();
@@ -575,7 +578,5 @@ export {
   setTrainingData,
   disposeVizData,
   setStatusMessage,
-  setupInputEventListeners,
-  setInputFormat
+  setupInputEventListeners
 };
-export type { InputFormat };

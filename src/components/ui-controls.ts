@@ -35,7 +35,7 @@ function updateTrainButtonText() {
 }
 
 // Implementation for the reinitializeModel message handler
-const reinitializeModel: ReinitializeModelHandler = (_schedule, _numLayers, _neuronsPerLayer) => {
+const reinitializeModel: ReinitializeModelHandler = (_schedule, _numLayers, _neuronsPerLayer, _inputFormat) => {
   // Reset button text when model is reinitialized
   updateTrainButtonText();
 };
