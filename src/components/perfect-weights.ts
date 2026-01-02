@@ -4,7 +4,7 @@ import { Schedule } from "../messageLoop.js";
 import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 import { SetModelWeightsMsg } from "../messages/setModelWeights.js";
 import { StopTrainingMsg } from "../messages/training.js";
-import { drawViz } from "./viz.js";
+import { drawViz } from "./viz-examples.js";
 
 // Module-local state for DOM elements (initialized on first use)
 let perfectWeightsButton: HTMLButtonElement | null = null;
