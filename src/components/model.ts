@@ -41,13 +41,7 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
   } else if (inputFormat === 'one-hot') {
     // One-hot encoding via embedding layer with identity matrix
     // Then flatten to get [batchSize, INPUT_SIZE * vocabSize]
-    const identityMatrix: number[][] = [];
-    for (let i = 0; i < vocabSize; i++) {
-      const row = Array(vocabSize).fill(0);
-      row[i] = 1;
-      identityMatrix.push(row);
-    }
-    const oneHotWeights = tf.tensor2d(identityMatrix);
+    const oneHotWeights = tf.eye(vocabSize);
     newModel.add(tf.layers.embedding({
       inputDim: vocabSize,
       outputDim: vocabSize,
