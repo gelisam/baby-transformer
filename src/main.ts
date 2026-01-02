@@ -11,7 +11,9 @@ import * as dataset from "./components/dataset.js";
 import * as model from "./components/model.js";
 import * as perfectWeights from "./components/perfect-weights.js";
 import * as uiControls from "./components/ui-controls.js";
-import * as viz from "./components/viz.js";
+import * as vizLoss from "./components/viz-loss.js";
+import * as vizArchitecture from "./components/viz-architecture.js";
+import * as vizExamples from "./components/viz-examples.js";
 
 // Module-local state for layer configuration
 let numLayers = 4;
@@ -29,8 +31,9 @@ function processMessage(schedule: Schedule, msg: Msg): void {
       // 2. Generate new data and push to modules via message (dataset.ts)
       dataset.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
 
-      // 3. Update visualization (viz.ts)
-      viz.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
+      // 3. Update visualizations (split into three components)
+      vizExamples.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
+      vizArchitecture.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
 
       // 4. Update perfect weights button state (perfect-weights.ts)
       perfectWeights.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
@@ -39,16 +42,17 @@ function processMessage(schedule: Schedule, msg: Msg): void {
       uiControls.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
 
       // 6. Set ready status
-      viz.setStatusMessage('Ready to train!');
+      vizLoss.setStatusMessage('Ready to train!');
       break;
     }
     case "RefreshViz": {
-      viz.refreshViz(schedule);
+      vizExamples.refreshViz(schedule);
+      vizLoss.refreshViz(schedule);
       break;
     }
     case "OnEpochCompleted": {
       const m = msg as OnEpochCompletedMsg;
-      viz.onEpochCompleted(schedule, m.epoch, m.loss);
+      vizLoss.onEpochCompleted(schedule, m.epoch, m.loss);
       break;
     }
     case "StartTraining": {
@@ -72,8 +76,8 @@ function processMessage(schedule: Schedule, msg: Msg): void {
       // 1. Set training data in model.ts
       model.setTrainingData(schedule, m.data);
       
-      // 2. Set training data reference in viz.ts for lookup
-      viz.setTrainingData(schedule, m.data);
+      // 2. Set training data reference in viz-examples.ts for lookup
+      vizExamples.setTrainingData(schedule, m.data);
       break;
     }
     case "SetModelWeights": {
@@ -116,12 +120,14 @@ function prepareForReinitialize(): void {
   // Always stop training (safe to call even if not training)
   window.messageLoop({ type: "StopTraining" } as StopTrainingMsg);
   model.disposeTrainingData();
-  viz.disposeVizData();
+  vizExamples.disposeVizData();
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Initialize module DOM references (each module calls document.getElementById directly)
-  viz.initVizDom();
+  vizLoss.initVizLossDom();
+  vizArchitecture.initVizArchitectureDom();
+  vizExamples.initVizExamplesDom();
   uiControls.initUiControlsDom();
   perfectWeights.initPerfectWeightsDom();
 
@@ -162,8 +168,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
   });
 
-  // Set up input textbox event listeners in viz module
-  viz.setupInputEventListeners();
+  // Set up input textbox event listeners in viz-examples module
+  vizExamples.setupInputEventListeners();
 
   // Initial setup
   await setBackend(backendSelector.value);
