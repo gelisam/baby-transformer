@@ -9,9 +9,9 @@ import { disposeVizData } from "./viz-examples.js";
 // Module-local state for DOM elements (initialized on first use)
 let backendSelector: HTMLSelectElement | null = null;
 let numLayersSlider: HTMLInputElement | null = null;
-let numLayersValue: HTMLSpanElement | null = null;
+let numLayersSpan: HTMLSpanElement | null = null;
 let neuronsPerLayerSlider: HTMLInputElement | null = null;
-let neuronsPerLayerValue: HTMLSpanElement | null = null;
+let neuronsPerLayerSpan: HTMLSpanElement | null = null;
 let inputFormatSelector: HTMLSelectElement | null = null;
 
 // Module-local state for layer configuration
@@ -34,11 +34,11 @@ function getNumLayersSlider(): HTMLInputElement {
   return numLayersSlider;
 }
 
-function getNumLayersValue(): HTMLSpanElement {
-  if (!numLayersValue) {
-    numLayersValue = document.getElementById('num-layers-value') as HTMLSpanElement;
+function getNumLayersSpan(): HTMLSpanElement {
+  if (!numLayersSpan) {
+    numLayersSpan = document.getElementById('num-layers-value') as HTMLSpanElement;
   }
-  return numLayersValue;
+  return numLayersSpan;
 }
 
 function getNeuronsPerLayerSlider(): HTMLInputElement {
@@ -48,11 +48,11 @@ function getNeuronsPerLayerSlider(): HTMLInputElement {
   return neuronsPerLayerSlider;
 }
 
-function getNeuronsPerLayerValue(): HTMLSpanElement {
-  if (!neuronsPerLayerValue) {
-    neuronsPerLayerValue = document.getElementById('neurons-per-layer-value') as HTMLSpanElement;
+function getNeuronsPerLayerSpan(): HTMLSpanElement {
+  if (!neuronsPerLayerSpan) {
+    neuronsPerLayerSpan = document.getElementById('neurons-per-layer-value') as HTMLSpanElement;
   }
-  return neuronsPerLayerValue;
+  return neuronsPerLayerSpan;
 }
 
 function getInputFormatSelector(): HTMLSelectElement {
@@ -80,7 +80,7 @@ const init: InitHandler = (_schedule) => {
   });
   
   const layersSlider = getNumLayersSlider();
-  const layersValueSpan = getNumLayersValue();
+  const layersValueSpan = getNumLayersSpan();
   layersSlider.addEventListener('input', () => {
     numLayers = parseInt(layersSlider.value, 10);
     layersValueSpan.textContent = numLayers.toString();
@@ -89,7 +89,7 @@ const init: InitHandler = (_schedule) => {
   });
   
   const neuronsSlider = getNeuronsPerLayerSlider();
-  const neuronsValueSpan = getNeuronsPerLayerValue();
+  const neuronsValueSpan = getNeuronsPerLayerSpan();
   neuronsSlider.addEventListener('input', () => {
     neuronsPerLayer = parseInt(neuronsSlider.value, 10);
     neuronsValueSpan.textContent = neuronsPerLayer.toString();
