@@ -3,41 +3,14 @@ import {
   OUTPUT_SIZE,
 } from "../constants.js";
 import type { InputFormat } from "../constants.js";
-import { EMBEDDED_INPUT_SIZE, embedInput } from "../embeddings.js";
 import { tf, Tensor2D } from "../tf.js";
 import {
   NUMBERS,
   LETTERS,
-  TOKENS,
   tokenNumberToIndex,
   tokenStringToTokenNumber
 } from "../tokens.js";
-import { Schedule } from "../messageLoop.js";
 import { TrainingData, SetTrainingDataMsg } from "../messages/setTrainingData.js";
-import { getInputSizeForFormat } from "./model.js";
-
-// Transform a single token to one-hot representation
-function tokenToOneHot(tokenNum: number): number[] {
-  const index = tokenNumberToIndex(tokenNum);
-  const oneHot = Array(TOKENS.length).fill(0);
-  oneHot[index] = 1;
-  return oneHot;
-}
-
-// Transform an input array based on the input format
-function transformInput(input: number[], inputFormat: InputFormat): number[] {
-  switch (inputFormat) {
-    case 'number':
-      // Return raw token numbers as-is (values 1-6)
-      return input;
-    case 'one-hot':
-      // Return concatenated one-hot vectors
-      return input.flatMap(tokenToOneHot);
-    case 'embedding':
-      // Return concatenated embeddings
-      return embedInput(input);
-  }
-}
 
 // Pure function: Generate training data for the classification task
 function generateData(inputFormat: InputFormat): TrainingData {
@@ -98,12 +71,13 @@ function generateData(inputFormat: InputFormat): TrainingData {
 
   generate(2, [], new Map(), allLetters, allNumbers);
 
-  // Convert to tensors based on input format
+  // Convert to tensors
+  // inputArray contains token numbers (1-6), but inputTensor needs token indices (0-5)
+  // for the embedding layer to work correctly
   const numExamples = inputArray.length;
-  const transformedInputArray = inputArray.map(input => transformInput(input, inputFormat));
-  const inputSize = getInputSizeForFormat(inputFormat);
+  const inputIndicesArray = inputArray.map(input => input.map(tokenNumberToIndex));
 
-  const inputTensor = tf.tensor2d(transformedInputArray, [numExamples, inputSize]);
+  const inputTensor = tf.tensor2d(inputIndicesArray, [numExamples, INPUT_SIZE]);
   const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
 
   return { inputArray, outputArray, inputTensor, outputTensor };
@@ -120,6 +94,5 @@ const reinitializeModel: ReinitializeModelHandler = (schedule, _numLayers, _neur
 
 export {
   generateData,
-  reinitializeModel,
-  transformInput
+  reinitializeModel
 };
