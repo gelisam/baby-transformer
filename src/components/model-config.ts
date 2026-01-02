@@ -36,7 +36,7 @@ function getNumLayersSlider(): HTMLInputElement {
 
 function getNumLayersSpan(): HTMLSpanElement {
   if (!numLayersSpan) {
-    numLayersSpan = document.getElementById('num-layers-value') as HTMLSpanElement;
+    numLayersSpan = document.getElementById('num-layers-span') as HTMLSpanElement;
   }
   return numLayersSpan;
 }
@@ -50,7 +50,7 @@ function getNeuronsPerLayerSlider(): HTMLInputElement {
 
 function getNeuronsPerLayerSpan(): HTMLSpanElement {
   if (!neuronsPerLayerSpan) {
-    neuronsPerLayerSpan = document.getElementById('neurons-per-layer-value') as HTMLSpanElement;
+    neuronsPerLayerSpan = document.getElementById('neurons-per-layer-span') as HTMLSpanElement;
   }
   return neuronsPerLayerSpan;
 }
