@@ -40,34 +40,40 @@ function initModelConfigDom() {
   
   // Set up event listeners
   if (backendSelector) {
-    backendSelector.addEventListener('change', async () => {
+    const selector = backendSelector;
+    selector.addEventListener('change', async () => {
       prepareForReinitialize();
-      await setBackend(backendSelector!.value);
+      await setBackend(selector.value);
       window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
     });
   }
   
   if (numLayersSlider && numLayersValue) {
-    numLayersSlider.addEventListener('input', () => {
-      numLayers = parseInt(numLayersSlider!.value, 10);
-      numLayersValue!.textContent = numLayers.toString();
+    const slider = numLayersSlider;
+    const valueSpan = numLayersValue;
+    slider.addEventListener('input', () => {
+      numLayers = parseInt(slider.value, 10);
+      valueSpan.textContent = numLayers.toString();
       prepareForReinitialize();
       window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
     });
   }
   
   if (neuronsPerLayerSlider && neuronsPerLayerValue) {
-    neuronsPerLayerSlider.addEventListener('input', () => {
-      neuronsPerLayer = parseInt(neuronsPerLayerSlider!.value, 10);
-      neuronsPerLayerValue!.textContent = neuronsPerLayer.toString();
+    const slider = neuronsPerLayerSlider;
+    const valueSpan = neuronsPerLayerValue;
+    slider.addEventListener('input', () => {
+      neuronsPerLayer = parseInt(slider.value, 10);
+      valueSpan.textContent = neuronsPerLayer.toString();
       prepareForReinitialize();
       window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
     });
   }
   
   if (inputFormatSelector) {
-    inputFormatSelector.addEventListener('change', () => {
-      inputFormat = inputFormatSelector!.value as InputFormat;
+    const selector = inputFormatSelector;
+    selector.addEventListener('change', () => {
+      inputFormat = selector.value as InputFormat;
       prepareForReinitialize();
       window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
     });
@@ -84,23 +90,7 @@ async function performInitialSetup(): Promise<void> {
   window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
 }
 
-// Getters for current configuration values (used by main.ts for initial setup)
-function getNumLayers(): number {
-  return numLayers;
-}
-
-function getNeuronsPerLayer(): number {
-  return neuronsPerLayer;
-}
-
-function getInputFormat(): InputFormat {
-  return inputFormat;
-}
-
 export {
   initModelConfigDom,
-  performInitialSetup,
-  getNumLayers,
-  getNeuronsPerLayer,
-  getInputFormat
+  performInitialSetup
 };
