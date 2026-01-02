@@ -459,6 +459,24 @@ function drawNetworkArchitecture(): void {
       const arrowEndY = geom.y + geom.height - 2;
 
       drawDownwardArrow(ctx, arrowX, arrowStartY, arrowEndY);
+    } else if (i === preprocessingLayerIndex && currentInputFormat === 'one-hot') {
+      // One-hot layer: white rectangle with thin vertical blue bars per input
+      ctx.fillStyle = 'white';
+      ctx.fillRect(geom.x, geom.y, geom.width, geom.height);
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(geom.x, geom.y, geom.width, geom.height);
+
+      // Draw thin vertical bars per input, occupying the bottom 25% of the layer height
+      const numInputs = INPUT_SIZE;
+      const barWidth = 3;
+      const barHeight = geom.height * 0.25;
+      ctx.fillStyle = 'blue';
+      for (let b = 0; b < numInputs; b++) {
+        const barX = geom.x + (geom.width / numInputs) * (b + 0.5) - barWidth / 2;
+        const barY = geom.y + geom.height - barHeight;
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+      }
     } else {
       ctx.fillStyle = 'darkblue';
       ctx.fillRect(geom.x, geom.y, geom.width, geom.height);
