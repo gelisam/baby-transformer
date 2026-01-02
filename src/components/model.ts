@@ -1,6 +1,6 @@
-import { OUTPUT_SIZE, EPOCHS_PER_BATCH, INPUT_SIZE } from "../constants.js";
+import { OUTPUT_SIZE, EPOCHS_PER_BATCH, INPUT_SIZE, EMBEDDING_DIM, getTransformedInputSize } from "../constants.js";
 import type { InputFormat } from "../constants.js";
-import { EMBEDDING_DIM, EMBEDDING_MATRIX, UNEMBEDDING_MATRIX } from "../embeddings.js";
+import { EMBEDDING_MATRIX, UNEMBEDDING_MATRIX } from "../embeddings.js";
 import { TOKENS } from "../tokens.js";
 import { tf, Sequential, Tensor2D } from "../tf.js";
 import { Schedule } from "../messageLoop.js";
@@ -54,15 +54,7 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
   }
   // For 'number' format, no preprocessing layer - input is used directly
   
-  // Calculate the size after preprocessing
-  let preLayerSize: number;
-  if (inputFormat === 'embedding') {
-    preLayerSize = INPUT_SIZE * EMBEDDING_DIM;
-  } else if (inputFormat === 'one-hot') {
-    preLayerSize = INPUT_SIZE * vocabSize;
-  } else {
-    preLayerSize = INPUT_SIZE;
-  }
+  const preLayerSize = getTransformedInputSize(inputFormat);
 
   if (numLayers === 0) {
     newModel.add(tf.layers.dense({

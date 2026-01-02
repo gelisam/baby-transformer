@@ -1,11 +1,10 @@
 import {
   INPUT_SIZE,
-  OUTPUT_SIZE
+  OUTPUT_SIZE,
+  EMBEDDING_DIM,
+  getTransformedInputSize
 } from "../constants.js";
 import type { InputFormat } from "../constants.js";
-import {
-  EMBEDDING_DIM
-} from "../embeddings.js";
 import { tf, Tensor2D } from "../tf.js";
 import {
   NUMBERS,
@@ -272,17 +271,7 @@ function drawNetworkArchitecture(): void {
   const ctx = networkCanvas.getContext('2d')!;
   ctx.clearRect(0, 0, networkCanvas.width, networkCanvas.height);
 
-  const vocabSize = TOKENS.length; // 6 tokens
-  
-  // Calculate the size after preprocessing based on input format
-  let transformedInputSize: number;
-  if (currentInputFormat === 'embedding') {
-    transformedInputSize = INPUT_SIZE * EMBEDDING_DIM; // 5 * 3 = 15
-  } else if (currentInputFormat === 'one-hot') {
-    transformedInputSize = INPUT_SIZE * vocabSize; // 5 * 6 = 30
-  } else {
-    transformedInputSize = INPUT_SIZE; // 5 raw indices
-  }
+  const transformedInputSize = getTransformedInputSize(currentInputFormat);
   
   // Build layers array based on current input format
   // For embedding format: input -> embedding preprocessing -> ReLU layers -> linear -> softmax
