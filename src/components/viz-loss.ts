@@ -17,6 +17,7 @@ function initVizLossDom() {
 }
 
 function drawLossCurve(): void {
+  initVizLossDom(); // Ensure DOM is initialized
   const lossHistory = getLossHistory();
   if (!lossCanvas || lossHistory.length < 2) {
     return;
@@ -58,6 +59,7 @@ const refreshViz: RefreshVizHandler = (_schedule) => {
 
 // Implementation for onEpochCompleted message handler
 const onEpochCompleted: OnEpochCompletedHandler = (_schedule, epoch, loss) => {
+  initVizLossDom(); // Ensure DOM is initialized
   if (statusElement) {
     statusElement.innerHTML = `Training... Epoch ${epoch} - Loss: ${loss.toFixed(4)}`;
   }
@@ -65,6 +67,7 @@ const onEpochCompleted: OnEpochCompletedHandler = (_schedule, epoch, loss) => {
 
 // Set status message
 function setStatusMessage(message: string) {
+  initVizLossDom(); // Ensure DOM is initialized
   if (statusElement) {
     statusElement.innerHTML = message;
   }
