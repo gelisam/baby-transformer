@@ -1,4 +1,5 @@
 import { Schedule } from "../messageLoop.js";
+import { InitHandler } from "../messages/init.js";
 import { OnEpochCompletedHandler } from "../messages/onEpochCompleted.js";
 import { RefreshVizHandler } from "../messages/refreshViz.js";
 import { getLossHistory } from "./model.js";
@@ -6,32 +7,42 @@ import { getLossHistory } from "./model.js";
 // Module-local state for DOM elements (initialized on first use)
 let lossCanvas: HTMLCanvasElement | null = null;
 let statusElement: HTMLElement | null = null;
-let domInitialized = false;
 
-// Initialize DOM elements by calling document.getElementById directly
-function initVizLossDom() {
-  if (domInitialized) return;
-  lossCanvas = document.getElementById('loss-canvas') as HTMLCanvasElement;
-  statusElement = document.getElementById('status') as HTMLElement;
-  domInitialized = true;
+// Getter functions that check and initialize DOM elements if needed
+function getLossCanvas(): HTMLCanvasElement {
+  if (!lossCanvas) {
+    lossCanvas = document.getElementById('loss-canvas') as HTMLCanvasElement;
+  }
+  return lossCanvas;
 }
 
+function getStatusElement(): HTMLElement {
+  if (!statusElement) {
+    statusElement = document.getElementById('status') as HTMLElement;
+  }
+  return statusElement;
+}
+
+// Handler for the Init message - no event listeners needed for this component
+const init: InitHandler = (_schedule) => {
+  // DOM elements will be lazily initialized when first accessed
+};
+
 function drawLossCurve(): void {
-  initVizLossDom(); // Ensure DOM is initialized
+  const canvas = getLossCanvas();
   const lossHistory = getLossHistory();
-  if (!lossCanvas || lossHistory.length < 2) {
+  if (lossHistory.length < 2) {
     return;
   }
 
-  const ctx = lossCanvas.getContext('2d')!;
-  ctx.clearRect(0, 0, lossCanvas.width, lossCanvas.height);
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const minLoss = Math.min(...lossHistory.map(d => d.loss));
   const maxLoss = Math.max(...lossHistory.map(d => d.loss));
   const minEpoch = lossHistory[0].epoch;
   const maxEpoch = lossHistory[lossHistory.length - 1].epoch;
 
-  const canvas = lossCanvas;
   function toCanvasX(epoch: number): number {
     return ((epoch - minEpoch) / (maxEpoch - minEpoch)) * (canvas.width - 60) + 30;
   }
@@ -59,22 +70,18 @@ const refreshViz: RefreshVizHandler = (_schedule) => {
 
 // Implementation for onEpochCompleted message handler
 const onEpochCompleted: OnEpochCompletedHandler = (_schedule, epoch, loss) => {
-  initVizLossDom(); // Ensure DOM is initialized
-  if (statusElement) {
-    statusElement.innerHTML = `Training... Epoch ${epoch} - Loss: ${loss.toFixed(4)}`;
-  }
+  const status = getStatusElement();
+  status.innerHTML = `Training... Epoch ${epoch} - Loss: ${loss.toFixed(4)}`;
 };
 
 // Set status message
 function setStatusMessage(message: string) {
-  initVizLossDom(); // Ensure DOM is initialized
-  if (statusElement) {
-    statusElement.innerHTML = message;
-  }
+  const status = getStatusElement();
+  status.innerHTML = message;
 }
 
 export {
-  initVizLossDom,
+  init,
   drawLossCurve,
   refreshViz,
   onEpochCompleted,

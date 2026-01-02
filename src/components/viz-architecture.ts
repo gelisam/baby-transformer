@@ -6,29 +6,35 @@ import {
 } from "../constants.js";
 import type { InputFormat } from "../constants.js";
 import { Schedule } from "../messageLoop.js";
+import { InitHandler } from "../messages/init.js";
 import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 
 // Module-local state for DOM elements (initialized on first use)
 let networkCanvas: HTMLCanvasElement | null = null;
-let domInitialized = false;
 
 // Module-local state for architecture display
 let numLayers = 4;
 let neuronsPerLayer = 6;
 let currentInputFormat: InputFormat = 'embedding';
 
-// Initialize DOM elements by calling document.getElementById directly
-function initVizArchitectureDom() {
-  if (domInitialized) return;
-  networkCanvas = document.getElementById('network-canvas') as HTMLCanvasElement;
-  domInitialized = true;
+// Getter function that checks and initializes DOM element if needed
+function getNetworkCanvas(): HTMLCanvasElement {
+  if (!networkCanvas) {
+    networkCanvas = document.getElementById('network-canvas') as HTMLCanvasElement;
+  }
+  return networkCanvas;
 }
 
+// Handler for the Init message - no event listeners needed for this component
+const init: InitHandler = (_schedule) => {
+  // DOM element will be lazily initialized when first accessed
+};
+
 function drawNetworkArchitecture(): void {
-  if (!networkCanvas) return;
+  const canvas = getNetworkCanvas();
   
-  const ctx = networkCanvas.getContext('2d')!;
-  ctx.clearRect(0, 0, networkCanvas.width, networkCanvas.height);
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const transformedInputSize = getTransformedInputSize(currentInputFormat);
   
@@ -75,10 +81,10 @@ function drawNetworkArchitecture(): void {
   }
 
   const layerHeight = 20;
-  const maxLayerWidth = networkCanvas.width * 0.4;
+  const maxLayerWidth = canvas.width * 0.4;
   const layerGapY = 40;
   const startY = 30;
-  const canvasWidth = networkCanvas.width;
+  const canvasWidth = canvas.width;
   const arrowHeadSize = 8;
 
   const maxNeurons = Math.max(...layers);
@@ -279,7 +285,7 @@ const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, ne
 };
 
 export {
-  initVizArchitectureDom,
+  init,
   drawNetworkArchitecture,
   reinitializeModel
 };

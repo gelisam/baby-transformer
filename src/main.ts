@@ -1,4 +1,5 @@
 import { Msg, Schedule } from "./messageLoop.js";
+import { InitMsg } from "./messages/init.js";
 import { OnEpochCompletedMsg } from "./messages/onEpochCompleted.js";
 import { RefreshVizMsg } from "./messages/refreshViz.js";
 import { ReinitializeModelMsg } from "./messages/reinitializeModel.js";
@@ -17,6 +18,16 @@ import * as vizExamples from "./components/viz-examples.js";
 // Process a single message
 function processMessage(schedule: Schedule, msg: Msg): void {
   switch (msg.type) {
+    case "Init": {
+      // Initialize all components that need event listeners attached
+      vizLoss.init(schedule);
+      vizArchitecture.init(schedule);
+      vizExamples.init(schedule);
+      uiControls.init(schedule);
+      perfectWeights.init(schedule);
+      modelConfig.init(schedule);
+      break;
+    }
     case "ReinitializeModel": {
       const m = msg as ReinitializeModelMsg;
       // 1. First, create a new model (model.ts)
@@ -110,16 +121,8 @@ window.messageLoop = (msgOrMsgs: Msg | Msg[]): void => {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Initialize module DOM references (each module calls document.getElementById directly)
-  vizLoss.initVizLossDom();
-  vizArchitecture.initVizArchitectureDom();
-  vizExamples.initVizExamplesDom();
-  uiControls.initUiControlsDom();
-  perfectWeights.initPerfectWeightsDom();
-  modelConfig.initModelConfigDom();
-
-  // Set up input textbox event listeners in viz-examples module
-  vizExamples.setupInputEventListeners();
+  // Initialize all components by sending the Init message
+  window.messageLoop({ type: "Init" } as InitMsg);
 
   // Initial setup
   await modelConfig.performInitialSetup();
