@@ -48,6 +48,7 @@ function numberToProbabilities(num: number): number[] {
   const probabilities = new Array(OUTPUT_SIZE).fill(0);
   
   // Clamp the number to valid token range [1, 3] (tokens "1 ", "2 ", "3 ")
+  // These correspond to the first three tokens in TOKENS array
   const clampedNum = Math.max(1, Math.min(3, num));
   
   // Calculate the fractional part
@@ -55,13 +56,22 @@ function numberToProbabilities(num: number): number[] {
   const upperToken = Math.ceil(clampedNum);
   const fraction = clampedNum - lowerToken;
   
+  // Ensure indices are within bounds
+  const lowerIndex = lowerToken - 1;
+  const upperIndex = upperToken - 1;
+  
+  if (lowerIndex < 0 || upperIndex >= OUTPUT_SIZE) {
+    // Safety fallback: return uniform distribution
+    return new Array(OUTPUT_SIZE).fill(1.0 / OUTPUT_SIZE);
+  }
+  
   if (lowerToken === upperToken) {
     // Exact integer
-    probabilities[lowerToken - 1] = 1.0;
+    probabilities[lowerIndex] = 1.0;
   } else {
     // Between two tokens
-    probabilities[lowerToken - 1] = 1.0 - fraction;
-    probabilities[upperToken - 1] = fraction;
+    probabilities[lowerIndex] = 1.0 - fraction;
+    probabilities[upperIndex] = fraction;
   }
   
   return probabilities;
@@ -248,10 +258,24 @@ async function drawViz(): Promise<void> {
   if (currentOutputFormat === 'probabilities') {
     predictionArray = rawOutputArray;
   } else if (currentOutputFormat === 'number') {
-    predictionArray = rawOutputArray.map(output => numberToProbabilities(output[0]));
+    predictionArray = rawOutputArray.map(output => {
+      // Ensure output has at least one element
+      if (output.length === 0) {
+        // Fallback: uniform distribution
+        return new Array(OUTPUT_SIZE).fill(1.0 / OUTPUT_SIZE);
+      }
+      return numberToProbabilities(output[0]);
+    });
   } else {
     // embedding
-    predictionArray = rawOutputArray.map(output => embeddingToProbabilities(output));
+    predictionArray = rawOutputArray.map(output => {
+      // Ensure output has the expected dimensionality
+      if (output.length !== EMBEDDING_DIM) {
+        // Fallback: uniform distribution
+        return new Array(OUTPUT_SIZE).fill(1.0 / OUTPUT_SIZE);
+      }
+      return embeddingToProbabilities(output);
+    });
   }
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
