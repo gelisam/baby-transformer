@@ -1,6 +1,7 @@
 import { Schedule } from "../messageLoop.js";
 import { OnEpochCompletedHandler } from "../messages/onEpochCompleted.js";
 import { RefreshVizHandler } from "../messages/refreshViz.js";
+import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 import { getLossHistory } from "./model.js";
 
 // Module-local state for DOM elements (initialized on first use)
@@ -57,6 +58,14 @@ function drawLossCurve(): void {
   ctx.stroke();
 }
 
+// Implementation for the reinitializeModel message handler
+const reinitializeModel: ReinitializeModelHandler = (_schedule, _numLayers, _neuronsPerLayer, _inputFormat) => {
+  // Clear the loss canvas when model is reinitialized
+  const canvas = getLossCanvas();
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+};
+
 // Implementation for the refreshViz message handler
 const refreshViz: RefreshVizHandler = (_schedule) => {
   drawLossCurve();
@@ -76,6 +85,7 @@ function setStatusMessage(message: string) {
 
 export {
   drawLossCurve,
+  reinitializeModel,
   refreshViz,
   onEpochCompleted,
   setStatusMessage

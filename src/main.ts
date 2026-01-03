@@ -36,6 +36,7 @@ function processMessage(schedule: Schedule, msg: Msg): void {
 
       // 3. Update visualizations
       vizArchitecture.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
+      vizLoss.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
 
       // 4. Update perfect weights button state (perfect-weights.ts)
       perfectWeights.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
