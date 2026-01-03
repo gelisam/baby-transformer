@@ -237,15 +237,6 @@ async function drawViz(): Promise<void> {
   predictionTensor.dispose();
 }
 
-// Implementation for the reinitializeModel message handler
-const reinitializeModel: ReinitializeModelHandler = (_schedule, _newNumLayers, _newNeuronsPerLayer, _newInputFormat) => {
-  // Pick random visualization inputs
-  pickRandomInputs();
-
-  // Visualize the initial (untrained) state
-  drawViz();
-};
-
 // Implementation for the refreshViz message handler
 const refreshViz: RefreshVizHandler = (_schedule) => {
   drawViz();
@@ -255,6 +246,12 @@ const refreshViz: RefreshVizHandler = (_schedule) => {
 const setTrainingData: SetTrainingDataHandler = (_schedule, data) => {
   trainingInputArray = data.inputArray;
   trainingOutputArray = data.outputArray;
+  
+  // Pick random inputs now that training data is available
+  pickRandomInputs();
+  
+  // Draw the visualization with the new inputs
+  drawViz();
 };
 
 // Dispose viz tensors
@@ -275,7 +272,6 @@ export {
   updateVizDataFromTextboxes,
   drawViz,
   VIZ_EXAMPLES_COUNT,
-  reinitializeModel,
   refreshViz,
   setTrainingData,
   disposeVizData
