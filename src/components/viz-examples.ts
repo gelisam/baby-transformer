@@ -238,7 +238,7 @@ async function drawViz(): Promise<void> {
 }
 
 // Implementation for the reinitializeModel message handler
-const reinitializeModel: ReinitializeModelHandler = (_schedule, _newNumLayers, _newNeuronsPerLayer, _newInputFormat) => {
+const reinitializeModel: ReinitializeModelHandler = (_schedule, _newNumLayers, _newNeuronsPerLayer, _newInputFormat, _vocabSize) => {
   // Pick random visualization inputs
   pickRandomInputs();
 

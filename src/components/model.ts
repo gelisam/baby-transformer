@@ -132,7 +132,7 @@ async function trainingStep() {
 }
 
 // Implementation for the reinitializeModel message handler
-const reinitializeModel: ReinitializeModelHandler = (_schedule, numLayers, neuronsPerLayer, inputFormat) => {
+const reinitializeModel: ReinitializeModelHandler = (_schedule, numLayers, neuronsPerLayer, inputFormat, _vocabSize) => {
   // Create a new model
   if (model) {
     model.dispose();

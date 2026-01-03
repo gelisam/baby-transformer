@@ -22,7 +22,8 @@ export type ReinitializeModelMsg = {
   numLayers: number;
   neuronsPerLayer: number;
   inputFormat: InputFormat;
+  vocabSize: number;
 };
 
 // Type for the message handler (used by module implementations)
-export type ReinitializeModelHandler = (schedule: Schedule, numLayers: number, neuronsPerLayer: number, inputFormat: InputFormat) => void;
+export type ReinitializeModelHandler = (schedule: Schedule, numLayers: number, neuronsPerLayer: number, inputFormat: InputFormat, vocabSize: number) => void;
