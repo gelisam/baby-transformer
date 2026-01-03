@@ -1,5 +1,6 @@
 import type { InputFormat } from "../constants.js";
 import { setBackend } from "../tf.js";
+import { InitHandler } from "../messages/init.js";
 import { ReinitializeModelMsg } from "../messages/reinitializeModel.js";
 import { StopTrainingMsg } from "../messages/training.js";
 import { disposeTrainingData } from "./model.js";
@@ -8,16 +9,58 @@ import { disposeVizData } from "./viz-examples.js";
 // Module-local state for DOM elements (initialized on first use)
 let backendSelector: HTMLSelectElement | null = null;
 let numLayersSlider: HTMLInputElement | null = null;
-let numLayersValue: HTMLSpanElement | null = null;
+let numLayersSpan: HTMLSpanElement | null = null;
 let neuronsPerLayerSlider: HTMLInputElement | null = null;
-let neuronsPerLayerValue: HTMLSpanElement | null = null;
+let neuronsPerLayerSpan: HTMLSpanElement | null = null;
 let inputFormatSelector: HTMLSelectElement | null = null;
-let domInitialized = false;
 
 // Module-local state for layer configuration
 let numLayers = 4;
 let neuronsPerLayer = 6;
 let inputFormat: InputFormat = 'embedding';
+
+// Getter functions that check and initialize DOM elements if needed
+function getBackendSelector(): HTMLSelectElement {
+  if (!backendSelector) {
+    backendSelector = document.getElementById('backend-selector') as HTMLSelectElement;
+  }
+  return backendSelector;
+}
+
+function getNumLayersSlider(): HTMLInputElement {
+  if (!numLayersSlider) {
+    numLayersSlider = document.getElementById('num-layers-slider') as HTMLInputElement;
+  }
+  return numLayersSlider;
+}
+
+function getNumLayersSpan(): HTMLSpanElement {
+  if (!numLayersSpan) {
+    numLayersSpan = document.getElementById('num-layers-span') as HTMLSpanElement;
+  }
+  return numLayersSpan;
+}
+
+function getNeuronsPerLayerSlider(): HTMLInputElement {
+  if (!neuronsPerLayerSlider) {
+    neuronsPerLayerSlider = document.getElementById('neurons-per-layer-slider') as HTMLInputElement;
+  }
+  return neuronsPerLayerSlider;
+}
+
+function getNeuronsPerLayerSpan(): HTMLSpanElement {
+  if (!neuronsPerLayerSpan) {
+    neuronsPerLayerSpan = document.getElementById('neurons-per-layer-span') as HTMLSpanElement;
+  }
+  return neuronsPerLayerSpan;
+}
+
+function getInputFormatSelector(): HTMLSelectElement {
+  if (!inputFormatSelector) {
+    inputFormatSelector = document.getElementById('input-format-selector') as HTMLSelectElement;
+  }
+  return inputFormatSelector;
+}
 
 // Helper function to stop training and dispose tensors before reinitializing
 function prepareForReinitialize(): void {
@@ -27,70 +70,49 @@ function prepareForReinitialize(): void {
   disposeVizData();
 }
 
-// Initialize DOM elements by calling document.getElementById directly
-function initModelConfigDom() {
-  if (domInitialized) return;
+// Handler for the Init message - attach event listeners
+const init: InitHandler = (_schedule) => {
+  const selector = getBackendSelector();
+  selector.addEventListener('change', async () => {
+    prepareForReinitialize();
+    await setBackend(selector.value);
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+  });
   
-  backendSelector = document.getElementById('backend-selector') as HTMLSelectElement;
-  numLayersSlider = document.getElementById('num-layers-slider') as HTMLInputElement;
-  numLayersValue = document.getElementById('num-layers-value') as HTMLSpanElement;
-  neuronsPerLayerSlider = document.getElementById('neurons-per-layer-slider') as HTMLInputElement;
-  neuronsPerLayerValue = document.getElementById('neurons-per-layer-value') as HTMLSpanElement;
-  inputFormatSelector = document.getElementById('input-format-selector') as HTMLSelectElement;
+  const layersSlider = getNumLayersSlider();
+  const layersValueSpan = getNumLayersSpan();
+  layersSlider.addEventListener('input', () => {
+    numLayers = parseInt(layersSlider.value, 10);
+    layersValueSpan.textContent = numLayers.toString();
+    prepareForReinitialize();
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+  });
   
-  // Set up event listeners
-  if (backendSelector) {
-    const selector = backendSelector;
-    selector.addEventListener('change', async () => {
-      prepareForReinitialize();
-      await setBackend(selector.value);
-      window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
-    });
-  }
+  const neuronsSlider = getNeuronsPerLayerSlider();
+  const neuronsValueSpan = getNeuronsPerLayerSpan();
+  neuronsSlider.addEventListener('input', () => {
+    neuronsPerLayer = parseInt(neuronsSlider.value, 10);
+    neuronsValueSpan.textContent = neuronsPerLayer.toString();
+    prepareForReinitialize();
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+  });
   
-  if (numLayersSlider && numLayersValue) {
-    const slider = numLayersSlider;
-    const valueSpan = numLayersValue;
-    slider.addEventListener('input', () => {
-      numLayers = parseInt(slider.value, 10);
-      valueSpan.textContent = numLayers.toString();
-      prepareForReinitialize();
-      window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
-    });
-  }
-  
-  if (neuronsPerLayerSlider && neuronsPerLayerValue) {
-    const slider = neuronsPerLayerSlider;
-    const valueSpan = neuronsPerLayerValue;
-    slider.addEventListener('input', () => {
-      neuronsPerLayer = parseInt(slider.value, 10);
-      valueSpan.textContent = neuronsPerLayer.toString();
-      prepareForReinitialize();
-      window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
-    });
-  }
-  
-  if (inputFormatSelector) {
-    const selector = inputFormatSelector;
-    selector.addEventListener('change', () => {
-      inputFormat = selector.value as InputFormat;
-      prepareForReinitialize();
-      window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
-    });
-  }
-  
-  domInitialized = true;
-}
+  const formatSelector = getInputFormatSelector();
+  formatSelector.addEventListener('change', () => {
+    inputFormat = formatSelector.value as InputFormat;
+    prepareForReinitialize();
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+  });
+};
 
 // Perform initial setup - set backend and initialize model
 async function performInitialSetup(): Promise<void> {
-  if (backendSelector) {
-    await setBackend(backendSelector.value);
-  }
+  const selector = getBackendSelector();
+  await setBackend(selector.value);
   window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
 }
 
 export {
-  initModelConfigDom,
+  init,
   performInitialSetup
 };

@@ -1,37 +1,37 @@
 import { Schedule } from "../messageLoop.js";
+import { InitHandler } from "../messages/init.js";
 import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 import { StartTrainingHandler, StopTrainingHandler, StartTrainingMsg, StopTrainingMsg } from "../messages/training.js";
 
 // Module-local state for DOM elements (initialized on first use)
 let trainButton: HTMLButtonElement | null = null;
-let domInitialized = false;
 
 // Module-local state for training status
 let isTraining = false;
 
-// Initialize DOM elements by calling document.getElementById directly
-function initUiControlsDom() {
-  if (domInitialized) return;
-  trainButton = document.getElementById('train-button') as HTMLButtonElement;
-  
-  // Set up event listener - toggle logic lives here in the UI module
-  if (trainButton) {
-    trainButton.addEventListener('click', () => {
-      if (isTraining) {
-        window.messageLoop({ type: "StopTraining" } as StopTrainingMsg);
-      } else {
-        window.messageLoop({ type: "StartTraining" } as StartTrainingMsg);
-      }
-    });
+// Getter function that checks and initializes DOM element if needed
+function getTrainButton(): HTMLButtonElement {
+  if (!trainButton) {
+    trainButton = document.getElementById('train-button') as HTMLButtonElement;
   }
-  
-  domInitialized = true;
+  return trainButton;
 }
 
+// Handler for the Init message - attach event listeners
+const init: InitHandler = (_schedule) => {
+  const button = getTrainButton();
+  button.addEventListener('click', () => {
+    if (isTraining) {
+      window.messageLoop({ type: "StopTraining" } as StopTrainingMsg);
+    } else {
+      window.messageLoop({ type: "StartTraining" } as StartTrainingMsg);
+    }
+  });
+};
+
 function updateTrainButtonText() {
-  if (trainButton) {
-    trainButton.innerText = isTraining ? 'Pause' : 'Train Model';
-  }
+  const button = getTrainButton();
+  button.innerText = isTraining ? 'Pause' : 'Train Model';
 }
 
 // Implementation for the reinitializeModel message handler
@@ -55,7 +55,7 @@ const stopTraining: StopTrainingHandler = (_schedule) => {
 };
 
 export { 
-  initUiControlsDom,
+  init,
   reinitializeModel,
   startTraining,
   stopTraining

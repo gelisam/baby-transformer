@@ -13,6 +13,7 @@ import {
   tokenStringToTokenNumber
 } from "../tokens.js";
 import { Schedule } from "../messageLoop.js";
+import { InitHandler } from "../messages/init.js";
 import { RefreshVizHandler } from "../messages/refreshViz.js";
 import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 import { SetTrainingDataHandler } from "../messages/setTrainingData.js";
@@ -24,8 +25,7 @@ const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
 
 // Module-local state for DOM elements (initialized on first use)
 let outputCanvas: HTMLCanvasElement | null = null;
-let inputElements: HTMLInputElement[] = [];
-let domInitialized = false;
+let inputElements: HTMLInputElement[] | null = null;
 
 // Module-local state for visualization data
 let vizInputArray: number[][] = [];
@@ -37,19 +37,38 @@ let vizOutputTensor: Tensor2D | null = null;
 let trainingInputArray: number[][] = [];
 let trainingOutputArray: number[] = [];
 
-// Initialize DOM elements by calling document.getElementById directly
-function initVizExamplesDom() {
-  if (domInitialized) return;
-  outputCanvas = document.getElementById('output-canvas') as HTMLCanvasElement;
-  inputElements = Array.from({ length: VIZ_EXAMPLES_COUNT }, (_, i) => 
-    document.getElementById(`input-${i}`) as HTMLInputElement
-  ).filter((el): el is HTMLInputElement => el !== null);
-  domInitialized = true;
+// Getter functions that check and initialize DOM elements if needed
+function getOutputCanvas(): HTMLCanvasElement {
+  if (!outputCanvas) {
+    outputCanvas = document.getElementById('output-canvas') as HTMLCanvasElement;
+  }
+  return outputCanvas;
 }
 
+function getInputElements(): HTMLInputElement[] {
+  if (!inputElements) {
+    inputElements = Array.from({ length: VIZ_EXAMPLES_COUNT }, (_, i) => 
+      document.getElementById(`input-${i}`) as HTMLInputElement
+    ).filter((el): el is HTMLInputElement => el !== null);
+  }
+  return inputElements;
+}
+
+// Handler for the Init message - attach event listeners for input textboxes
+const init: InitHandler = (_schedule) => {
+  const elements = getInputElements();
+  for (let i = 0; i < elements.length; i++) {
+    const inputElement = elements[i];
+    inputElement.addEventListener('input', () => {
+      updateVizDataFromTextboxes();
+    });
+  }
+};
+
 function updateTextboxesFromInputs(inputArray: number[][]): void {
+  const elements = getInputElements();
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
-    const inputElement = inputElements[i];
+    const inputElement = elements[i];
     if (inputElement) {
       const inputTokenStrings = inputArray[i].map(tokenNumberToTokenString).join('');
       inputElement.value = inputTokenStrings;
@@ -112,11 +131,12 @@ function parseInputString(inputStr: string): number[] | null {
 }
 
 function updateVizDataFromTextboxes(): void {
+  const elements = getInputElements();
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
 
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
-    const inputElement = inputElements[i];
+    const inputElement = elements[i];
     if (inputElement) {
       const parsed = parseInputString(inputElement.value);
       if (parsed) {
@@ -161,21 +181,22 @@ function updateVizDataFromTextboxes(): void {
 
 async function drawViz(): Promise<void> {
   const model = getModel();
-  if (!outputCanvas || !model || !vizInputTensor) return;
+  if (!model || !vizInputTensor) return;
   
-  const ctx = outputCanvas.getContext('2d')!;
+  const canvas = getOutputCanvas();
+  const ctx = canvas.getContext('2d')!;
 
   const predictionTensor = model.predict(vizInputTensor) as Tensor2D;
   const predictionArray = await predictionTensor.array() as number[][];
 
-  ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const sectionSpacing = 10;
   const barSpacing = 3;
 
-  const availableWidth = outputCanvas.width - (sectionSpacing * (VIZ_COLUMNS + 1));
+  const availableWidth = canvas.width - (sectionSpacing * (VIZ_COLUMNS + 1));
   const sectionWidth = availableWidth / VIZ_COLUMNS;
-  const availableHeight = outputCanvas.height - (sectionSpacing * (VIZ_ROWS + 1));
+  const availableHeight = canvas.height - (sectionSpacing * (VIZ_ROWS + 1));
   const sectionHeight = availableHeight / VIZ_ROWS;
 
   ctx.strokeStyle = 'black';
@@ -248,21 +269,8 @@ function disposeVizData() {
   }
 }
 
-// Setup event listeners for input textboxes
-function setupInputEventListeners() {
-  initVizExamplesDom(); // Ensure DOM is initialized
-  for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
-    const inputElement = inputElements[i];
-    if (inputElement) {
-      inputElement.addEventListener('input', () => {
-        updateVizDataFromTextboxes();
-      });
-    }
-  }
-}
-
 export {
-  initVizExamplesDom,
+  init,
   pickRandomInputs,
   updateVizDataFromTextboxes,
   drawViz,
@@ -270,6 +278,5 @@ export {
   reinitializeModel,
   refreshViz,
   setTrainingData,
-  disposeVizData,
-  setupInputEventListeners
+  disposeVizData
 };

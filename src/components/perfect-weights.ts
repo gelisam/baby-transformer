@@ -1,6 +1,7 @@
 import { INPUT_SIZE, OUTPUT_SIZE } from "../constants.js";
 import { tf, Tensor } from "../tf.js";
 import { Schedule } from "../messageLoop.js";
+import { InitHandler } from "../messages/init.js";
 import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 import { SetModelWeightsMsg } from "../messages/setModelWeights.js";
 import { StopTrainingMsg } from "../messages/training.js";
@@ -9,30 +10,36 @@ import { drawViz } from "./viz-examples.js";
 // Module-local state for DOM elements (initialized on first use)
 let perfectWeightsButton: HTMLButtonElement | null = null;
 let perfectWeightsTooltipText: HTMLSpanElement | null = null;
-let domInitialized = false;
 
 // Module-local state for layer configuration
 let numLayers = 4;
 let neuronsPerLayer = 6;
+
+// Getter functions that check and initialize DOM elements if needed
+function getPerfectWeightsButton(): HTMLButtonElement {
+  if (!perfectWeightsButton) {
+    perfectWeightsButton = document.getElementById('perfect-weights-button') as HTMLButtonElement;
+  }
+  return perfectWeightsButton;
+}
+
+function getPerfectWeightsTooltipText(): HTMLSpanElement {
+  if (!perfectWeightsTooltipText) {
+    perfectWeightsTooltipText = document.getElementById('perfect-weights-tooltip-text') as HTMLSpanElement;
+  }
+  return perfectWeightsTooltipText;
+}
 
 // Forward declaration for event handler
 async function handlePerfectWeightsClick(): Promise<void> {
   await setPerfectWeights();
 }
 
-// Initialize DOM elements by calling document.getElementById directly
-function initPerfectWeightsDom() {
-  if (domInitialized) return;
-  perfectWeightsButton = document.getElementById('perfect-weights-button') as HTMLButtonElement;
-  perfectWeightsTooltipText = document.getElementById('perfect-weights-tooltip-text') as HTMLSpanElement;
-  
-  // Set up event listener
-  if (perfectWeightsButton) {
-    perfectWeightsButton.addEventListener('click', () => handlePerfectWeightsClick());
-  }
-  
-  domInitialized = true;
-}
+// Handler for the Init message - attach event listeners
+const init: InitHandler = (_schedule) => {
+  const button = getPerfectWeightsButton();
+  button.addEventListener('click', () => handlePerfectWeightsClick());
+};
 
 function canUsePerfectWeights(layers: number, neurons: number): { canUse: boolean, reason: string } {
   // The setPerfectWeights function needs to be updated for the new embedding/unembedding architecture
@@ -43,16 +50,17 @@ function canUsePerfectWeights(layers: number, neurons: number): { canUse: boolea
 }
 
 function updatePerfectWeightsButton(): void {
-  if (!perfectWeightsButton || !perfectWeightsTooltipText) return;
+  const button = getPerfectWeightsButton();
+  const tooltipText = getPerfectWeightsTooltipText();
   
   const result = canUsePerfectWeights(numLayers, neuronsPerLayer);
 
-  perfectWeightsButton.disabled = !result.canUse;
+  button.disabled = !result.canUse;
 
   if (!result.canUse) {
-    perfectWeightsTooltipText.textContent = result.reason;
+    tooltipText.textContent = result.reason;
   } else {
-    perfectWeightsTooltipText.textContent = '';
+    tooltipText.textContent = '';
   }
 }
 
@@ -322,7 +330,7 @@ const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, ne
 };
 
 export { 
-  initPerfectWeightsDom,
+  init,
   canUsePerfectWeights, 
   updatePerfectWeightsButton, 
   setPerfectWeights, 
