@@ -239,10 +239,10 @@ async function drawViz(): Promise<void> {
 
 // Implementation for the reinitializeModel message handler
 const reinitializeModel: ReinitializeModelHandler = (_schedule, _newNumLayers, _newNeuronsPerLayer, _newInputFormat) => {
-  // Pick random visualization inputs
-  pickRandomInputs();
-
-  // Visualize the initial (untrained) state
+  // Note: We don't pick random inputs here because training data isn't available yet.
+  // pickRandomInputs() will be called from setTrainingData() after the data is set.
+  
+  // Visualize the initial (untrained) state (will be empty until training data is set)
   drawViz();
 };
 
@@ -255,6 +255,12 @@ const refreshViz: RefreshVizHandler = (_schedule) => {
 const setTrainingData: SetTrainingDataHandler = (_schedule, data) => {
   trainingInputArray = data.inputArray;
   trainingOutputArray = data.outputArray;
+  
+  // Pick random inputs now that training data is available
+  pickRandomInputs();
+  
+  // Draw the visualization with the new inputs
+  drawViz();
 };
 
 // Dispose viz tensors
