@@ -11,6 +11,9 @@ const EMBEDDING_DIM = 3;
 // Input format type - determines how inputs are transformed before the first layer
 type InputFormat = 'number' | 'one-hot' | 'embedding';
 
+// Output format type - determines how outputs are generated and converted to probabilities
+type OutputFormat = 'number' | 'probabilities' | 'embedding';
+
 // Calculate the size after preprocessing based on input format
 function getTransformedInputSize(inputFormat: InputFormat): number {
   const vocabSize = TOKENS.length;
@@ -30,4 +33,4 @@ export {
   EMBEDDING_DIM,
   getTransformedInputSize,
 };
-export type { InputFormat };
+export type { InputFormat, OutputFormat };

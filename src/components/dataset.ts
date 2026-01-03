@@ -81,7 +81,7 @@ import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 
 // Implementation of the reinitializeModel message handler
 // Generates new training data and pushes to other modules via setTrainingData message
-const reinitializeModel: ReinitializeModelHandler = (schedule, _numLayers, _neuronsPerLayer, inputFormat) => {
+const reinitializeModel: ReinitializeModelHandler = (schedule, _numLayers, _neuronsPerLayer, inputFormat, _outputFormat) => {
   const data = generateData(inputFormat);
   schedule({ type: "SetTrainingData", data } as SetTrainingDataMsg);
 };
