@@ -46,14 +46,8 @@ function generateData(inputFormat: InputFormat): TrainingData {
       availableNumbers: number[]
   ) {
     if (n === 0) {
-      for (const letter of allLetters) {
-        if (mapping.has(letter)) {
-          addExample([...sequence, letter, mapping.get(letter)!]);
-        } else {
-          for (const number of availableNumbers) {
-            addExample([...sequence, letter, number]);
-          }
-        }
+      for (const letter of mapping.keys()) {
+        addExample([...sequence, letter, mapping.get(letter)!]);
       }
     } else {
       for (let i = 0; i < availableLetters.length; i++) {
