@@ -34,8 +34,7 @@ function processMessage(schedule: Schedule, msg: Msg): void {
       // 2. Generate new data and push to modules via message (dataset.ts)
       dataset.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
 
-      // 3. Update visualizations (split into three components)
-      vizExamples.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
+      // 3. Update visualizations
       vizArchitecture.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
 
       // 4. Update perfect weights button state (perfect-weights.ts)

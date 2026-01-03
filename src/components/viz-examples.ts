@@ -237,15 +237,6 @@ async function drawViz(): Promise<void> {
   predictionTensor.dispose();
 }
 
-// Implementation for the reinitializeModel message handler
-const reinitializeModel: ReinitializeModelHandler = (_schedule, _newNumLayers, _newNeuronsPerLayer, _newInputFormat) => {
-  // Note: We don't pick random inputs here because training data isn't available yet.
-  // pickRandomInputs() will be called from setTrainingData() after the data is set.
-  
-  // Visualize the initial (untrained) state (will be empty until training data is set)
-  drawViz();
-};
-
 // Implementation for the refreshViz message handler
 const refreshViz: RefreshVizHandler = (_schedule) => {
   drawViz();
@@ -281,7 +272,6 @@ export {
   updateVizDataFromTextboxes,
   drawViz,
   VIZ_EXAMPLES_COUNT,
-  reinitializeModel,
   refreshViz,
   setTrainingData,
   disposeVizData
