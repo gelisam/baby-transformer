@@ -1,4 +1,4 @@
-import type { InputFormat } from "../constants.js";
+import type { InputFormat, OutputFormat } from "../constants.js";
 import { setBackend } from "../tf.js";
 import { InitHandler } from "../messages/init.js";
 import { ReinitializeModelMsg } from "../messages/reinitializeModel.js";
@@ -13,11 +13,13 @@ let numLayersSpan: HTMLSpanElement | null = null;
 let neuronsPerLayerSlider: HTMLInputElement | null = null;
 let neuronsPerLayerSpan: HTMLSpanElement | null = null;
 let inputFormatSelector: HTMLSelectElement | null = null;
+let outputFormatSelector: HTMLSelectElement | null = null;
 
 // Module-local state for layer configuration
 let numLayers = 4;
 let neuronsPerLayer = 6;
 let inputFormat: InputFormat = 'embedding';
+let outputFormat: OutputFormat = 'probabilities';
 
 // Getter functions that check and initialize DOM elements if needed
 function getBackendSelector(): HTMLSelectElement {
@@ -62,6 +64,13 @@ function getInputFormatSelector(): HTMLSelectElement {
   return inputFormatSelector;
 }
 
+function getOutputFormatSelector(): HTMLSelectElement {
+  if (!outputFormatSelector) {
+    outputFormatSelector = document.getElementById('output-format-selector') as HTMLSelectElement;
+  }
+  return outputFormatSelector;
+}
+
 // Helper function to stop training and dispose tensors before reinitializing
 function prepareForReinitialize(): void {
   // Always stop training (safe to call even if not training)
@@ -76,7 +85,7 @@ const init: InitHandler = (_schedule) => {
   selector.addEventListener('change', async () => {
     prepareForReinitialize();
     await setBackend(selector.value);
-    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat, outputFormat } as ReinitializeModelMsg);
   });
   
   const layersSlider = getNumLayersSlider();
@@ -85,7 +94,7 @@ const init: InitHandler = (_schedule) => {
     numLayers = parseInt(layersSlider.value, 10);
     layersValueSpan.textContent = numLayers.toString();
     prepareForReinitialize();
-    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat, outputFormat } as ReinitializeModelMsg);
   });
   
   const neuronsSlider = getNeuronsPerLayerSlider();
@@ -94,14 +103,21 @@ const init: InitHandler = (_schedule) => {
     neuronsPerLayer = parseInt(neuronsSlider.value, 10);
     neuronsValueSpan.textContent = neuronsPerLayer.toString();
     prepareForReinitialize();
-    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat, outputFormat } as ReinitializeModelMsg);
   });
   
   const formatSelector = getInputFormatSelector();
   formatSelector.addEventListener('change', () => {
     inputFormat = formatSelector.value as InputFormat;
     prepareForReinitialize();
-    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat, outputFormat } as ReinitializeModelMsg);
+  });
+  
+  const outFormatSelector = getOutputFormatSelector();
+  outFormatSelector.addEventListener('change', () => {
+    outputFormat = outFormatSelector.value as OutputFormat;
+    prepareForReinitialize();
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat, outputFormat } as ReinitializeModelMsg);
   });
 };
 
@@ -109,7 +125,7 @@ const init: InitHandler = (_schedule) => {
 async function performInitialSetup(): Promise<void> {
   const selector = getBackendSelector();
   await setBackend(selector.value);
-  window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+  window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat, outputFormat } as ReinitializeModelMsg);
 }
 
 export {

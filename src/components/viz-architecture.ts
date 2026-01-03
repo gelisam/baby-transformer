@@ -268,7 +268,7 @@ function drawNetworkArchitecture(): void {
 }
 
 // Implementation for the reinitializeModel message handler
-const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, newNeuronsPerLayer, newInputFormat) => {
+const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, newNeuronsPerLayer, newInputFormat, _newOutputFormat) => {
   numLayers = newNumLayers;
   neuronsPerLayer = newNeuronsPerLayer;
   currentInputFormat = newInputFormat;

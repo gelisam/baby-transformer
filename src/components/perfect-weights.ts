@@ -323,7 +323,7 @@ async function setPerfectWeights(): Promise<void> {
 }
 
 // Implementation for the reinitializeModel message handler
-const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, newNeuronsPerLayer, _inputFormat) => {
+const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, newNeuronsPerLayer, _inputFormat, _outputFormat) => {
   numLayers = newNumLayers;
   neuronsPerLayer = newNeuronsPerLayer;
   updatePerfectWeightsButton();
