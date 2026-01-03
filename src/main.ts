@@ -20,8 +20,6 @@ function processMessage(schedule: Schedule, msg: Msg): void {
   switch (msg.type) {
     case "Init": {
       // Initialize all components that need event listeners attached
-      vizLoss.init(schedule);
-      vizArchitecture.init(schedule);
       vizExamples.init(schedule);
       uiControls.init(schedule);
       perfectWeights.init(schedule);

@@ -1,5 +1,4 @@
 import { Schedule } from "../messageLoop.js";
-import { InitHandler } from "../messages/init.js";
 import { OnEpochCompletedHandler } from "../messages/onEpochCompleted.js";
 import { RefreshVizHandler } from "../messages/refreshViz.js";
 import { getLossHistory } from "./model.js";
@@ -22,11 +21,6 @@ function getStatusElement(): HTMLElement {
   }
   return statusElement;
 }
-
-// Handler for the Init message - no event listeners needed for this component
-const init: InitHandler = (_schedule) => {
-  // DOM elements will be lazily initialized when first accessed
-};
 
 function drawLossCurve(): void {
   const canvas = getLossCanvas();
@@ -81,7 +75,6 @@ function setStatusMessage(message: string) {
 }
 
 export {
-  init,
   drawLossCurve,
   refreshViz,
   onEpochCompleted,

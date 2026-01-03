@@ -5,8 +5,6 @@ import {
   getTransformedInputSize
 } from "../constants.js";
 import type { InputFormat } from "../constants.js";
-import { Schedule } from "../messageLoop.js";
-import { InitHandler } from "../messages/init.js";
 import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 
 // Module-local state for DOM elements (initialized on first use)
@@ -24,11 +22,6 @@ function getNetworkCanvas(): HTMLCanvasElement {
   }
   return networkCanvas;
 }
-
-// Handler for the Init message - no event listeners needed for this component
-const init: InitHandler = (_schedule) => {
-  // DOM element will be lazily initialized when first accessed
-};
 
 function drawNetworkArchitecture(): void {
   const canvas = getNetworkCanvas();
@@ -285,7 +278,6 @@ const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, ne
 };
 
 export {
-  init,
   drawNetworkArchitecture,
   reinitializeModel
 };
