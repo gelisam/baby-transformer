@@ -8,12 +8,13 @@ import {
   NUMBERS,
   LETTERS,
   tokenNumberToIndex,
-  tokenStringToTokenNumber
+  tokenStringToTokenNumber,
+  setVocabSize
 } from "../tokens.js";
 import { TrainingData, SetTrainingDataMsg } from "../messages/setTrainingData.js";
 
 // Pure function: Generate training data for the classification task
-function generateData(inputFormat: InputFormat): TrainingData {
+function generateData(inputFormat: InputFormat, vocabSize: number): TrainingData {
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
   function addExample(sequence: number[]) {
@@ -81,8 +82,9 @@ import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 
 // Implementation of the reinitializeModel message handler
 // Generates new training data and pushes to other modules via setTrainingData message
-const reinitializeModel: ReinitializeModelHandler = (schedule, _numLayers, _neuronsPerLayer, inputFormat) => {
-  const data = generateData(inputFormat);
+const reinitializeModel: ReinitializeModelHandler = (schedule, _numLayers, _neuronsPerLayer, inputFormat, vocabSize) => {
+  setVocabSize(vocabSize);
+  const data = generateData(inputFormat, vocabSize);
   schedule({ type: "SetTrainingData", data } as SetTrainingDataMsg);
 };
 
