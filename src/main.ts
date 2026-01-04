@@ -29,20 +29,20 @@ function processMessage(schedule: Schedule, msg: Msg): void {
     case "ReinitializeModel": {
       const m = msg as ReinitializeModelMsg;
       // 1. First, create a new model (model.ts)
-      model.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
+      model.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat, m.outputFormat);
 
       // 2. Generate new data and push to modules via message (dataset.ts)
-      dataset.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
+      dataset.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat, m.outputFormat);
 
       // 3. Update visualizations
-      vizArchitecture.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
-      vizLoss.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
+      vizArchitecture.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat, m.outputFormat);
+      vizLoss.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat, m.outputFormat);
 
       // 4. Update perfect weights button state (perfect-weights.ts)
-      perfectWeights.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
+      perfectWeights.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat, m.outputFormat);
 
       // 5. Update UI controls state (ui-controls.ts)
-      uiControls.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat);
+      uiControls.reinitializeModel(schedule, m.numLayers, m.neuronsPerLayer, m.inputFormat, m.outputFormat);
 
       // 6. Set ready status
       vizLoss.setStatusMessage('Ready to train!');

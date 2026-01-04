@@ -1,9 +1,11 @@
 import {
   INPUT_SIZE,
-  OUTPUT_SIZE
+  OUTPUT_SIZE,
+  EMBEDDING_DIM
 } from "../constants.js";
-import type { InputFormat } from "../constants.js";
+import type { InputFormat, OutputFormat } from "../constants.js";
 import { tf, Tensor2D } from "../tf.js";
+import { UNEMBEDDING_MATRIX } from "../embeddings.js";
 import {
   NUMBERS,
   TOKENS,
@@ -36,6 +38,68 @@ let vizOutputTensor: Tensor2D | null = null;
 // Module-local state for training data reference (for lookup)
 let trainingInputArray: number[][] = [];
 let trainingOutputArray: number[] = [];
+
+// Module-local state for current output format
+let currentOutputFormat: OutputFormat = 'probabilities';
+
+// Convert a number output to probabilities
+// e.g., 1.5 -> [0, 0.5, 0.5, 0, 0, 0] (50% prob of token 1 (index 1), 50% prob of token 2 (index 2))
+function numberToProbabilities(num: number): number[] {
+  const probabilities = new Array(OUTPUT_SIZE).fill(0);
+  
+  // Clamp the number to valid token range [1, 3] (tokens "1 ", "2 ", "3 ")
+  // These correspond to the first three tokens in TOKENS array
+  const clampedNum = Math.max(1, Math.min(3, num));
+  
+  // Calculate the fractional part
+  const lowerToken = Math.floor(clampedNum);
+  const upperToken = Math.ceil(clampedNum);
+  const fraction = clampedNum - lowerToken;
+  
+  // Ensure indices are within bounds
+  const lowerIndex = lowerToken - 1;
+  const upperIndex = upperToken - 1;
+  
+  if (lowerIndex < 0 || upperIndex >= OUTPUT_SIZE) {
+    // Safety fallback: return uniform distribution
+    return new Array(OUTPUT_SIZE).fill(1.0 / OUTPUT_SIZE);
+  }
+  
+  if (lowerToken === upperToken) {
+    // Exact integer
+    probabilities[lowerIndex] = 1.0;
+  } else {
+    // Between two tokens
+    probabilities[lowerIndex] = 1.0 - fraction;
+    probabilities[upperIndex] = fraction;
+  }
+  
+  return probabilities;
+}
+
+// Convert an embedding output to probabilities via matrix multiplication
+// Uses the transpose of the embedding matrix (unembedding matrix)
+function embeddingToProbabilities(embedding: number[]): number[] {
+  // Matrix multiplication: embedding [1 x EMBEDDING_DIM] * UNEMBEDDING_MATRIX [EMBEDDING_DIM x OUTPUT_SIZE]
+  // Result: [1 x OUTPUT_SIZE]
+  const logits = new Array(OUTPUT_SIZE).fill(0);
+  
+  for (let i = 0; i < OUTPUT_SIZE; i++) {
+    let sum = 0;
+    for (let j = 0; j < EMBEDDING_DIM; j++) {
+      sum += embedding[j] * UNEMBEDDING_MATRIX[j][i];
+    }
+    logits[i] = sum;
+  }
+  
+  // Apply softmax to convert logits to probabilities
+  const maxLogit = Math.max(...logits);
+  const expValues = logits.map(l => Math.exp(l - maxLogit));
+  const sumExp = expValues.reduce((a, b) => a + b, 0);
+  const probabilities = expValues.map(e => e / sumExp);
+  
+  return probabilities;
+}
 
 // Getter functions that check and initialize DOM elements if needed
 function getOutputCanvas(): HTMLCanvasElement {
@@ -186,8 +250,33 @@ async function drawViz(): Promise<void> {
   const canvas = getOutputCanvas();
   const ctx = canvas.getContext('2d')!;
 
-  const predictionTensor = model.predict(vizInputTensor) as Tensor2D;
-  const predictionArray = await predictionTensor.array() as number[][];
+  const rawOutput = model.predict(vizInputTensor) as Tensor2D;
+  const rawOutputArray = await rawOutput.array() as number[][];
+  
+  // Convert raw output to probabilities based on output format
+  let predictionArray: number[][];
+  if (currentOutputFormat === 'probabilities') {
+    predictionArray = rawOutputArray;
+  } else if (currentOutputFormat === 'number') {
+    predictionArray = rawOutputArray.map(output => {
+      // Ensure output has at least one element
+      if (output.length === 0) {
+        // Fallback: uniform distribution
+        return new Array(OUTPUT_SIZE).fill(1.0 / OUTPUT_SIZE);
+      }
+      return numberToProbabilities(output[0]);
+    });
+  } else {
+    // embedding
+    predictionArray = rawOutputArray.map(output => {
+      // Ensure output has the expected dimensionality
+      if (output.length !== EMBEDDING_DIM) {
+        // Fallback: uniform distribution
+        return new Array(OUTPUT_SIZE).fill(1.0 / OUTPUT_SIZE);
+      }
+      return embeddingToProbabilities(output);
+    });
+  }
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -234,7 +323,7 @@ async function drawViz(): Promise<void> {
     }
   }
 
-  predictionTensor.dispose();
+  rawOutput.dispose();
 }
 
 // Implementation for the refreshViz message handler

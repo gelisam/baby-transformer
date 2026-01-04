@@ -1,5 +1,5 @@
 import { OUTPUT_SIZE, EPOCHS_PER_BATCH, INPUT_SIZE, EMBEDDING_DIM, getTransformedInputSize } from "../constants.js";
-import type { InputFormat } from "../constants.js";
+import type { InputFormat, OutputFormat } from "../constants.js";
 import { EMBEDDING_MATRIX, UNEMBEDDING_MATRIX } from "../embeddings.js";
 import { TOKENS } from "../tokens.js";
 import { tf, Sequential, Tensor2D } from "../tf.js";
@@ -18,8 +18,9 @@ let currentEpoch = 0;
 let lossHistory: { epoch: number; loss: number }[] = [];
 let trainingInputTensor: Tensor2D | null = null;
 let trainingOutputTensor: Tensor2D | null = null;
+let currentOutputFormat: OutputFormat = 'probabilities';
 
-function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: InputFormat): Sequential {
+function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: InputFormat, outputFormat: OutputFormat): Sequential {
   const newModel = tf.sequential();
   const vocabSize = TOKENS.length; // 6 tokens
   
@@ -57,11 +58,26 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
   const preLayerSize = getTransformedInputSize(inputFormat);
 
   if (numLayers === 0) {
-    newModel.add(tf.layers.dense({
-      units: EMBEDDING_DIM,
-      inputShape: inputFormat === 'number' ? [preLayerSize] : undefined,
-      activation: 'linear'
-    }));
+    if (outputFormat === 'number') {
+      newModel.add(tf.layers.dense({
+        units: 1,
+        inputShape: inputFormat === 'number' ? [preLayerSize] : undefined,
+        activation: 'linear'
+      }));
+    } else if (outputFormat === 'embedding') {
+      newModel.add(tf.layers.dense({
+        units: EMBEDDING_DIM,
+        inputShape: inputFormat === 'number' ? [preLayerSize] : undefined,
+        activation: 'linear'
+      }));
+    } else {
+      // probabilities
+      newModel.add(tf.layers.dense({
+        units: EMBEDDING_DIM,
+        inputShape: inputFormat === 'number' ? [preLayerSize] : undefined,
+        activation: 'linear'
+      }));
+    }
   } else {
     newModel.add(tf.layers.dense({
       units: neuronsPerLayer,
@@ -77,24 +93,41 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
       }));
     }
 
-    newModel.add(tf.layers.dense({
-      units: EMBEDDING_DIM,
-      activation: 'linear'
-    }));
+    if (outputFormat === 'number') {
+      newModel.add(tf.layers.dense({
+        units: 1,
+        activation: 'linear'
+      }));
+    } else if (outputFormat === 'embedding') {
+      newModel.add(tf.layers.dense({
+        units: EMBEDDING_DIM,
+        activation: 'linear'
+      }));
+    } else {
+      // probabilities
+      newModel.add(tf.layers.dense({
+        units: EMBEDDING_DIM,
+        activation: 'linear'
+      }));
+    }
   }
 
-  const unembeddingWeights = tf.tensor2d(UNEMBEDDING_MATRIX);
-  const unembeddingBias = tf.zeros([OUTPUT_SIZE]);
+  // Add final layer based on output format
+  if (outputFormat === 'probabilities') {
+    const unembeddingWeights = tf.tensor2d(UNEMBEDDING_MATRIX);
+    const unembeddingBias = tf.zeros([OUTPUT_SIZE]);
 
-  newModel.add(tf.layers.dense({
-    units: OUTPUT_SIZE,
-    activation: 'softmax',
-    weights: [unembeddingWeights, unembeddingBias],
-    trainable: true
-  }));
+    newModel.add(tf.layers.dense({
+      units: OUTPUT_SIZE,
+      activation: 'softmax',
+      weights: [unembeddingWeights, unembeddingBias],
+      trainable: true
+    }));
 
-  unembeddingWeights.dispose();
-  unembeddingBias.dispose();
+    unembeddingWeights.dispose();
+    unembeddingBias.dispose();
+  }
+  // For 'number' and 'embedding' formats, no final layer is needed
 
   newModel.compile({
     loss: 'categoricalCrossentropy',
@@ -132,17 +165,23 @@ async function trainingStep() {
 }
 
 // Implementation for the reinitializeModel message handler
-const reinitializeModel: ReinitializeModelHandler = (_schedule, numLayers, neuronsPerLayer, inputFormat) => {
+const reinitializeModel: ReinitializeModelHandler = (_schedule, numLayers, neuronsPerLayer, inputFormat, outputFormat) => {
   // Create a new model
   if (model) {
     model.dispose();
   }
-  model = createModel(numLayers, neuronsPerLayer, inputFormat);
+  model = createModel(numLayers, neuronsPerLayer, inputFormat, outputFormat);
+  currentOutputFormat = outputFormat;
   
   // Reset training state
   currentEpoch = 0;
   lossHistory = [];
 };
+
+// Getter for current output format
+function getOutputFormat(): OutputFormat {
+  return currentOutputFormat;
+}
 
 // Implementation for the startTraining message handler
 const startTraining: StartTrainingHandler = (_schedule) => {
@@ -201,6 +240,7 @@ export {
   setTrainingData,
   setModelWeights,
   getModel,
+  getOutputFormat,
   getLossHistory,
   getCurrentEpoch,
   disposeTrainingData

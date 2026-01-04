@@ -138,6 +138,14 @@
         <option value="embedding" selected>embedding (e.g. [-0.5,10,-sqrt(3)/2])</option>
       </select>
     </div>
+    <div style="margin-bottom: 10px;">
+      <label for="output-format-selector">Output Format: </label>
+      <select id="output-format-selector">
+        <option value="number">number (e.g. 1.5)</option>
+        <option value="probabilities" selected>probabilities (e.g. [0.33,0.33,0.34,0,0,0])</option>
+        <option value="embedding">embedding (e.g. [10,-0.5,-sqrt(3)/2])</option>
+      </select>
+    </div>
     <div id="inputs-container" style="margin-bottom: 15px;">
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 600px;">
             <input type="text" id="input-0" class="sequence-input" style="padding: 5px; font-family: monospace;">
