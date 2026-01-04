@@ -21,8 +21,8 @@ function getTables(vocabSize: number): TokenTables {
   }
   
   // Generate new tables
-  const shortNumbers: string[] = [];
-  const shortLetters: string[] = [];
+  const /*mut*/ shortNumbers: string[] = [];
+  const /*mut*/ shortLetters: string[] = [];
   
   for (let i = 1; i <= vocabSize; i++) {
     shortNumbers.push(i.toString());
@@ -37,7 +37,7 @@ function getTables(vocabSize: number): TokenTables {
   const letters = shortLetters.map(l => l + "=");
   const tokens = [...numbers, ...letters];
   
-  const tokenStringToIndex: { [key: string]: number } = {};
+  const /*mut*/ tokenStringToIndex: { [key: string]: number } = {};
   for (let i = 0; i < tokens.length; i++) {
     tokenStringToIndex[tokens[i]] = i;
   }
