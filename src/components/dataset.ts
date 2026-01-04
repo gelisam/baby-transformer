@@ -7,8 +7,8 @@ import {
   getTokenCount,
   getNumberCount,
   getLetterCount,
-  getNumberAtIndex,
-  getLetterAtIndex,
+  numberIndexToTokenNumber,
+  letterIndexToTokenNumber,
   tokenNumberToIndex,
   tokenStringToTokenNumber,
 } from "../tokens.js";
@@ -45,14 +45,12 @@ function generateData(inputFormat: InputFormat, vocabSize: number): TrainingData
   // Build arrays of all letters and numbers as token numbers
   const allLetters: number[] = [];
   for (let i = 0; i < letterCount; i++) {
-    const letter = getLetterAtIndex(vocabSize, i);
-    allLetters.push(tokenStringToTokenNumber(vocabSize, letter));
+    allLetters.push(letterIndexToTokenNumber(vocabSize, i));
   }
   
   const allNumbers: number[] = [];
   for (let i = 0; i < numberCount; i++) {
-    const number = getNumberAtIndex(vocabSize, i);
-    allNumbers.push(tokenStringToTokenNumber(vocabSize, number));
+    allNumbers.push(numberIndexToTokenNumber(i));
   }
   function generate(
       n: number, // number of examples to generate before the final pair

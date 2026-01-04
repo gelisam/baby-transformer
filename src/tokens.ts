@@ -90,6 +90,18 @@ function getLetterAtIndex(vocabSize: number, index: number): string {
   return getTables(vocabSize).letters[index];
 }
 
+function numberIndexToTokenNumber(numberIndex: number): number {
+  // Numbers are at indices 0 to vocabSize-1
+  // Token numbers are indices + 1
+  return numberIndex + 1;
+}
+
+function letterIndexToTokenNumber(vocabSize: number, letterIndex: number): number {
+  // Letters are at indices vocabSize to (2*vocabSize-1)
+  // Token numbers are indices + 1
+  return vocabSize + letterIndex + 1;
+}
+
 function indexToTokenNumber(index: number): number {
   return index + 1;
 }
@@ -130,6 +142,8 @@ export {
   getTokenAtIndex,
   getNumberAtIndex,
   getLetterAtIndex,
+  numberIndexToTokenNumber,
+  letterIndexToTokenNumber,
   indexToTokenNumber,
   indexToShortTokenString,
   indexToTokenString,
