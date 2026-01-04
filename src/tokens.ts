@@ -1,5 +1,29 @@
-// Generate tokens based on vocabulary size
-function generateTokens(vocabSize: number) {
+// Token tables for a given vocabulary size
+type TokenTables = {
+  shortNumbers: string[];
+  shortLetters: string[];
+  shortTokens: string[];
+  numbers: string[];
+  letters: string[];
+  tokens: string[];
+  tokenStringToIndex: { [key: string]: number };
+};
+
+// Cache for token tables keyed by vocabulary size
+// Using `const /*mut*/` to convey that while the reference never changes,
+// the contents of the Map will be mutated over time (see AGENTS.md)
+const /*mut*/ tablesCache: Map<number, TokenTables> = new Map();
+
+// Private function to get or create token tables for a given vocabulary size
+// This function caches results to avoid recreating tables for the same vocabSize
+function getTables(vocabSize: number): TokenTables {
+  // Check cache first
+  const cached = tablesCache.get(vocabSize);
+  if (cached) {
+    return cached;
+  }
+  
+  // Generate new tables
   const shortNumbers: string[] = [];
   const shortLetters: string[] = [];
   
@@ -21,78 +45,72 @@ function generateTokens(vocabSize: number) {
     tokenStringToIndex[tokens[i]] = i;
   }
   
-  return { 
-    SHORT_NUMBERS: shortNumbers, 
-    SHORT_LETTERS: shortLetters, 
-    SHORT_TOKENS: shortTokens, 
-    NUMBERS: numbers, 
-    LETTERS: letters, 
-    TOKENS: tokens, 
-    TOKEN_STRING_TO_INDEX: tokenStringToIndex 
+  const tables: TokenTables = {
+    shortNumbers,
+    shortLetters,
+    shortTokens,
+    numbers,
+    letters,
+    tokens,
+    tokenStringToIndex
   };
+  
+  // Cache the result
+  tablesCache.set(vocabSize, tables);
+  
+  return tables;
 }
 
-// Default vocabulary size
-let currentVocabSize = 3;
-let tokenData = generateTokens(currentVocabSize);
+// Pure function exports - all take vocabSize as first parameter
 
-let SHORT_NUMBERS = tokenData.SHORT_NUMBERS;
-let SHORT_LETTERS = tokenData.SHORT_LETTERS;
-let SHORT_TOKENS = tokenData.SHORT_TOKENS;
-let NUMBERS = tokenData.NUMBERS;
-let LETTERS = tokenData.LETTERS;
-let TOKENS = tokenData.TOKENS;
-let TOKEN_STRING_TO_INDEX = tokenData.TOKEN_STRING_TO_INDEX;
+function getNumbers(vocabSize: number): string[] {
+  return getTables(vocabSize).numbers;
+}
 
-// Function to update tokens when vocabulary size changes
-function setVocabSize(vocabSize: number): void {
-  currentVocabSize = vocabSize;
-  tokenData = generateTokens(vocabSize);
-  SHORT_NUMBERS = tokenData.SHORT_NUMBERS;
-  SHORT_LETTERS = tokenData.SHORT_LETTERS;
-  SHORT_TOKENS = tokenData.SHORT_TOKENS;
-  NUMBERS = tokenData.NUMBERS;
-  LETTERS = tokenData.LETTERS;
-  TOKENS = tokenData.TOKENS;
-  TOKEN_STRING_TO_INDEX = tokenData.TOKEN_STRING_TO_INDEX;
+function getLetters(vocabSize: number): string[] {
+  return getTables(vocabSize).letters;
+}
+
+function getTokens(vocabSize: number): string[] {
+  return getTables(vocabSize).tokens;
 }
 
 function indexToTokenNumber(index: number): number {
   return index + 1;
 }
 
-function indexToShortTokenString(index: number): string {
-  return SHORT_TOKENS[index];
+function indexToShortTokenString(vocabSize: number, index: number): string {
+  return getTables(vocabSize).shortTokens[index];
 }
 
-function indexToTokenString(index: number): string {
-  return TOKENS[index];
+function indexToTokenString(vocabSize: number, index: number): string {
+  return getTables(vocabSize).tokens[index];
 }
 
 function tokenNumberToIndex(tokenNum: number): number {
   return tokenNum - 1;
 }
 
-function tokenNumberToShortTokenString(tokenNum: number): string {
-  return SHORT_TOKENS[tokenNum - 1];
+function tokenNumberToShortTokenString(vocabSize: number, tokenNum: number): string {
+  return getTables(vocabSize).shortTokens[tokenNum - 1];
 }
 
-function tokenNumberToTokenString(tokenNum: number): string {
-  return TOKENS[tokenNum - 1];
+function tokenNumberToTokenString(vocabSize: number, tokenNum: number): string {
+  return getTables(vocabSize).tokens[tokenNum - 1];
 }
 
-function tokenStringToIndex(token: string): number {
-  return TOKEN_STRING_TO_INDEX[token];
+function tokenStringToIndex(vocabSize: number, token: string): number {
+  return getTables(vocabSize).tokenStringToIndex[token];
 }
 
-function tokenStringToTokenNumber(token: string): number {
-  return TOKEN_STRING_TO_INDEX[token] + 1;
+function tokenStringToTokenNumber(vocabSize: number, token: string): number {
+  return getTables(vocabSize).tokenStringToIndex[token] + 1;
 }
 
 export {
-  NUMBERS,
-  LETTERS,
-  TOKENS,
+  getNumbers,
+  getLetters,
+  getTokens,
   indexToTokenNumber,
   indexToShortTokenString,
   indexToTokenString,
@@ -101,5 +119,4 @@ export {
   tokenNumberToTokenString,
   tokenStringToIndex,
   tokenStringToTokenNumber,
-  setVocabSize,
 };

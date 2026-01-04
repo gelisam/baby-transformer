@@ -1,20 +1,22 @@
 import {
   INPUT_SIZE,
-  OUTPUT_SIZE,
 } from "../constants.js";
 import type { InputFormat } from "../constants.js";
 import { tf, Tensor2D } from "../tf.js";
 import {
-  NUMBERS,
-  LETTERS,
+  getNumbers,
+  getLetters,
   tokenNumberToIndex,
   tokenStringToTokenNumber,
-  setVocabSize
 } from "../tokens.js";
 import { TrainingData, SetTrainingDataMsg } from "../messages/setTrainingData.js";
 
 // Pure function: Generate training data for the classification task
 function generateData(inputFormat: InputFormat, vocabSize: number): TrainingData {
+  const numbers = getNumbers(vocabSize);
+  const letters = getLetters(vocabSize);
+  const outputSize = vocabSize * 2; // numbers + letters
+  
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
   function addExample(sequence: number[]) {
@@ -37,8 +39,8 @@ function generateData(inputFormat: InputFormat, vocabSize: number): TrainingData
     return newMapping;
   }
 
-  const allLetters = LETTERS.map(tokenStringToTokenNumber);
-  const allNumbers = NUMBERS.map(tokenStringToTokenNumber);
+  const allLetters = letters.map(l => tokenStringToTokenNumber(vocabSize, l));
+  const allNumbers = numbers.map(n => tokenStringToTokenNumber(vocabSize, n));
   function generate(
       n: number, // number of examples to generate before the final pair
       sequence: number[],
@@ -73,7 +75,7 @@ function generateData(inputFormat: InputFormat, vocabSize: number): TrainingData
   const inputIndicesArray = inputArray.map(input => input.map(tokenNumberToIndex));
 
   const inputTensor = tf.tensor2d(inputIndicesArray, [numExamples, INPUT_SIZE]);
-  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
+  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), outputSize) as Tensor2D;
 
   return { inputArray, outputArray, inputTensor, outputTensor };
 }
@@ -83,7 +85,6 @@ import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 // Implementation of the reinitializeModel message handler
 // Generates new training data and pushes to other modules via setTrainingData message
 const reinitializeModel: ReinitializeModelHandler = (schedule, _numLayers, _neuronsPerLayer, inputFormat, vocabSize) => {
-  setVocabSize(vocabSize);
   const data = generateData(inputFormat, vocabSize);
   schedule({ type: "SetTrainingData", data } as SetTrainingDataMsg);
 };

@@ -1,7 +1,6 @@
-import { OUTPUT_SIZE, EPOCHS_PER_BATCH, INPUT_SIZE, EMBEDDING_DIM, getTransformedInputSize } from "../constants.js";
+import { EPOCHS_PER_BATCH, INPUT_SIZE, EMBEDDING_DIM, getOutputSize, getTransformedInputSize } from "../constants.js";
 import type { InputFormat } from "../constants.js";
 import { EMBEDDING_MATRIX, UNEMBEDDING_MATRIX } from "../embeddings.js";
-import { TOKENS } from "../tokens.js";
 import { tf, Sequential, Tensor2D } from "../tf.js";
 import { Schedule } from "../messageLoop.js";
 import { OnEpochCompletedMsg } from "../messages/onEpochCompleted.js";
@@ -19,9 +18,9 @@ let lossHistory: { epoch: number; loss: number }[] = [];
 let trainingInputTensor: Tensor2D | null = null;
 let trainingOutputTensor: Tensor2D | null = null;
 
-function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: InputFormat): Sequential {
+function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: InputFormat, vocabSize: number): Sequential {
   const newModel = tf.sequential();
-  const vocabSize = TOKENS.length; // 6 tokens
+  const outputSize = getOutputSize(vocabSize);
   
   // Add preprocessing layer based on input format
   // Input is always [batchSize, INPUT_SIZE] with token indices (0-5)
@@ -30,7 +29,7 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
     // Then flatten to get [batchSize, INPUT_SIZE * EMBEDDING_DIM]
     const embeddingWeights = tf.tensor2d(EMBEDDING_MATRIX); // [vocabSize, EMBEDDING_DIM]
     newModel.add(tf.layers.embedding({
-      inputDim: vocabSize,
+      inputDim: vocabSize * 2,
       outputDim: EMBEDDING_DIM,
       inputLength: INPUT_SIZE,
       weights: [embeddingWeights],
@@ -41,10 +40,10 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
   } else if (inputFormat === 'one-hot') {
     // One-hot encoding via embedding layer with identity matrix
     // Then flatten to get [batchSize, INPUT_SIZE * vocabSize]
-    const oneHotWeights = tf.eye(vocabSize);
+    const oneHotWeights = tf.eye(vocabSize * 2);
     newModel.add(tf.layers.embedding({
-      inputDim: vocabSize,
-      outputDim: vocabSize,
+      inputDim: vocabSize * 2,
+      outputDim: vocabSize * 2,
       inputLength: INPUT_SIZE,
       weights: [oneHotWeights],
       trainable: false
@@ -54,7 +53,7 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
   }
   // For 'number' format, no preprocessing layer - input is used directly
   
-  const preLayerSize = getTransformedInputSize(inputFormat);
+  const preLayerSize = getTransformedInputSize(inputFormat, vocabSize);
 
   if (numLayers === 0) {
     newModel.add(tf.layers.dense({
@@ -84,10 +83,10 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
   }
 
   const unembeddingWeights = tf.tensor2d(UNEMBEDDING_MATRIX);
-  const unembeddingBias = tf.zeros([OUTPUT_SIZE]);
+  const unembeddingBias = tf.zeros([outputSize]);
 
   newModel.add(tf.layers.dense({
-    units: OUTPUT_SIZE,
+    units: outputSize,
     activation: 'softmax',
     weights: [unembeddingWeights, unembeddingBias],
     trainable: true
@@ -132,12 +131,12 @@ async function trainingStep() {
 }
 
 // Implementation for the reinitializeModel message handler
-const reinitializeModel: ReinitializeModelHandler = (_schedule, numLayers, neuronsPerLayer, inputFormat, _vocabSize) => {
+const reinitializeModel: ReinitializeModelHandler = (_schedule, numLayers, neuronsPerLayer, inputFormat, vocabSize) => {
   // Create a new model
   if (model) {
     model.dispose();
   }
-  model = createModel(numLayers, neuronsPerLayer, inputFormat);
+  model = createModel(numLayers, neuronsPerLayer, inputFormat, vocabSize);
   
   // Reset training state
   currentEpoch = 0;

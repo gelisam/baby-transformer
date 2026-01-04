@@ -1,7 +1,7 @@
 import {
   INPUT_SIZE,
-  OUTPUT_SIZE,
   EMBEDDING_DIM,
+  getOutputSize,
   getTransformedInputSize
 } from "../constants.js";
 import type { InputFormat } from "../constants.js";
@@ -14,6 +14,7 @@ let networkCanvas: HTMLCanvasElement | null = null;
 let numLayers = 4;
 let neuronsPerLayer = 6;
 let currentInputFormat: InputFormat = 'embedding';
+let currentVocabSize = 3;
 
 // Getter function that checks and initializes DOM element if needed
 function getNetworkCanvas(): HTMLCanvasElement {
@@ -29,7 +30,7 @@ function drawNetworkArchitecture(): void {
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const transformedInputSize = getTransformedInputSize(currentInputFormat);
+  const transformedInputSize = getTransformedInputSize(currentInputFormat, currentVocabSize);
   
   // Build layers array based on current input format
   // For embedding format: input -> embedding preprocessing -> ReLU layers -> linear -> softmax
@@ -38,7 +39,7 @@ function drawNetworkArchitecture(): void {
   const inputLayer = INPUT_SIZE;
   const hiddenLayers = Array(numLayers).fill(neuronsPerLayer);
   const linearLayer = EMBEDDING_DIM;
-  const outputLayer = OUTPUT_SIZE;
+  const outputLayer = getOutputSize(currentVocabSize);
   
   // Build layers with optional preprocessing layer
   let layers: number[];
@@ -268,10 +269,11 @@ function drawNetworkArchitecture(): void {
 }
 
 // Implementation for the reinitializeModel message handler
-const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, newNeuronsPerLayer, newInputFormat, _vocabSize) => {
+const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, newNeuronsPerLayer, newInputFormat, vocabSize) => {
   numLayers = newNumLayers;
   neuronsPerLayer = newNeuronsPerLayer;
   currentInputFormat = newInputFormat;
+  currentVocabSize = vocabSize;
   
   // Redraw the architecture in case it changed
   drawNetworkArchitecture();
