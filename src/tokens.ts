@@ -1,27 +1,35 @@
 // Generate tokens based on vocabulary size
 function generateTokens(vocabSize: number) {
-  const SHORT_NUMBERS: string[] = [];
-  const SHORT_LETTERS: string[] = [];
+  const shortNumbers: string[] = [];
+  const shortLetters: string[] = [];
   
   for (let i = 1; i <= vocabSize; i++) {
-    SHORT_NUMBERS.push(i.toString());
+    shortNumbers.push(i.toString());
   }
   
   for (let i = 0; i < vocabSize; i++) {
-    SHORT_LETTERS.push(String.fromCharCode(65 + i)); // 65 is 'A'
+    shortLetters.push(String.fromCharCode(65 + i)); // 65 is 'A'
   }
   
-  const SHORT_TOKENS = [...SHORT_NUMBERS, ...SHORT_LETTERS];
-  const NUMBERS = SHORT_NUMBERS.map(n => n + " ");
-  const LETTERS = SHORT_LETTERS.map(l => l + "=");
-  const TOKENS = [...NUMBERS, ...LETTERS];
+  const shortTokens = [...shortNumbers, ...shortLetters];
+  const numbers = shortNumbers.map(n => n + " ");
+  const letters = shortLetters.map(l => l + "=");
+  const tokens = [...numbers, ...letters];
   
-  const TOKEN_STRING_TO_INDEX: { [key: string]: number } = {};
-  for (let i = 0; i < TOKENS.length; i++) {
-    TOKEN_STRING_TO_INDEX[TOKENS[i]] = i;
+  const tokenStringToIndex: { [key: string]: number } = {};
+  for (let i = 0; i < tokens.length; i++) {
+    tokenStringToIndex[tokens[i]] = i;
   }
   
-  return { SHORT_NUMBERS, SHORT_LETTERS, SHORT_TOKENS, NUMBERS, LETTERS, TOKENS, TOKEN_STRING_TO_INDEX };
+  return { 
+    SHORT_NUMBERS: shortNumbers, 
+    SHORT_LETTERS: shortLetters, 
+    SHORT_TOKENS: shortTokens, 
+    NUMBERS: numbers, 
+    LETTERS: letters, 
+    TOKENS: tokens, 
+    TOKEN_STRING_TO_INDEX: tokenStringToIndex 
+  };
 }
 
 // Default vocabulary size
