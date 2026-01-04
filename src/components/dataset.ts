@@ -4,6 +4,7 @@ import {
 import type { InputFormat } from "../inputFormat.js";
 import { tf, Tensor2D } from "../tf.js";
 import {
+  getTokenCount,
   getNumberCount,
   getLetterCount,
   getNumberAtIndex,
@@ -17,7 +18,7 @@ import { TrainingData, SetTrainingDataMsg } from "../messages/setTrainingData.js
 function generateData(inputFormat: InputFormat, vocabSize: number): TrainingData {
   const numberCount = getNumberCount(vocabSize);
   const letterCount = getLetterCount(vocabSize);
-  const outputSize = vocabSize * 2; // numbers + letters
+  const outputSize = getTokenCount(vocabSize);
   
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
