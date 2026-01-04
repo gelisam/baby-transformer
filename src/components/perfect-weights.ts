@@ -1,4 +1,5 @@
-import { INPUT_SIZE, getOutputSize } from "../tokens.js";
+import { INPUT_SIZE } from "../inputFormat.js";
+import { getOutputSize } from "../tokens.js";
 import { tf, Tensor } from "../tf.js";
 import { Schedule } from "../messageLoop.js";
 import { InitHandler } from "../messages/init.js";

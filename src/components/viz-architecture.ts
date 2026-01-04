@@ -1,10 +1,10 @@
 import {
   INPUT_SIZE,
-  EMBEDDING_DIM,
-  getOutputSize,
   getTransformedInputSize
-} from "../tokens.js";
-import type { InputFormat } from "../tokens.js";
+} from "../inputFormat.js";
+import type { InputFormat } from "../inputFormat.js";
+import { EMBEDDING_DIM } from "../embeddings.js";
+import { getOutputSize } from "../tokens.js";
 import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 
 // Module-local state for DOM elements (initialized on first use)
