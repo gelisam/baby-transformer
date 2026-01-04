@@ -4,8 +4,10 @@ import {
 import type { InputFormat } from "../constants.js";
 import { tf, Tensor2D } from "../tf.js";
 import {
-  getNumbers,
-  getLetters,
+  getNumberCount,
+  getLetterCount,
+  getNumberAtIndex,
+  getLetterAtIndex,
   tokenNumberToIndex,
   tokenStringToTokenNumber,
 } from "../tokens.js";
@@ -13,8 +15,8 @@ import { TrainingData, SetTrainingDataMsg } from "../messages/setTrainingData.js
 
 // Pure function: Generate training data for the classification task
 function generateData(inputFormat: InputFormat, vocabSize: number): TrainingData {
-  const numbers = getNumbers(vocabSize);
-  const letters = getLetters(vocabSize);
+  const numberCount = getNumberCount(vocabSize);
+  const letterCount = getLetterCount(vocabSize);
   const outputSize = vocabSize * 2; // numbers + letters
   
   const inputArray: number[][] = [];
@@ -39,8 +41,18 @@ function generateData(inputFormat: InputFormat, vocabSize: number): TrainingData
     return newMapping;
   }
 
-  const allLetters = letters.map(l => tokenStringToTokenNumber(vocabSize, l));
-  const allNumbers = numbers.map(n => tokenStringToTokenNumber(vocabSize, n));
+  // Build arrays of all letters and numbers as token numbers
+  const allLetters: number[] = [];
+  for (let i = 0; i < letterCount; i++) {
+    const letter = getLetterAtIndex(vocabSize, i);
+    allLetters.push(tokenStringToTokenNumber(vocabSize, letter));
+  }
+  
+  const allNumbers: number[] = [];
+  for (let i = 0; i < numberCount; i++) {
+    const number = getNumberAtIndex(vocabSize, i);
+    allNumbers.push(tokenStringToTokenNumber(vocabSize, number));
+  }
   function generate(
       n: number, // number of examples to generate before the final pair
       sequence: number[],

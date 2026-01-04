@@ -61,16 +61,28 @@ function getTables(vocabSize: number): TokenTables {
 
 // Pure function exports - all take vocabSize as first parameter
 
-function getNumbers(vocabSize: number): string[] {
-  return getTables(vocabSize).numbers;
+function getTokenCount(vocabSize: number): number {
+  return vocabSize * 2; // vocabSize numbers + vocabSize letters
 }
 
-function getLetters(vocabSize: number): string[] {
-  return getTables(vocabSize).letters;
+function getNumberCount(vocabSize: number): number {
+  return vocabSize;
 }
 
-function getTokens(vocabSize: number): string[] {
-  return getTables(vocabSize).tokens;
+function getLetterCount(vocabSize: number): number {
+  return vocabSize;
+}
+
+function getTokenAtIndex(vocabSize: number, index: number): string {
+  return getTables(vocabSize).tokens[index];
+}
+
+function getNumberAtIndex(vocabSize: number, index: number): string {
+  return getTables(vocabSize).numbers[index];
+}
+
+function getLetterAtIndex(vocabSize: number, index: number): string {
+  return getTables(vocabSize).letters[index];
 }
 
 function indexToTokenNumber(index: number): number {
@@ -106,9 +118,12 @@ function tokenStringToTokenNumber(vocabSize: number, token: string): number {
 }
 
 export {
-  getNumbers,
-  getLetters,
-  getTokens,
+  getTokenCount,
+  getNumberCount,
+  getLetterCount,
+  getTokenAtIndex,
+  getNumberAtIndex,
+  getLetterAtIndex,
   indexToTokenNumber,
   indexToShortTokenString,
   indexToTokenString,

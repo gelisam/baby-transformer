@@ -4,8 +4,9 @@ import {
 import type { InputFormat } from "../constants.js";
 import { tf, Tensor2D } from "../tf.js";
 import {
-  getNumbers,
-  getTokens,
+  getTokenCount,
+  getTokenAtIndex,
+  getNumberAtIndex,
   indexToShortTokenString,
   tokenNumberToIndex,
   tokenNumberToTokenString,
@@ -112,12 +113,13 @@ function pickRandomInputs(): void {
 function parseInputString(inputStr: string): number[] | null {
   const tokens: number[] = [];
   let i = 0;
-  const allTokens = getTokens(currentVocabSize);
+  const tokenCount = getTokenCount(currentVocabSize);
 
   while (i < inputStr.length) {
     let matched = false;
 
-    for (const token of allTokens) {
+    for (let tokenIndex = 0; tokenIndex < tokenCount; tokenIndex++) {
+      const token = getTokenAtIndex(currentVocabSize, tokenIndex);
       if (inputStr.substring(i, i + token.length) === token) {
         tokens.push(tokenStringToTokenNumber(currentVocabSize, token));
         i += token.length;
@@ -138,7 +140,7 @@ function updateVizDataFromTextboxes(): void {
   const elements = getInputElements();
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
-  const numbers = getNumbers(currentVocabSize);
+  const firstNumber = getNumberAtIndex(currentVocabSize, 0);
 
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
     const inputElement = elements[i];
@@ -152,7 +154,7 @@ function updateVizDataFromTextboxes(): void {
         if (matchingIndex >= 0) {
           outputArray.push(trainingOutputArray[matchingIndex]);
         } else {
-          outputArray.push(tokenStringToTokenNumber(currentVocabSize, numbers[0]));
+          outputArray.push(tokenStringToTokenNumber(currentVocabSize, firstNumber));
         }
       } else {
         if (vizInputArray[i]) {
