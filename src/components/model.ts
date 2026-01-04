@@ -1,4 +1,3 @@
-import { EPOCHS_PER_BATCH } from "../constants.js";
 import { INPUT_SIZE, getTransformedInputSize } from "../inputFormat.js";
 import type { InputFormat } from "../inputFormat.js";
 import { EMBEDDING_DIM, EMBEDDING_MATRIX, UNEMBEDDING_MATRIX } from "../embeddings.js";
@@ -11,6 +10,8 @@ import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 import { SetModelWeightsHandler } from "../messages/setModelWeights.js";
 import { SetTrainingDataHandler } from "../messages/setTrainingData.js";
 import { StartTrainingHandler, StopTrainingHandler } from "../messages/training.js";
+
+const EPOCHS_PER_BATCH = 1;
 
 // Module-local state
 let model: Sequential | null = null;
