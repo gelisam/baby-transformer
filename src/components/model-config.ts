@@ -1,4 +1,4 @@
-import type { InputFormat } from "../constants.js";
+import type { InputFormat } from "../tokens.js";
 import { setBackend } from "../tf.js";
 import { InitHandler } from "../messages/init.js";
 import { ReinitializeModelMsg } from "../messages/reinitializeModel.js";

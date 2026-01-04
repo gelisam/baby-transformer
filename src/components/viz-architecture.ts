@@ -3,8 +3,8 @@ import {
   EMBEDDING_DIM,
   getOutputSize,
   getTransformedInputSize
-} from "../constants.js";
-import type { InputFormat } from "../constants.js";
+} from "../tokens.js";
+import type { InputFormat } from "../tokens.js";
 import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 
 // Module-local state for DOM elements (initialized on first use)

@@ -14,7 +14,7 @@
  */
 
 import { Schedule } from "../messageLoop.js";
-import type { InputFormat } from "../constants.js";
+import type { InputFormat } from "../tokens.js";
 
 // Message type for reinitialize model
 export type ReinitializeModelMsg = {

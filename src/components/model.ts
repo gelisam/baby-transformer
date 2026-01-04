@@ -1,5 +1,6 @@
-import { EPOCHS_PER_BATCH, INPUT_SIZE, EMBEDDING_DIM, getOutputSize, getTransformedInputSize } from "../constants.js";
-import type { InputFormat } from "../constants.js";
+import { EPOCHS_PER_BATCH } from "../constants.js";
+import { INPUT_SIZE, EMBEDDING_DIM, getOutputSize, getTransformedInputSize } from "../tokens.js";
+import type { InputFormat } from "../tokens.js";
 import { EMBEDDING_MATRIX, UNEMBEDDING_MATRIX } from "../embeddings.js";
 import { tf, Sequential, Tensor2D } from "../tf.js";
 import { Schedule } from "../messageLoop.js";

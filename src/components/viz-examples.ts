@@ -1,7 +1,7 @@
 import {
   INPUT_SIZE,
-} from "../constants.js";
-import type { InputFormat } from "../constants.js";
+} from "../tokens.js";
+import type { InputFormat } from "../tokens.js";
 import { tf, Tensor2D } from "../tf.js";
 import {
   getTokenCount,

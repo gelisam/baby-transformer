@@ -1,5 +1,5 @@
 import { transposeArray } from "./array.js";
-import { INPUT_SIZE, EMBEDDING_DIM } from "./constants.js";
+import { INPUT_SIZE, EMBEDDING_DIM } from "./tokens.js";
 import { tokenNumberToIndex } from "./tokens.js";
 
 const EMBEDDED_INPUT_SIZE = INPUT_SIZE * EMBEDDING_DIM;
