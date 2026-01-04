@@ -9,18 +9,15 @@ type TokenTables = {
   tokenStringToIndex: { [key: string]: number };
 };
 
-// Cache for token tables keyed by vocabulary size
-// Using `const /*mut*/` to convey that while the reference never changes,
-// the contents of the Map will be mutated over time (see AGENTS.md)
-const /*mut*/ tablesCache: Map<number, TokenTables> = new Map();
+// Cache for the most recently used vocabulary size
+let cachedVocabSize: number | null = null;
+let cachedTables: TokenTables | null = null;
 
 // Private function to get or create token tables for a given vocabulary size
-// This function caches results to avoid recreating tables for the same vocabSize
 function getTables(vocabSize: number): TokenTables {
-  // Check cache first
-  const cached = tablesCache.get(vocabSize);
-  if (cached) {
-    return cached;
+  // Check if cached vocabSize matches
+  if (cachedVocabSize === vocabSize && cachedTables !== null) {
+    return cachedTables;
   }
   
   // Generate new tables
@@ -55,8 +52,9 @@ function getTables(vocabSize: number): TokenTables {
     tokenStringToIndex
   };
   
-  // Cache the result
-  tablesCache.set(vocabSize, tables);
+  // Update cache
+  cachedVocabSize = vocabSize;
+  cachedTables = tables;
   
   return tables;
 }
