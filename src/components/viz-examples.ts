@@ -8,6 +8,7 @@ import {
   getTokenCount,
   getTokenAtIndex,
   getNumberAtIndex,
+  numberIndexToTokenNumber,
   indexToShortTokenString,
   tokenNumberToIndex,
   tokenNumberToTokenString,
@@ -141,7 +142,6 @@ function updateVizDataFromTextboxes(): void {
   const elements = getInputElements();
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
-  const firstNumber = getNumberAtIndex(currentVocabSize, 0);
 
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
     const inputElement = elements[i];
@@ -155,7 +155,7 @@ function updateVizDataFromTextboxes(): void {
         if (matchingIndex >= 0) {
           outputArray.push(trainingOutputArray[matchingIndex]);
         } else {
-          outputArray.push(tokenStringToTokenNumber(currentVocabSize, firstNumber));
+          outputArray.push(numberIndexToTokenNumber(0));
         }
       } else {
         if (vizInputArray[i]) {
