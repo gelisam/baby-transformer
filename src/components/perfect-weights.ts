@@ -44,10 +44,20 @@ const init: InitHandler = (_schedule) => {
 };
 
 function canUsePerfectWeights(layers: number, neurons: number): { canUse: boolean, reason: string } {
-  // The setPerfectWeights function needs to be updated for the new embedding/unembedding architecture
+  // Check if we have enough neurons to implement the perfect weights algorithm
+  // Layer 3 needs 2*vocabSize neurons (vocabSize for subNfromOut + vocabSize for subOutFromN)
+  const requiredNeurons = 2 * currentVocabSize;
+  
+  if (neurons < requiredNeurons) {
+    return {
+      canUse: false,
+      reason: `Perfect weights require at least ${requiredNeurons} neurons per layer for vocab size ${currentVocabSize}.`
+    };
+  }
+  
   return {
-    canUse: false,
-    reason: 'Perfect weights feature not yet implemented for embedding/unembedding architecture.'
+    canUse: true,
+    reason: ''
   };
 }
 
