@@ -2,6 +2,25 @@
 
 This document describes the coding patterns used in this codebase. When modifying or extending the code, please follow these patterns.
 
+## Mutable Variables
+
+Use `const /*mut*/` to convey that while a variable reference is never reassigned, its contents will change over time:
+
+```typescript
+// The Map reference never changes, but entries are added/removed
+const /*mut*/ cache: Map<string, Data> = new Map();
+
+// The array reference never changes, but elements are pushed/removed
+const /*mut*/ items: Item[] = [];
+```
+
+This practice helps distinguish between:
+- Truly immutable constants (use `const`)
+- Variables that get reassigned (use `let`)
+- Variables whose reference is constant but contents are mutable (use `const /*mut*/`)
+
+## Message Loop Pattern
+
 ### Instead of:
 ```typescript
 // components/a.ts

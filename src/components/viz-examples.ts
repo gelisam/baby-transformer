@@ -1,12 +1,14 @@
 import {
   INPUT_SIZE,
-  OUTPUT_SIZE
-} from "../constants.js";
-import type { InputFormat } from "../constants.js";
+} from "../inputFormat.js";
+import type { InputFormat } from "../inputFormat.js";
 import { tf, Tensor2D } from "../tf.js";
 import {
-  NUMBERS,
-  TOKENS,
+  getOutputSize,
+  getTokenCount,
+  getTokenAtIndex,
+  getNumberAtIndex,
+  numberIndexToTokenNumber,
   indexToShortTokenString,
   tokenNumberToIndex,
   tokenNumberToTokenString,
@@ -36,6 +38,9 @@ let vizOutputTensor: Tensor2D | null = null;
 // Module-local state for training data reference (for lookup)
 let trainingInputArray: number[][] = [];
 let trainingOutputArray: number[] = [];
+
+// Module-local state for current vocabulary size
+let currentVocabSize = 3;
 
 // Getter functions that check and initialize DOM elements if needed
 function getOutputCanvas(): HTMLCanvasElement {
@@ -70,7 +75,7 @@ function updateTextboxesFromInputs(inputArray: number[][]): void {
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
     const inputElement = elements[i];
     if (inputElement) {
-      const inputTokenStrings = inputArray[i].map(tokenNumberToTokenString).join('');
+      const inputTokenStrings = inputArray[i].map(t => tokenNumberToTokenString(currentVocabSize, t)).join('');
       inputElement.value = inputTokenStrings;
     }
   }
@@ -101,7 +106,8 @@ function pickRandomInputs(): void {
   vizInputArray = inputArray;
   vizOutputArray = outputArray;
   vizInputTensor = tf.tensor2d(inputIndicesArray, [VIZ_EXAMPLES_COUNT, INPUT_SIZE]);
-  vizOutputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
+  const outputSize = getOutputSize(currentVocabSize);
+  vizOutputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), outputSize) as Tensor2D;
 
   updateTextboxesFromInputs(inputArray);
 }
@@ -109,13 +115,15 @@ function pickRandomInputs(): void {
 function parseInputString(inputStr: string): number[] | null {
   const /*mut*/ tokens: number[] = [];
   let i = 0;
+  const tokenCount = getTokenCount(currentVocabSize);
 
   while (i < inputStr.length) {
     let matched = false;
 
-    for (const token of TOKENS) {
+    for (let tokenIndex = 0; tokenIndex < tokenCount; tokenIndex++) {
+      const token = getTokenAtIndex(currentVocabSize, tokenIndex);
       if (inputStr.substring(i, i + token.length) === token) {
-        tokens.push(tokenStringToTokenNumber(token));
+        tokens.push(tokenStringToTokenNumber(currentVocabSize, token));
         i += token.length;
         matched = true;
         break;
@@ -147,7 +155,7 @@ function updateVizDataFromTextboxes(): void {
         if (matchingIndex >= 0) {
           outputArray.push(trainingOutputArray[matchingIndex]);
         } else {
-          outputArray.push(tokenStringToTokenNumber(NUMBERS[0]));
+          outputArray.push(numberIndexToTokenNumber(0));
         }
       } else {
         if (vizInputArray[i]) {
@@ -174,7 +182,8 @@ function updateVizDataFromTextboxes(): void {
   vizInputArray = inputArray;
   vizOutputArray = outputArray;
   vizInputTensor = tf.tensor2d(inputIndicesArray, [VIZ_EXAMPLES_COUNT, INPUT_SIZE]);
-  vizOutputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
+  const outputSize = getOutputSize(currentVocabSize);
+  vizOutputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), outputSize) as Tensor2D;
 
   drawViz();
 }
@@ -211,7 +220,7 @@ async function drawViz(): Promise<void> {
 
     ctx.strokeRect(sectionX, sectionY, sectionWidth, sectionHeight);
 
-    const inputTokenStrings = vizInputArray[i].map(tokenNumberToTokenString).join('');
+    const inputTokenStrings = vizInputArray[i].map(t => tokenNumberToTokenString(currentVocabSize, t)).join('');
     ctx.font = '12px monospace';
     ctx.fillStyle = 'black';
     ctx.fillText(inputTokenStrings, sectionX + 5, sectionY + 15);
@@ -230,12 +239,17 @@ async function drawViz(): Promise<void> {
 
       ctx.font = '10px monospace';
       ctx.fillStyle = 'black';
-      ctx.fillText(indexToShortTokenString(j), barX, sectionY + sectionHeight - 5);
+      ctx.fillText(indexToShortTokenString(currentVocabSize, j), barX, sectionY + sectionHeight - 5);
     }
   }
 
   predictionTensor.dispose();
 }
+
+// Implementation for the reinitializeModel message handler
+const reinitializeModel: ReinitializeModelHandler = (_schedule, _newNumLayers, _newNeuronsPerLayer, _newInputFormat, vocabSize) => {
+  currentVocabSize = vocabSize;
+};
 
 // Implementation for the refreshViz message handler
 const refreshViz: RefreshVizHandler = (_schedule) => {
@@ -272,6 +286,7 @@ export {
   updateVizDataFromTextboxes,
   drawViz,
   VIZ_EXAMPLES_COUNT,
+  reinitializeModel,
   refreshViz,
   setTrainingData,
   disposeVizData

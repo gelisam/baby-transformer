@@ -1,4 +1,4 @@
-import type { InputFormat } from "../constants.js";
+import type { InputFormat } from "../inputFormat.js";
 import { setBackend } from "../tf.js";
 import { InitHandler } from "../messages/init.js";
 import { ReinitializeModelMsg } from "../messages/reinitializeModel.js";
@@ -8,6 +8,8 @@ import { disposeVizData } from "./viz-examples.js";
 
 // Module-local state for DOM elements (initialized on first use)
 let backendSelector: HTMLSelectElement | null = null;
+let vocabSizeSlider: HTMLInputElement | null = null;
+let vocabSizeSpan: HTMLSpanElement | null = null;
 let numLayersSlider: HTMLInputElement | null = null;
 let numLayersSpan: HTMLSpanElement | null = null;
 let neuronsPerLayerSlider: HTMLInputElement | null = null;
@@ -15,6 +17,7 @@ let neuronsPerLayerSpan: HTMLSpanElement | null = null;
 let inputFormatSelector: HTMLSelectElement | null = null;
 
 // Module-local state for layer configuration
+let vocabSize = 3;
 let numLayers = 4;
 let neuronsPerLayer = 6;
 let inputFormat: InputFormat = 'embedding';
@@ -25,6 +28,20 @@ function getBackendSelector(): HTMLSelectElement {
     backendSelector = document.getElementById('backend-selector') as HTMLSelectElement;
   }
   return backendSelector;
+}
+
+function getVocabSizeSlider(): HTMLInputElement {
+  if (!vocabSizeSlider) {
+    vocabSizeSlider = document.getElementById('vocab-size-slider') as HTMLInputElement;
+  }
+  return vocabSizeSlider;
+}
+
+function getVocabSizeSpan(): HTMLSpanElement {
+  if (!vocabSizeSpan) {
+    vocabSizeSpan = document.getElementById('vocab-size-span') as HTMLSpanElement;
+  }
+  return vocabSizeSpan;
 }
 
 function getNumLayersSlider(): HTMLInputElement {
@@ -76,7 +93,16 @@ const init: InitHandler = (_schedule) => {
   selector.addEventListener('change', async () => {
     prepareForReinitialize();
     await setBackend(selector.value);
-    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat, vocabSize } as ReinitializeModelMsg);
+  });
+  
+  const vocabSlider = getVocabSizeSlider();
+  const vocabValueSpan = getVocabSizeSpan();
+  vocabSlider.addEventListener('input', () => {
+    vocabSize = parseInt(vocabSlider.value, 10);
+    vocabValueSpan.textContent = vocabSize.toString();
+    prepareForReinitialize();
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat, vocabSize } as ReinitializeModelMsg);
   });
   
   const layersSlider = getNumLayersSlider();
@@ -85,7 +111,7 @@ const init: InitHandler = (_schedule) => {
     numLayers = parseInt(layersSlider.value, 10);
     layersValueSpan.textContent = numLayers.toString();
     prepareForReinitialize();
-    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat, vocabSize } as ReinitializeModelMsg);
   });
   
   const neuronsSlider = getNeuronsPerLayerSlider();
@@ -94,14 +120,14 @@ const init: InitHandler = (_schedule) => {
     neuronsPerLayer = parseInt(neuronsSlider.value, 10);
     neuronsValueSpan.textContent = neuronsPerLayer.toString();
     prepareForReinitialize();
-    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat, vocabSize } as ReinitializeModelMsg);
   });
   
   const formatSelector = getInputFormatSelector();
   formatSelector.addEventListener('change', () => {
     inputFormat = formatSelector.value as InputFormat;
     prepareForReinitialize();
-    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+    window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat, vocabSize } as ReinitializeModelMsg);
   });
 };
 
@@ -109,7 +135,7 @@ const init: InitHandler = (_schedule) => {
 async function performInitialSetup(): Promise<void> {
   const selector = getBackendSelector();
   await setBackend(selector.value);
-  window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat } as ReinitializeModelMsg);
+  window.messageLoop({ type: "ReinitializeModel", numLayers, neuronsPerLayer, inputFormat, vocabSize } as ReinitializeModelMsg);
 }
 
 export {

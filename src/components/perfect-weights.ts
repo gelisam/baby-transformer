@@ -1,4 +1,5 @@
-import { INPUT_SIZE, OUTPUT_SIZE } from "../constants.js";
+import { INPUT_SIZE } from "../inputFormat.js";
+import { getOutputSize } from "../tokens.js";
 import { tf, Tensor } from "../tf.js";
 import { Schedule } from "../messageLoop.js";
 import { InitHandler } from "../messages/init.js";
@@ -14,6 +15,7 @@ let perfectWeightsTooltipText: HTMLSpanElement | null = null;
 // Module-local state for layer configuration
 let numLayers = 4;
 let neuronsPerLayer = 6;
+let currentVocabSize = 3;
 
 // Getter functions that check and initialize DOM elements if needed
 function getPerfectWeightsButton(): HTMLButtonElement {
@@ -296,17 +298,19 @@ async function setPerfectWeights(): Promise<void> {
   // way up and P(A="A=") way down.
 
   // Output layer connects to the last hidden layer
-  const /*mut*/ outputWeights = tf.buffer([neuronsPerLayer, OUTPUT_SIZE])
-  const /*mut*/ outputBias = tf.buffer([OUTPUT_SIZE]);
+  const outputSize = getOutputSize(currentVocabSize);
+  const /*mut*/ outputWeights = tf.buffer([neuronsPerLayer, outputSize])
+  const /*mut*/ outputBias = tf.buffer([outputSize]);
   outputWeights.set(1000.0, probability1, probability1);
   outputWeights.set(1000.0, probability2, probability2);
   outputWeights.set(1000.0, probability3, probability3);
-  outputBias.set(-100, 0);
-  outputBias.set(-100, 1);
-  outputBias.set(-100, 2);
-  outputBias.set(-Infinity, 3);
-  outputBias.set(-Infinity, 4);
-  outputBias.set(-Infinity, 5);
+  for (let i = 0; i < outputSize; i++) {
+    if (i < 3) {
+      outputBias.set(-100, i);
+    } else {
+      outputBias.set(-Infinity, i);
+    }
+  }
 
   const perfectWeights: Tensor[] = [
     layer1weights.toTensor(), layer1bias.toTensor(),
@@ -323,9 +327,10 @@ async function setPerfectWeights(): Promise<void> {
 }
 
 // Implementation for the reinitializeModel message handler
-const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, newNeuronsPerLayer, _inputFormat) => {
+const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, newNeuronsPerLayer, _inputFormat, vocabSize) => {
   numLayers = newNumLayers;
   neuronsPerLayer = newNeuronsPerLayer;
+  currentVocabSize = vocabSize;
   updatePerfectWeightsButton();
 };
 
