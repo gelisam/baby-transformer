@@ -5,9 +5,6 @@ const EMBEDDING_DIM = 3;
 
 // Generate embedding matrix dynamically based on vocab size
 function generateEmbeddingMatrix(vocabSize: number): number[][] {
-  const COS0 = 1;
-  const SIN0 = 0;
-  
   const /*mut*/ matrix: number[][] = [];
   
   // For each number token (1, 2, 3, ...)
