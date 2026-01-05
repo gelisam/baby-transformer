@@ -41,8 +41,8 @@ function drawNetworkArchitecture(): void {
   const outputLayer = OUTPUT_SIZE;
   
   // Build layers with optional preprocessing layer
-  let layers: number[];
-  let layerLabels: string[];
+  let /*mut*/ layers: number[];
+  let /*mut*/ layerLabels: string[];
   
   if (currentInputFormat === 'embedding') {
     layers = [inputLayer, transformedInputSize, ...hiddenLayers, linearLayer, outputLayer];

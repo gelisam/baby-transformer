@@ -108,10 +108,10 @@ function pickRandomInputs(): void {
 
 function parseInputString(inputStr: string): number[] | null {
   const tokens: number[] = [];
-  let i = 0;
+  let /*mut*/ i = 0;
 
   while (i < inputStr.length) {
-    let matched = false;
+    let /*mut*/ matched = false;
 
     for (const token of TOKENS) {
       if (inputStr.substring(i, i + token.length) === token) {
