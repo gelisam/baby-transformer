@@ -1,6 +1,6 @@
 import { INPUT_SIZE, getTransformedInputSize } from "../inputFormat.js";
 import type { InputFormat } from "../inputFormat.js";
-import { EMBEDDING_DIM, EMBEDDING_MATRIX, UNEMBEDDING_MATRIX } from "../embeddings.js";
+import { EMBEDDING_DIM, generateEmbeddingMatrix } from "../embeddings.js";
 import { getOutputSize, getTokenCount } from "../tokens.js";
 import { tf, Sequential, Tensor2D } from "../tf.js";
 import { Schedule } from "../messageLoop.js";
@@ -10,6 +10,7 @@ import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 import { SetModelWeightsHandler } from "../messages/setModelWeights.js";
 import { SetTrainingDataHandler } from "../messages/setTrainingData.js";
 import { StartTrainingHandler, StopTrainingHandler } from "../messages/training.js";
+import { transposeArray } from "../array.js";
 
 const EPOCHS_PER_BATCH = 1;
 
@@ -26,12 +27,16 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
   const outputSize = getOutputSize(vocabSize);
   const tokenCount = getTokenCount(vocabSize);
   
+  // Generate embedding matrices dynamically based on vocab size
+  const embeddingMatrix = generateEmbeddingMatrix(vocabSize);
+  const unembeddingMatrix = transposeArray(embeddingMatrix);
+  
   // Add preprocessing layer based on input format
-  // Input is always [batchSize, INPUT_SIZE] with token indices (0-5)
+  // Input is always [batchSize, INPUT_SIZE] with token indices
   if (inputFormat === 'embedding') {
     // Embedding layer converts token indices to embedding vectors
     // Then flatten to get [batchSize, INPUT_SIZE * EMBEDDING_DIM]
-    const embeddingWeights = tf.tensor2d(EMBEDDING_MATRIX); // [vocabSize, EMBEDDING_DIM]
+    const embeddingWeights = tf.tensor2d(embeddingMatrix);
     newModel.add(tf.layers.embedding({
       inputDim: tokenCount,
       outputDim: EMBEDDING_DIM,
@@ -86,7 +91,7 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
     }));
   }
 
-  const unembeddingWeights = tf.tensor2d(UNEMBEDDING_MATRIX);
+  const unembeddingWeights = tf.tensor2d(unembeddingMatrix);
   const unembeddingBias = tf.zeros([outputSize]);
 
   newModel.add(tf.layers.dense({
