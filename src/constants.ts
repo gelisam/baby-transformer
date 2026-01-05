@@ -8,10 +8,8 @@ const EPOCHS_PER_BATCH = 1;
 
 const EMBEDDING_DIM = 3;
 
-// Input format type - determines how inputs are transformed before the first layer
 type InputFormat = 'number' | 'one-hot' | 'embedding';
 
-// Calculate the size after preprocessing based on input format
 function getTransformedInputSize(inputFormat: InputFormat): number {
   const vocabSize = TOKENS.length;
   if (inputFormat === 'embedding') {

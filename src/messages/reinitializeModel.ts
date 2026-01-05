@@ -16,7 +16,6 @@
 import { Schedule } from "../messageLoop.js";
 import type { InputFormat } from "../constants.js";
 
-// Message type for reinitialize model
 export type ReinitializeModelMsg = {
   type: "ReinitializeModel";
   numLayers: number;
@@ -24,5 +23,4 @@ export type ReinitializeModelMsg = {
   inputFormat: InputFormat;
 };
 
-// Type for the message handler (used by module implementations)
 export type ReinitializeModelHandler = (schedule: Schedule, numLayers: number, neuronsPerLayer: number, inputFormat: InputFormat) => void;

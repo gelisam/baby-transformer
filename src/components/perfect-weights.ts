@@ -7,15 +7,11 @@ import { SetModelWeightsMsg } from "../messages/setModelWeights.js";
 import { StopTrainingMsg } from "../messages/training.js";
 import { drawViz } from "./viz-examples.js";
 
-// Module-local state for DOM elements (initialized on first use)
 let perfectWeightsButton: HTMLButtonElement | null = null;
 let perfectWeightsTooltipText: HTMLSpanElement | null = null;
-
-// Module-local state for layer configuration
 let numLayers = 4;
 let neuronsPerLayer = 6;
 
-// Getter functions that check and initialize DOM elements if needed
 function getPerfectWeightsButton(): HTMLButtonElement {
   if (!perfectWeightsButton) {
     perfectWeightsButton = document.getElementById('perfect-weights-button') as HTMLButtonElement;
@@ -30,12 +26,10 @@ function getPerfectWeightsTooltipText(): HTMLSpanElement {
   return perfectWeightsTooltipText;
 }
 
-// Forward declaration for event handler
 async function handlePerfectWeightsClick(): Promise<void> {
   await setPerfectWeights();
 }
 
-// Handler for the Init message - attach event listeners
 const init: InitHandler = (_schedule) => {
   const button = getPerfectWeightsButton();
   button.addEventListener('click', () => handlePerfectWeightsClick());
@@ -322,7 +316,6 @@ async function setPerfectWeights(): Promise<void> {
   perfectWeights.forEach(tensor => tensor.dispose());
 }
 
-// Implementation for the reinitializeModel message handler
 const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, newNeuronsPerLayer, _inputFormat) => {
   numLayers = newNumLayers;
   neuronsPerLayer = newNeuronsPerLayer;

@@ -4,11 +4,9 @@ import { RefreshVizHandler } from "../messages/refreshViz.js";
 import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 import { getLossHistory } from "./model.js";
 
-// Module-local state for DOM elements (initialized on first use)
 let lossCanvas: HTMLCanvasElement | null = null;
 let statusElement: HTMLElement | null = null;
 
-// Getter functions that check and initialize DOM elements if needed
 function getLossCanvas(): HTMLCanvasElement {
   if (!lossCanvas) {
     lossCanvas = document.getElementById('loss-canvas') as HTMLCanvasElement;
@@ -58,26 +56,21 @@ function drawLossCurve(): void {
   ctx.stroke();
 }
 
-// Implementation for the reinitializeModel message handler
 const reinitializeModel: ReinitializeModelHandler = (_schedule, _numLayers, _neuronsPerLayer, _inputFormat) => {
-  // Clear the loss canvas when model is reinitialized
   const canvas = getLossCanvas();
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 };
 
-// Implementation for the refreshViz message handler
 const refreshViz: RefreshVizHandler = (_schedule) => {
   drawLossCurve();
 };
 
-// Implementation for onEpochCompleted message handler
 const onEpochCompleted: OnEpochCompletedHandler = (_schedule, epoch, loss) => {
   const status = getStatusElement();
   status.innerHTML = `Training... Epoch ${epoch} - Loss: ${loss.toFixed(4)}`;
 };
 
-// Set status message
 function setStatusMessage(message: string) {
   const status = getStatusElement();
   status.innerHTML = message;

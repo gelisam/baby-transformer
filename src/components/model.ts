@@ -11,7 +11,6 @@ import { SetModelWeightsHandler } from "../messages/setModelWeights.js";
 import { SetTrainingDataHandler } from "../messages/setTrainingData.js";
 import { StartTrainingHandler, StopTrainingHandler } from "../messages/training.js";
 
-// Module-local state
 let model: Sequential | null = null;
 let isTraining = false;
 let currentEpoch = 0;
@@ -21,14 +20,10 @@ let trainingOutputTensor: Tensor2D | null = null;
 
 function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: InputFormat): Sequential {
   const newModel = tf.sequential();
-  const vocabSize = TOKENS.length; // 6 tokens
+  const vocabSize = TOKENS.length;
   
-  // Add preprocessing layer based on input format
-  // Input is always [batchSize, INPUT_SIZE] with token indices (0-5)
   if (inputFormat === 'embedding') {
-    // Embedding layer converts token indices to embedding vectors
-    // Then flatten to get [batchSize, INPUT_SIZE * EMBEDDING_DIM]
-    const embeddingWeights = tf.tensor2d(EMBEDDING_MATRIX); // [vocabSize, EMBEDDING_DIM]
+    const embeddingWeights = tf.tensor2d(EMBEDDING_MATRIX);
     newModel.add(tf.layers.embedding({
       inputDim: vocabSize,
       outputDim: EMBEDDING_DIM,
@@ -39,8 +34,6 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
     embeddingWeights.dispose();
     newModel.add(tf.layers.flatten());
   } else if (inputFormat === 'one-hot') {
-    // One-hot encoding via embedding layer with identity matrix
-    // Then flatten to get [batchSize, INPUT_SIZE * vocabSize]
     const oneHotWeights = tf.eye(vocabSize);
     newModel.add(tf.layers.embedding({
       inputDim: vocabSize,
@@ -52,8 +45,7 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
     oneHotWeights.dispose();
     newModel.add(tf.layers.flatten());
   }
-  // For 'number' format, no preprocessing layer - input is used directly
-  
+
   const preLayerSize = getTransformedInputSize(inputFormat);
 
   if (numLayers === 0) {
@@ -69,7 +61,6 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
       activation: 'relu'
     }));
 
-    // Remaining hidden layers rely on TensorFlow.js to infer their input shape from the previous layer.
     for (let i = 1; i < numLayers; i++) {
       newModel.add(tf.layers.dense({
         units: neuronsPerLayer,
@@ -109,7 +100,6 @@ async function trainingStep() {
     return;
   }
 
-  // Train for one epoch
   const history = await model.fit(trainingInputTensor, trainingOutputTensor, {
     epochs: EPOCHS_PER_BATCH,
     verbose: 0
@@ -117,63 +107,50 @@ async function trainingStep() {
 
   currentEpoch += EPOCHS_PER_BATCH;
 
-  // Get the loss from the last epoch in the batch
   const loss = history.history.loss[history.history.loss.length - 1] as number;
   lossHistory.push({ epoch: currentEpoch, loss });
 
-  // Notify other modules via messages
   window.messageLoop([
     { type: "OnEpochCompleted", epoch: currentEpoch, loss } as OnEpochCompletedMsg,
     { type: "RefreshViz" } as RefreshVizMsg
   ]);
 
-  // Request the next frame
   requestAnimationFrame(() => trainingStep());
 }
 
-// Implementation for the reinitializeModel message handler
 const reinitializeModel: ReinitializeModelHandler = (_schedule, numLayers, neuronsPerLayer, inputFormat) => {
-  // Create a new model
   if (model) {
     model.dispose();
   }
   model = createModel(numLayers, neuronsPerLayer, inputFormat);
-  
-  // Reset training state
   currentEpoch = 0;
   lossHistory = [];
 };
 
-// Implementation for the startTraining message handler
 const startTraining: StartTrainingHandler = (_schedule) => {
   isTraining = true;
   requestAnimationFrame(() => trainingStep());
 };
 
-// Implementation for the stopTraining message handler
 const stopTraining: StopTrainingHandler = (_schedule) => {
   isTraining = false;
 };
 
-// Implementation for the setTrainingData message handler
 const setTrainingData: SetTrainingDataHandler = (_schedule, data) => {
   trainingInputTensor = data.inputTensor;
   trainingOutputTensor = data.outputTensor;
 };
 
-// Implementation for the setModelWeights message handler
 const setModelWeights: SetModelWeightsHandler = (_schedule, weights) => {
   if (model) {
     model.setWeights(weights);
   }
 };
 
-// Getter for model - used by viz.ts for predictions
 function getModel(): Sequential | null {
   return model;
 }
 
-// Getters for external access
 function getLossHistory(): { epoch: number; loss: number }[] {
   return lossHistory;
 }

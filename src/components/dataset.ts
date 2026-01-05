@@ -12,7 +12,6 @@ import {
 } from "../tokens.js";
 import { TrainingData, SetTrainingDataMsg } from "../messages/setTrainingData.js";
 
-// Pure function: Generate training data for the classification task
 function generateData(inputFormat: InputFormat): TrainingData {
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
@@ -65,9 +64,6 @@ function generateData(inputFormat: InputFormat): TrainingData {
 
   generate(2, [], new Map(), allLetters, allNumbers);
 
-  // Convert to tensors
-  // inputArray contains token numbers (1-6), but inputTensor needs token indices (0-5)
-  // for the embedding layer to work correctly
   const numExamples = inputArray.length;
   const inputIndicesArray = inputArray.map(input => input.map(tokenNumberToIndex));
 
@@ -79,8 +75,6 @@ function generateData(inputFormat: InputFormat): TrainingData {
 
 import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 
-// Implementation of the reinitializeModel message handler
-// Generates new training data and pushes to other modules via setTrainingData message
 const reinitializeModel: ReinitializeModelHandler = (schedule, _numLayers, _neuronsPerLayer, inputFormat) => {
   const data = generateData(inputFormat);
   schedule({ type: "SetTrainingData", data } as SetTrainingDataMsg);

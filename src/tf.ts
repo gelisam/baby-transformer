@@ -6,7 +6,6 @@ type Tensor = import('@tensorflow/tfjs').Tensor;
 type Tensor2D = import('@tensorflow/tfjs').Tensor2D;
 type Sequential = import('@tensorflow/tfjs').Sequential;
 
-// Function to set the backend and update UI
 async function setBackend(requestedBackend: string) {
   try {
     await tf.setBackend(requestedBackend);

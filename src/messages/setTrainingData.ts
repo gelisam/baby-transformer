@@ -8,7 +8,6 @@
 import { Schedule } from "../messageLoop.js";
 import { Tensor2D } from "../tf.js";
 
-// Training data structure
 export interface TrainingData {
   inputArray: number[][];
   outputArray: number[];
@@ -16,11 +15,9 @@ export interface TrainingData {
   outputTensor: Tensor2D;
 }
 
-// Message type for set training data
 export type SetTrainingDataMsg = {
   type: "SetTrainingData";
   data: TrainingData;
 };
 
-// Type for the message handler (used by module implementations)
 export type SetTrainingDataHandler = (schedule: Schedule, data: TrainingData) => void;

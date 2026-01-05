@@ -23,21 +23,15 @@ const VIZ_ROWS = 2;
 const VIZ_COLUMNS = 3;
 const VIZ_EXAMPLES_COUNT = VIZ_ROWS * VIZ_COLUMNS;
 
-// Module-local state for DOM elements (initialized on first use)
 let outputCanvas: HTMLCanvasElement | null = null;
 let inputElements: HTMLInputElement[] | null = null;
-
-// Module-local state for visualization data
 let vizInputArray: number[][] = [];
 let vizOutputArray: number[] = [];
 let vizInputTensor: Tensor2D | null = null;
 let vizOutputTensor: Tensor2D | null = null;
-
-// Module-local state for training data reference (for lookup)
 let trainingInputArray: number[][] = [];
 let trainingOutputArray: number[] = [];
 
-// Getter functions that check and initialize DOM elements if needed
 function getOutputCanvas(): HTMLCanvasElement {
   if (!outputCanvas) {
     outputCanvas = document.getElementById('output-canvas') as HTMLCanvasElement;
@@ -54,7 +48,6 @@ function getInputElements(): HTMLInputElement[] {
   return inputElements;
 }
 
-// Handler for the Init message - attach event listeners for input textboxes
 const init: InitHandler = (_schedule) => {
   const elements = getInputElements();
   for (let i = 0; i < elements.length; i++) {
@@ -237,24 +230,17 @@ async function drawViz(): Promise<void> {
   predictionTensor.dispose();
 }
 
-// Implementation for the refreshViz message handler
 const refreshViz: RefreshVizHandler = (_schedule) => {
   drawViz();
 };
 
-// Implementation for setTrainingData message handler
 const setTrainingData: SetTrainingDataHandler = (_schedule, data) => {
   trainingInputArray = data.inputArray;
   trainingOutputArray = data.outputArray;
-  
-  // Pick random inputs now that training data is available
   pickRandomInputs();
-  
-  // Draw the visualization with the new inputs
   drawViz();
 };
 
-// Dispose viz tensors
 function disposeVizData() {
   if (vizInputTensor) {
     try { vizInputTensor.dispose(); } catch (e) { /* ignore */ }

@@ -7,15 +7,11 @@ import {
 import type { InputFormat } from "../constants.js";
 import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 
-// Module-local state for DOM elements (initialized on first use)
 let networkCanvas: HTMLCanvasElement | null = null;
-
-// Module-local state for architecture display
 let numLayers = 4;
 let neuronsPerLayer = 6;
 let currentInputFormat: InputFormat = 'embedding';
 
-// Getter function that checks and initializes DOM element if needed
 function getNetworkCanvas(): HTMLCanvasElement {
   if (!networkCanvas) {
     networkCanvas = document.getElementById('network-canvas') as HTMLCanvasElement;
@@ -267,13 +263,10 @@ function drawNetworkArchitecture(): void {
   drawDownwardArrow(ctx, arrowX, arrowStartY, arrowEndY);
 }
 
-// Implementation for the reinitializeModel message handler
 const reinitializeModel: ReinitializeModelHandler = (_schedule, newNumLayers, newNeuronsPerLayer, newInputFormat) => {
   numLayers = newNumLayers;
   neuronsPerLayer = newNeuronsPerLayer;
   currentInputFormat = newInputFormat;
-  
-  // Redraw the architecture in case it changed
   drawNetworkArchitecture();
 };
 
