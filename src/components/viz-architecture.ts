@@ -101,7 +101,7 @@ function drawNetworkArchitecture(): void {
     ctx.fill();
   }
 
-  const layerGeometries: { x: number; y: number; width: number; height: number }[] = [];
+  const /*mut*/ layerGeometries: { x: number; y: number; width: number; height: number }[] = [];
 
   for (let i = 0; i < layers.length; i++) {
     const numNeurons = layers[i];
@@ -119,14 +119,14 @@ function drawNetworkArchitecture(): void {
     const currentNeurons = layers[i];
     const nextNeurons = layers[i + 1];
 
-    const currentNeuronPositions: { x: number; y: number }[] = [];
+    const /*mut*/ currentNeuronPositions: { x: number; y: number }[] = [];
     for (let n = 0; n < currentNeurons; n++) {
       const x = currentLayer.x + (currentLayer.width / currentNeurons) * (n + 0.5);
       const y = currentLayer.y + currentLayer.height + 1;
       currentNeuronPositions.push({ x, y });
     }
 
-    const nextNeuronPositions: { x: number; y: number }[] = [];
+    const /*mut*/ nextNeuronPositions: { x: number; y: number }[] = [];
     for (let n = 0; n < nextNeurons; n++) {
       const x = nextLayer.x + (nextLayer.width / nextNeurons) * (n + 0.5);
       const y = nextLayer.y;

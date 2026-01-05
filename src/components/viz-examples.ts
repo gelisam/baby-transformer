@@ -84,8 +84,8 @@ function updateTextboxesFromInputs(inputArray: number[][]): void {
 function pickRandomInputs(): void {
   if (trainingInputArray.length === 0) return;
   
-  const inputArray: number[][] = [];
-  const outputArray: number[] = [];
+  const /*mut*/ inputArray: number[][] = [];
+  const /*mut*/ outputArray: number[] = [];
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
     const randomIndex = Math.floor(Math.random() * trainingInputArray.length);
     inputArray.push(trainingInputArray[randomIndex]);
@@ -113,7 +113,7 @@ function pickRandomInputs(): void {
 }
 
 function parseInputString(inputStr: string): number[] | null {
-  const tokens: number[] = [];
+  const /*mut*/ tokens: number[] = [];
   let i = 0;
   const tokenCount = getTokenCount(currentVocabSize);
 
@@ -140,8 +140,8 @@ function parseInputString(inputStr: string): number[] | null {
 
 function updateVizDataFromTextboxes(): void {
   const elements = getInputElements();
-  const inputArray: number[][] = [];
-  const outputArray: number[] = [];
+  const /*mut*/ inputArray: number[][] = [];
+  const /*mut*/ outputArray: number[] = [];
 
   for (let i = 0; i < VIZ_EXAMPLES_COUNT; i++) {
     const inputElement = elements[i];

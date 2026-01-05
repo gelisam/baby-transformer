@@ -269,7 +269,7 @@ async function setPerfectWeights(): Promise<void> {
 
   // Layers 5 and beyond (if any) implement identity function on their first 3
   // inputs.
-  const extraLayerWeights: any[] = [];
+  const /*mut*/ extraLayerWeights: any[] = [];
   for (let layerIdx = 4; layerIdx < numLayers; layerIdx++) {
     const prevLayerSize = neuronsPerLayer;
     const currLayerSize = neuronsPerLayer;

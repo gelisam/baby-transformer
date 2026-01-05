@@ -20,8 +20,8 @@ function generateData(inputFormat: InputFormat, vocabSize: number): TrainingData
   const letterCount = getLetterCount(vocabSize);
   const outputSize = getTokenCount(vocabSize);
   
-  const inputArray: number[][] = [];
-  const outputArray: number[] = [];
+  const /*mut*/ inputArray: number[][] = [];
+  const /*mut*/ outputArray: number[] = [];
   function addExample(sequence: number[]) {
     //console.log(sequence.map(tokenNumberToTokenString).join(''));
     const input = sequence.slice(0, INPUT_SIZE);
