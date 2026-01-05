@@ -27,7 +27,7 @@ function embedTokenNumber(tokenNum: number): number[] {
 }
 
 function embedInput(input: number[]): number[] {
-  const embeddedInput: number[] = [];
+  const /*mut*/ embeddedInput: number[] = [];
   for (let i = 0; i < input.length; i++) {
     const embedding = embedTokenNumber(input[i]);
     embeddedInput.push(...embedding);

@@ -97,7 +97,7 @@ function processMessage(schedule: Schedule, msg: Msg): void {
 // Define the global message loop
 window.messageLoop = (msgOrMsgs: Msg | Msg[]): void => {
   // Create a distinct message queue for this invocation
-  const messageQueue: Msg[] = [];
+  const /*mut*/ messageQueue: Msg[] = [];
   
   // Create a schedule function that adds messages to this invocation's queue
   const schedule: Schedule = (msg: Msg) => {
