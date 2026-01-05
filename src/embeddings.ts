@@ -1,10 +1,7 @@
 import { transposeArray } from "./array.js";
-import { INPUT_SIZE } from "./inputFormat.js";
 import { tokenNumberToIndex } from "./tokens.js";
 
 const EMBEDDING_DIM = 3;
-
-const EMBEDDED_INPUT_SIZE = INPUT_SIZE * EMBEDDING_DIM;
 
 const COS0 = 1;
 const SIN0 = 0;
@@ -39,7 +36,6 @@ function embedInput(input: number[]): number[] {
 
 export {
   EMBEDDING_DIM,
-  EMBEDDED_INPUT_SIZE,
   EMBEDDING_MATRIX,
   UNEMBEDDING_MATRIX,
   embedTokenNumber,
