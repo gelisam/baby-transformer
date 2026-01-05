@@ -1,7 +1,7 @@
 import { INPUT_SIZE, getTransformedInputSize } from "../inputFormat.js";
 import type { InputFormat } from "../inputFormat.js";
 import { EMBEDDING_DIM, EMBEDDING_MATRIX, UNEMBEDDING_MATRIX } from "../embeddings.js";
-import { getOutputSize } from "../tokens.js";
+import { getOutputSize, getTokenCount } from "../tokens.js";
 import { tf, Sequential, Tensor2D } from "../tf.js";
 import { Schedule } from "../messageLoop.js";
 import { OnEpochCompletedMsg } from "../messages/onEpochCompleted.js";
@@ -24,6 +24,7 @@ let trainingOutputTensor: Tensor2D | null = null;
 function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: InputFormat, vocabSize: number): Sequential {
   const newModel = tf.sequential();
   const outputSize = getOutputSize(vocabSize);
+  const tokenCount = getTokenCount(vocabSize);
   
   // Add preprocessing layer based on input format
   // Input is always [batchSize, INPUT_SIZE] with token indices (0-5)
@@ -32,7 +33,7 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
     // Then flatten to get [batchSize, INPUT_SIZE * EMBEDDING_DIM]
     const embeddingWeights = tf.tensor2d(EMBEDDING_MATRIX); // [vocabSize, EMBEDDING_DIM]
     newModel.add(tf.layers.embedding({
-      inputDim: vocabSize * 2,
+      inputDim: tokenCount,
       outputDim: EMBEDDING_DIM,
       inputLength: INPUT_SIZE,
       weights: [embeddingWeights],
@@ -43,10 +44,10 @@ function createModel(numLayers: number, neuronsPerLayer: number, inputFormat: In
   } else if (inputFormat === 'one-hot') {
     // One-hot encoding via embedding layer with identity matrix
     // Then flatten to get [batchSize, INPUT_SIZE * vocabSize]
-    const oneHotWeights = tf.eye(vocabSize * 2);
+    const oneHotWeights = tf.eye(tokenCount);
     newModel.add(tf.layers.embedding({
-      inputDim: vocabSize * 2,
-      outputDim: vocabSize * 2,
+      inputDim: tokenCount,
+      outputDim: tokenCount,
       inputLength: INPUT_SIZE,
       weights: [oneHotWeights],
       trainable: false
