@@ -182,7 +182,7 @@ function updateVizDataFromTextboxes(): void {
   vizInputArray = inputArray;
   vizOutputArray = outputArray;
   vizInputTensor = tf.tensor2d(inputIndicesArray, [VIZ_EXAMPLES_COUNT, INPUT_SIZE]);
-  const outputSize = currentVocabSize * 2;
+  const outputSize = getOutputSize(currentVocabSize);
   vizOutputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), outputSize) as Tensor2D;
 
   drawViz();
