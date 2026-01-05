@@ -1,19 +1,25 @@
 import {
   INPUT_SIZE,
-  OUTPUT_SIZE,
-} from "../constants.js";
-import type { InputFormat } from "../constants.js";
+} from "../inputFormat.js";
+import type { InputFormat } from "../inputFormat.js";
 import { tf, Tensor2D } from "../tf.js";
 import {
-  NUMBERS,
-  LETTERS,
+  getTokenCount,
+  getNumberCount,
+  getLetterCount,
+  numberIndexToTokenNumber,
+  letterIndexToTokenNumber,
   tokenNumberToIndex,
-  tokenStringToTokenNumber
+  tokenStringToTokenNumber,
 } from "../tokens.js";
 import { TrainingData, SetTrainingDataMsg } from "../messages/setTrainingData.js";
 
 // Pure function: Generate training data for the classification task
-function generateData(inputFormat: InputFormat): TrainingData {
+function generateData(inputFormat: InputFormat, vocabSize: number): TrainingData {
+  const numberCount = getNumberCount(vocabSize);
+  const letterCount = getLetterCount(vocabSize);
+  const outputSize = getTokenCount(vocabSize);
+  
   const inputArray: number[][] = [];
   const outputArray: number[] = [];
   function addExample(sequence: number[]) {
@@ -36,8 +42,16 @@ function generateData(inputFormat: InputFormat): TrainingData {
     return newMapping;
   }
 
-  const allLetters = LETTERS.map(tokenStringToTokenNumber);
-  const allNumbers = NUMBERS.map(tokenStringToTokenNumber);
+  // Build arrays of all letters and numbers as token numbers
+  const allLetters: number[] = [];
+  for (let i = 0; i < letterCount; i++) {
+    allLetters.push(letterIndexToTokenNumber(vocabSize, i));
+  }
+  
+  const allNumbers: number[] = [];
+  for (let i = 0; i < numberCount; i++) {
+    allNumbers.push(numberIndexToTokenNumber(i));
+  }
   function generate(
       n: number, // number of examples to generate before the final pair
       sequence: number[],
@@ -72,7 +86,7 @@ function generateData(inputFormat: InputFormat): TrainingData {
   const inputIndicesArray = inputArray.map(input => input.map(tokenNumberToIndex));
 
   const inputTensor = tf.tensor2d(inputIndicesArray, [numExamples, INPUT_SIZE]);
-  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), OUTPUT_SIZE) as Tensor2D;
+  const outputTensor = tf.oneHot(outputArray.map(tokenNumberToIndex), outputSize) as Tensor2D;
 
   return { inputArray, outputArray, inputTensor, outputTensor };
 }
@@ -81,8 +95,8 @@ import { ReinitializeModelHandler } from "../messages/reinitializeModel.js";
 
 // Implementation of the reinitializeModel message handler
 // Generates new training data and pushes to other modules via setTrainingData message
-const reinitializeModel: ReinitializeModelHandler = (schedule, _numLayers, _neuronsPerLayer, inputFormat) => {
-  const data = generateData(inputFormat);
+const reinitializeModel: ReinitializeModelHandler = (schedule, _numLayers, _neuronsPerLayer, inputFormat, vocabSize) => {
+  const data = generateData(inputFormat, vocabSize);
   schedule({ type: "SetTrainingData", data } as SetTrainingDataMsg);
 };
 
