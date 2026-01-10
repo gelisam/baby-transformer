@@ -1,4 +1,5 @@
 import { INPUT_SIZE } from "../inputFormat.js";
+import { EMBEDDING_DIM } from "../embeddings.js";
 import { getOutputSize } from "../tokens.js";
 import { tf, Tensor } from "../tf.js";
 import { Schedule } from "../messageLoop.js";
@@ -44,10 +45,20 @@ const init: InitHandler = (_schedule) => {
 };
 
 function canUsePerfectWeights(layers: number, neurons: number): { canUse: boolean, reason: string } {
-  // The setPerfectWeights function needs to be updated for the new embedding/unembedding architecture
+  // Check if we have enough neurons to implement the perfect weights algorithm
+  // Layer 3 needs 2*vocabSize neurons (vocabSize for subNfromOut + vocabSize for subOutFromN)
+  const requiredNeurons = 2 * currentVocabSize;
+  
+  if (neurons < requiredNeurons) {
+    return {
+      canUse: false,
+      reason: `Perfect weights require at least ${requiredNeurons} neurons per layer for vocab size ${currentVocabSize}.`
+    };
+  }
+  
   return {
-    canUse: false,
-    reason: 'Perfect weights feature not yet implemented for embedding/unembedding architecture.'
+    canUse: true,
+    reason: ''
   };
 }
 
@@ -218,57 +229,52 @@ async function setPerfectWeights(): Promise<void> {
 
   const /*mut*/ layer3weights = tf.buffer([neuronsPerLayer, neuronsPerLayer])
   const /*mut*/ layer3bias = tf.buffer([neuronsPerLayer]);
-  const sub1fromOut = 0;
-  const sub2fromOut = 1;
-  const sub3fromOut = 2;
-  const subOutFrom1 = 3;
-  const subOutFrom2 = 4;
-  const subOutFrom3 = 5;
-  // const sub1fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 1.0)
-  layer3weights.set(1.0, contribution1, sub1fromOut);
-  layer3weights.set(1.0, contribution2, sub1fromOut);
-  layer3bias.set(-1.0, sub1fromOut);
-  // const sub2fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 2.0)
-  layer3weights.set(1.0, contribution1, sub2fromOut);
-  layer3weights.set(1.0, contribution2, sub2fromOut);
-  layer3bias.set(-2.0, sub2fromOut);
-  // const sub3fromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - 3.0)
-  layer3weights.set(1.0, contribution1, sub3fromOut);
-  layer3weights.set(1.0, contribution2, sub3fromOut);
-  layer3bias.set(-3.0, sub3fromOut);
-  // const subOutFrom1 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 1.0)
-  layer3weights.set(-1.0, contribution1, subOutFrom1);
-  layer3weights.set(-1.0, contribution2, subOutFrom1);
-  layer3bias.set(1.0, subOutFrom1);
-  // const subOutFrom2 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 2.0)
-  layer3weights.set(-1.0, contribution1, subOutFrom2);
-  layer3weights.set(-1.0, contribution2, subOutFrom2);
-  layer3bias.set(2.0, subOutFrom2);
-  // const subOutFrom3 = relu(-1.0 * contribution1 + -1.0 * contribution2 + 3.0)
-  layer3weights.set(-1.0, contribution1, subOutFrom3);
-  layer3weights.set(-1.0, contribution2, subOutFrom3);
-  layer3bias.set(3.0, subOutFrom3);
+  
+  // Dynamically create neurons for each value in vocab
+  // For each number 1..vocabSize, we need:
+  //   - subNfromOut = relu(1.0 * contribution1 + 1.0 * contribution2 - N)
+  //   - subOutFromN = relu(-1.0 * contribution1 + -1.0 * contribution2 + N)
+  const /*mut*/ subNfromOut: number[] = [];
+  const /*mut*/ subOutFromN: number[] = [];
+  
+  for (let i = 0; i < currentVocabSize; i++) {
+    const neuronValue = i + 1; // Values are 1-indexed
+    
+    // subNfromOut neurons (indices 0, 1, 2, ...)
+    const subFromIndex = i;
+    subNfromOut.push(subFromIndex);
+    layer3weights.set(1.0, contribution1, subFromIndex);
+    layer3weights.set(1.0, contribution2, subFromIndex);
+    layer3bias.set(-neuronValue, subFromIndex);
+    
+    // subOutFromN neurons (indices vocabSize, vocabSize+1, vocabSize+2, ...)
+    const subToIndex = currentVocabSize + i;
+    subOutFromN.push(subToIndex);
+    layer3weights.set(-1.0, contribution1, subToIndex);
+    layer3weights.set(-1.0, contribution2, subToIndex);
+    layer3bias.set(neuronValue, subToIndex);
+  }
 
   const /*mut*/ layer4weights = tf.buffer([neuronsPerLayer, neuronsPerLayer])
   const /*mut*/ layer4bias = tf.buffer([neuronsPerLayer]);
-  const probability1 = 0;
-  const probability2 = 1;
-  const probability3 = 2;
-  // relu(-1.0 * sub1FromOut + -1.0 * subOutFrom1 + 1.0),
-  layer4weights.set(-1.0, sub1fromOut, probability1);
-  layer4weights.set(-1.0, subOutFrom1, probability1);
-  layer4bias.set(1.0, probability1);
-  // relu(-1.0 * sub2FromOut + -1.0 * subOutFrom2 + 1.0),
-  layer4weights.set(-1.0, sub2fromOut, probability2);
-  layer4weights.set(-1.0, subOutFrom2, probability2);
-  layer4bias.set(1.0, probability2);
-  // relu(-1.0 * sub3FromOut + -1.0 * subOutFrom3 + 1.0),
-  layer4weights.set(-1.0, sub3fromOut, probability3);
-  layer4weights.set(-1.0, subOutFrom3, probability3);
-  layer4bias.set(1.0, probability3);
+  
+  // Dynamically create probability neurons for each value in vocab
+  // For each number 1..vocabSize:
+  //   probabilityN = relu(-1.0 * subNFromOut + -1.0 * subOutFromN + 1.0)
+  const /*mut*/ probabilityIndices: number[] = [];
+  
+  for (let i = 0; i < currentVocabSize; i++) {
+    const probabilityIndex = i;
+    probabilityIndices.push(probabilityIndex);
+    
+    // relu(-1.0 * subNFromOut + -1.0 * subOutFromN + 1.0)
+    layer4weights.set(-1.0, subNfromOut[i], probabilityIndex);
+    layer4weights.set(-1.0, subOutFromN[i], probabilityIndex);
+    layer4bias.set(1.0, probabilityIndex);
+  }
 
-  // Layers 5 and beyond (if any) implement identity function on their first 3
-  // inputs.
+  // Layers 5 and beyond (if any) implement identity function on their first vocabSize
+  // neurons (the probability outputs).
   const /*mut*/ extraLayerWeights: any[] = [];
   for (let layerIdx = 4; layerIdx < numLayers; layerIdx++) {
     const prevLayerSize = neuronsPerLayer;
@@ -277,10 +283,10 @@ async function setPerfectWeights(): Promise<void> {
     const weights = tf.buffer([prevLayerSize, currLayerSize]);
     const bias = tf.buffer([currLayerSize]);
 
-    // Set identity connections for the first 3 neurons
-    weights.set(1.0, probability1, probability1);
-    weights.set(1.0, probability2, probability2);
-    weights.set(1.0, probability3, probability3);
+    // Set identity connections for the first vocabSize neurons
+    for (let i = 0; i < currentVocabSize; i++) {
+      weights.set(1.0, probabilityIndices[i], probabilityIndices[i]);
+    }
 
     extraLayerWeights.push(weights.toTensor(), bias.toTensor());
   }
@@ -297,19 +303,31 @@ async function setPerfectWeights(): Promise<void> {
   // which looks great but softmax will mess this up so we need to push P(A=1)
   // way up and P(A="A=") way down.
 
-  // Output layer connects to the last hidden layer
+  // Linear layer: maps from neuronsPerLayer to EMBEDDING_DIM
+  // This layer should pass through the first vocabSize probability values
+  const /*mut*/ linearWeights = tf.buffer([neuronsPerLayer, EMBEDDING_DIM]);
+  const /*mut*/ linearBias = tf.buffer([EMBEDDING_DIM]);
+  // Map each probability neuron to a distinct embedding dimension
+  for (let i = 0; i < currentVocabSize && i < EMBEDDING_DIM; i++) {
+    linearWeights.set(1000.0, probabilityIndices[i], i);
+    linearBias.set(-100, i);
+  }
+
+  // Output layer (unembedding + softmax) connects to the linear layer
+  // The unembedding matrix is fixed and set by the model, so we just need
+  // to set dummy weights/bias here that will be overwritten by the model's
+  // fixed unembedding matrix
   const outputSize = getOutputSize(currentVocabSize);
-  const /*mut*/ outputWeights = tf.buffer([neuronsPerLayer, outputSize])
+  const /*mut*/ outputWeights = tf.buffer([EMBEDDING_DIM, outputSize]);
   const /*mut*/ outputBias = tf.buffer([outputSize]);
-  outputWeights.set(1000.0, probability1, probability1);
-  outputWeights.set(1000.0, probability2, probability2);
-  outputWeights.set(1000.0, probability3, probability3);
-  for (let i = 0; i < outputSize; i++) {
-    if (i < 3) {
-      outputBias.set(-100, i);
-    } else {
-      outputBias.set(-Infinity, i);
+  // Set dummy values - these will be replaced by the model's unembedding matrix
+  for (let i = 0; i < EMBEDDING_DIM; i++) {
+    for (let j = 0; j < outputSize; j++) {
+      outputWeights.set(0, i, j);
     }
+  }
+  for (let i = 0; i < outputSize; i++) {
+    outputBias.set(0, i);
   }
 
   const perfectWeights: Tensor[] = [
@@ -318,6 +336,7 @@ async function setPerfectWeights(): Promise<void> {
     layer3weights.toTensor(), layer3bias.toTensor(),
     layer4weights.toTensor(), layer4bias.toTensor(),
     ...extraLayerWeights,
+    linearWeights.toTensor(), linearBias.toTensor(),
     outputWeights.toTensor(), outputBias.toTensor()
   ];
   window.messageLoop({ type: "SetModelWeights", weights: perfectWeights } as SetModelWeightsMsg);
